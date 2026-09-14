@@ -27,7 +27,7 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
     return (
       <>
         <Cabecalho kicker="VISÃO GERAL" titulo="Nenhum site cadastrado" />
-        <div style={{ padding: '22px 32px' }}>
+        <div className="pagina">
           <Painel titulo="Comece cadastrando um cliente e um site" subtitulo="Sem site cadastrado não há o que medir.">
             <Link href="/clientes">Ir para Clientes →</Link>
           </Painel>
@@ -89,7 +89,7 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
         filtros={<SeletorPeriodo atual={ctx.periodoInput.key} />}
       />
 
-      <div className="pagina" style={{ padding: '22px 32px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="pagina">
         <div className="grade-cartoes">
           {resumo.map((c) => (
             <div key={c.rotulo} style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--bd)', background: 'var(--card)' }}>

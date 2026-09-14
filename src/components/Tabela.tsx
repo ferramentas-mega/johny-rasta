@@ -50,7 +50,7 @@ export function Tabela<T>({
   });
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div data-testid="rolagem-tabela" style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
         <thead>
           <tr>

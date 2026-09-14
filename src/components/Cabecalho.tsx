@@ -25,10 +25,10 @@ export function Cabecalho({
 }) {
   return (
     <header
+      className="cabecalho"
       style={{
         position: 'relative',
         overflow: 'hidden',
-        padding: '24px 32px',
         borderBottom: '1px solid var(--bd)',
         background: 'var(--header-bg)',
       }}

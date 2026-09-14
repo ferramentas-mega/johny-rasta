@@ -19,7 +19,10 @@ export function Abas({ siteId }: { siteId: string }) {
   const busca = searchParams.toString();
 
   return (
-    <nav aria-label="Seções do site" style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--bd)' }}>
+    <nav
+      aria-label="Seções do site"
+      style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--bd)', minWidth: 'max-content' }}
+    >
       {ABAS.map((aba) => {
         const href = `/sites/${siteId}/${aba.slug}`;
         const on = pathname === href;
@@ -36,6 +39,7 @@ export function Abas({ siteId }: { siteId: string }) {
               borderBottom: `2px solid ${on ? 'var(--gold)' : 'transparent'}`,
               marginBottom: -1,
               fontWeight: on ? 600 : 400,
+              whiteSpace: 'nowrap',
             }}
           >
             {aba.label}

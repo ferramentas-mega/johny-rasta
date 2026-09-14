@@ -111,7 +111,7 @@ export default async function PaginaConfiguracoes({ searchParams }: { searchPara
         meta={`${ctx.usuario.accountName} · ${ctx.usuario.email}`}
       />
 
-      <div className="pagina" style={{ padding: '22px 32px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="pagina">
         <Painel titulo="Situação da conta" subtitulo="Cada linha é consultada no banco, não escrita à mão">
           <Tabela colunas={colunas} linhas={linhas} />
         </Painel>

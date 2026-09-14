@@ -38,7 +38,7 @@ export default async function PaginaLeads({ searchParams }: { searchParams: Prom
     return (
       <>
         <Cabecalho kicker="LEADS" titulo="Leads" />
-        <div className="pagina" style={{ padding: '22px 32px' }}>
+        <div className="pagina">
           <Painel titulo="Nenhum site cadastrado" subtitulo="Leads chegam pelos formulários dos sites.">
             <Link href="/sites">Cadastrar um site →</Link>
           </Painel>
@@ -115,7 +115,7 @@ export default async function PaginaLeads({ searchParams }: { searchParams: Prom
         }
       />
 
-      <div className="pagina" style={{ padding: '22px 32px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="pagina">
         <Painel
           titulo="Contatos recebidos"
           subtitulo={`Derivados das submissões confirmadas de ${site.name}`}

@@ -11,7 +11,7 @@ import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { SeletorSiteRota } from '@/components/filtros';
 import { Snippet } from './Snippet';
 import { EventoTeste } from './EventoTeste';
-import { marcarSnippetVisto } from '../../acoes';
+import { registrarSnippetVisto } from '@/server/services/cadastros';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,15 +43,23 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
   const usuario = await exigirSessao();
   const { siteId } = await params;
 
+  // Abrir esta tela é o momento em que o operador vê o snippet. A partir daqui
+  // o estado deixa de ser "aguardando instalação" e passa a "aguardando
+  // primeiro evento" — uma distinção honesta, não um upgrade de status.
+  //
+  // A marcação vem ANTES da leitura, de propósito: marcar depois faria esta
+  // renderização mostrar o estado anterior, e o operador veria "aguardando
+  // instalação" na própria tela que acabou de lhe entregar o snippet.
+  //
+  // Grava direto pelo serviço, sem passar pela Server Action: `revalidatePath`
+  // não pode ser chamado durante o render de uma página, e a escrita é
+  // idempotente (coalesce), então não há o que revalidar.
+  await registrarSnippetVisto(usuario.accountId, siteId);
+
   const site = await obterSite(usuario.accountId, siteId);
   if (!site) notFound();
 
   const sites = await listarSites(usuario.accountId);
-
-  // Abrir esta tela é o momento em que o operador vê o snippet. A partir daqui
-  // o estado deixa de ser "aguardando instalação" e passa a "aguardando
-  // primeiro evento" — uma distinção honesta, não um upgrade de status.
-  await marcarSnippetVisto(site.id);
 
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
 
@@ -102,11 +110,11 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
         filtros={<SeletorSiteRota sites={sites} atual={site.id} aba="rastreamento" />}
       />
 
-      <div style={{ padding: '0 32px' }}>
+      <div className="abas">
         <Abas siteId={site.id} />
       </div>
 
-      <div className="pagina" style={{ padding: '22px 32px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="pagina">
         <Painel
           titulo="Situação da instalação"
           subtitulo={`Estado atual: ${ESTADO_LABEL[site.estado]}`}

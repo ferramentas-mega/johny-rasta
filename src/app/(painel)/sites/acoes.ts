@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { exigirSessao } from '@/server/contexto';
-import { SiteEntrada, criarSite, atualizarSite, arquivarSite, registrarSnippetVisto } from '@/server/services/cadastros';
+import { SiteEntrada, criarSite, atualizarSite, arquivarSite } from '@/server/services/cadastros';
 import type { EstadoFormulario } from '@/components/Formulario';
 
 /**
@@ -76,10 +76,4 @@ export async function removerSite(_anterior: EstadoFormulario, dados: FormData):
   if (!ok) return { erro: 'Site não encontrado.' };
   revalidarTudo(id);
   return { ok: true, mensagem: 'Site arquivado. O histórico é preservado.' };
-}
-
-export async function marcarSnippetVisto(siteId: string): Promise<void> {
-  const usuario = await exigirSessao();
-  await registrarSnippetVisto(usuario.accountId, siteId);
-  revalidarTudo(siteId);
 }

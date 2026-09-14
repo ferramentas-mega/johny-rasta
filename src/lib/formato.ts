@@ -34,7 +34,7 @@ export function variacao(atual: number, anterior: number): Variacao {
 }
 
 export function dataCurta(iso: string): string {
-  const [ano, mes, dia] = iso.split('-');
+  const [, mes, dia] = iso.split('-');
   return `${dia}/${mes}`;
 }
 

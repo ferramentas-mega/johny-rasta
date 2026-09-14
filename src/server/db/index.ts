@@ -12,7 +12,6 @@ import { Pool, type PoolClient, type QueryResultRow } from 'pg';
 declare global {
   // Em desenvolvimento o Next recarrega módulos a cada edição; sem este cache
   // cada recarga abriria um pool novo até esgotar as conexões do Postgres.
-  // eslint-disable-next-line no-var
   var __painelPools: Map<string, Pool> | undefined;
 }
 

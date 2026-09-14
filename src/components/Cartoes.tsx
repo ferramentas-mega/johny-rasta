@@ -9,6 +9,7 @@ import type { Variacao } from '@/lib/formato';
  * nenhuma: se este componente pudesse calcular, dois cartões poderiam discordar.
  */
 export function CartaoIndicador({
+  chave,
   rotulo,
   valor,
   ajuda,
@@ -17,6 +18,8 @@ export function CartaoIndicador({
   destaque = false,
   href,
 }: {
+  /** Chave do indicador em METRICS. Vira identificador estável para os testes. */
+  chave: string;
   rotulo: string;
   valor: string;
   ajuda: string;
@@ -57,6 +60,7 @@ export function CartaoIndicador({
       </div>
       <div
         className="mono"
+        data-testid={`kpi-valor-${chave}`}
         style={{ fontSize: 32, fontWeight: 500, letterSpacing: '-0.01em', margin: '10px 0 6px', color: 'var(--tx)' }}
       >
         {valor}
@@ -78,11 +82,13 @@ export function CartaoIndicador({
   } as const;
 
   return href ? (
-    <Link href={href} style={estilo}>
+    <Link href={href} data-testid={`kpi-${chave}`} style={estilo}>
       {conteudo}
     </Link>
   ) : (
-    <div style={estilo}>{conteudo}</div>
+    <div data-testid={`kpi-${chave}`} style={estilo}>
+      {conteudo}
+    </div>
   );
 }
 

@@ -10,8 +10,14 @@ import { FormularioSite } from './FormularioSite';
 export const dynamic = 'force-dynamic';
 
 export default async function PaginaSites({ searchParams }: { searchParams: Promise<ParametrosBusca> }) {
-  const ctx = await contextoPainel(await searchParams);
+  const busca = await searchParams;
+  const ctx = await contextoPainel(busca);
   const filtrado = ctx.clientes.find((c) => c.id === ctx.clienteId);
+
+  // A edição vive na URL, como os demais filtros: recarregar mantém o formulário
+  // aberto no site certo, e o link é compartilhável.
+  const editandoId = typeof busca.editar === 'string' ? busca.editar : null;
+  const emEdicao = ctx.sites.find((s) => s.id === editandoId);
 
   const colunas: Coluna<Site>[] = [
     { chave: 'nome', titulo: 'Site',
@@ -36,7 +42,12 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
         </span>
       ) },
     { chave: 'acoes', titulo: '', alinhamento: 'direita',
-      render: (s) => <Link href={`/sites/${s.id}/rastreamento`}>Instalação →</Link> },
+      render: (s) => (
+        <span style={{ display: 'inline-flex', gap: 12, whiteSpace: 'nowrap' }}>
+          <Link href={`/sites?editar=${s.id}`}>Editar</Link>
+          <Link href={`/sites/${s.id}/rastreamento`}>Instalação →</Link>
+        </span>
+      ) },
   ];
 
   return (
@@ -47,7 +58,7 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
         meta={`${ctx.sites.length} site(s) ativo(s)`}
       />
 
-      <div className="pagina" style={{ padding: '22px 32px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="pagina">
         {filtrado && (
           <p style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
             Filtrando por <strong>{filtrado.name}</strong>. <Link href="/sites">Ver todos os sites</Link>
@@ -57,7 +68,25 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
         <Painel
           titulo="Sites cadastrados"
           subtitulo="Cada site pertence a um cliente e recebe um identificador público próprio"
-          acoes={<FormularioSite clientes={ctx.clientes.map((c) => ({ id: c.id, name: c.name }))} />}
+          acoes={
+            <FormularioSite
+              // A chave força a remontagem ao trocar o alvo da edição: sem ela o
+              // componente cliente sobrevive à navegação e mantém o estado antigo.
+              key={emEdicao?.id ?? 'novo'}
+              clientes={ctx.clientes.map((c) => ({ id: c.id, name: c.name }))}
+              emEdicao={
+                emEdicao
+                  ? {
+                      id: emEdicao.id,
+                      name: emEdicao.name,
+                      domain: emEdicao.domain,
+                      timezone: emEdicao.timezone,
+                      clientId: emEdicao.clientId,
+                    }
+                  : undefined
+              }
+            />
+          }
         >
           <Tabela
             colunas={colunas}

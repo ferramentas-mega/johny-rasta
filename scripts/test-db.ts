@@ -42,6 +42,13 @@ export const MASSA = {
   siteRival: 'sit_teste_rival1',
   /** Sem nenhum evento: exercita os estados de instalação. */
   siteSemColeta: 'sit_teste_novo01',
+  /**
+   * Alvo das suítes que GRAVAM (formulários, coleta pela página de teste).
+   *
+   * Existe para que os testes numéricos possam afirmar totais exatos sobre
+   * `siteAlfa` sem depender da ordem de execução: quem escreve, escreve aqui.
+   */
+  siteEscrita: 'sit_teste_forms1',
 } as const;
 
 /**
@@ -113,6 +120,26 @@ const SESSOES_ALFA: EspecSessao[] = [
     envios: [{ email: 'carla@teste.com', nome: 'Carla Teste' }] },
   { visitante: 'v2', diasAtras: 0, vistas: ['/', '/contato'],
     cliques: [{ subtipo: 'email', botao: 'cta-email-rodape', texto: 'Escrever por e-mail', posicao: 'Rodapé' }],
+    envios: [] },
+
+  // Um dia movimentado FORA da janela de 7 dias. Existe para que, em 30 dias, o
+  // pico diário de cliques (5) supere o de formulários (2) — sem isso os dois
+  // eixos do gráfico coincidiriam por acaso, e o teste que verifica escalas
+  // independentes não teria como distinguir um gráfico correto de um que
+  // normaliza as duas séries contra o mesmo eixo.
+  // Os totais de 7 dias ficam intactos: este dia não entra naquela janela.
+  { visitante: 'v7', diasAtras: 20, vistas: ['/', '/planos'],
+    cliques: [
+      { subtipo: 'whatsapp', botao: 'cta-whatsapp-hero', texto: 'Falar no WhatsApp', posicao: 'Hero' },
+      { subtipo: 'whatsapp', botao: 'cta-whatsapp-planos', texto: 'Falar no WhatsApp', posicao: 'Conteúdo' },
+      { subtipo: 'phone', botao: 'cta-telefone-rodape', texto: 'Ligar agora', posicao: 'Rodapé' },
+    ],
+    envios: [] },
+  { visitante: 'v8', diasAtras: 20, vistas: ['/planos'],
+    cliques: [
+      { subtipo: 'form_open', botao: 'cta-form-planos', texto: 'Solicitar proposta', posicao: 'Conteúdo' },
+      { subtipo: 'email', botao: 'cta-email-rodape', texto: 'Escrever por e-mail', posicao: 'Rodapé' },
+    ],
     envios: [] },
 ];
 
@@ -251,6 +278,7 @@ export async function prepararBancoDeTeste(): Promise<void> {
   const alfa = await criarSite(agencia, clienteUm, 'alfa.teste', 'alfa.teste', MASSA.siteAlfa);
   const beta = await criarSite(agencia, clienteDois, 'beta.teste', 'beta.teste', MASSA.siteBeta);
   await criarSite(agencia, clienteDois, 'novo.teste', 'novo.teste', MASSA.siteSemColeta);
+  await criarSite(agencia, clienteDois, 'escrita.teste', 'escrita.teste', MASSA.siteEscrita);
   await semear(agencia, clienteUm, alfa, SESSOES_ALFA);
   await semear(agencia, clienteDois, beta, SESSOES_BETA);
 

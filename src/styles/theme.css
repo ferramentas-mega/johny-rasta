@@ -144,11 +144,43 @@ select option {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
 }
 
-/* Respiro lateral menor no celular, sem nunca zerar a margem. */
+/* Espaçamento das páginas em um lugar só.
+   O respiro lateral diminui no celular, mas nunca chega a zero. */
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 32px 40px;
+  min-width: 0;
+}
+
+.cabecalho {
+  padding: 24px 32px;
+}
+
+/* As abas do site rolam sozinhas quando não cabem, em vez de empurrar a
+   página e criar barra de rolagem lateral. */
+.abas {
+  padding: 0 32px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.abas::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 640px) {
   .pagina {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .cabecalho {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .abas {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
 

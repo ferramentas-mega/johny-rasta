@@ -19,7 +19,11 @@ type LinhaCliente = {
 };
 
 export default async function PaginaClientes({ searchParams }: { searchParams: Promise<ParametrosBusca> }) {
-  const ctx = await contextoPainel(await searchParams);
+  const busca = await searchParams;
+  const ctx = await contextoPainel(busca);
+
+  const editandoId = typeof busca.editar === 'string' ? busca.editar : null;
+  const emEdicao = ctx.clientes.find((c) => c.id === editandoId);
 
   // Agregado por cliente, no período selecionado, somando os sites do cliente.
   // Sai da mesma base que as telas de site — não é uma segunda contabilidade.
@@ -48,7 +52,16 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
     : [];
 
   const colunas: Coluna<LinhaCliente>[] = [
-    { chave: 'nome', titulo: 'Cliente', render: (l) => l.nome, total: () => 'Total' },
+    { chave: 'nome', titulo: 'Cliente',
+      render: (l) => (
+        <span style={{ display: 'inline-flex', gap: 10, alignItems: 'baseline' }}>
+          {l.nome}
+          <Link href={`/clientes?editar=${l.id}`} style={{ fontSize: 11.5 }}>
+            editar
+          </Link>
+        </span>
+      ),
+      total: () => 'Total' },
     { chave: 'sites', titulo: 'Sites', alinhamento: 'direita', mono: true,
       render: (l) => (l.sites ? <Link href={`/sites?cliente=${l.id}`}>{num(l.sites)}</Link> : '—'),
       total: (ls) => num(ls.reduce((t, l) => t + l.sites, 0)) },
@@ -69,11 +82,16 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
         filtros={<SeletorPeriodo atual={ctx.periodoInput.key} />}
       />
 
-      <div className="pagina" style={{ padding: '22px 32px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="pagina">
         <Painel
           titulo="Carteira de clientes"
           subtitulo="Cada site pertence a um cliente. Cadastre o cliente primeiro."
-          acoes={<FormularioCliente />}
+          acoes={
+            <FormularioCliente
+              key={emEdicao?.id ?? 'novo'}
+              emEdicao={emEdicao ? { id: emEdicao.id, name: emEdicao.name, notes: emEdicao.notes } : undefined}
+            />
+          }
         >
           <Tabela colunas={colunas} linhas={linhas} vazio="Nenhum cliente cadastrado ainda." />
           <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>

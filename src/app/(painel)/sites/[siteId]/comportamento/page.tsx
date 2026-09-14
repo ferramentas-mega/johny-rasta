@@ -106,11 +106,11 @@ export default async function PaginaComportamento({
         }
       />
 
-      <div style={{ padding: '0 32px' }}>
+      <div className="abas">
         <Abas siteId={site.id} />
       </div>
 
-      <div className="pagina" style={{ padding: '22px 32px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="pagina">
         {totalSessoes === 0 ? (
           <Painel
             titulo="Sem sessões neste período"

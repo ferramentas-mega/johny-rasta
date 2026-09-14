@@ -117,11 +117,11 @@ export default async function PaginaDesempenho({
         }
       />
 
-      <div style={{ padding: '0 32px' }}>
+      <div className="abas">
         <Abas siteId={site.id} />
       </div>
 
-      <div style={{ padding: '22px 32px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="pagina">
         {entrada.key === 'personalizado' && (
           <IntervaloPersonalizado de={entrada.de ?? ''} ate={entrada.ate ?? ''} />
         )}
@@ -138,24 +138,24 @@ export default async function PaginaDesempenho({
         ) : (
           <>
             <div className="grade-cartoes">
-              <CartaoIndicador rotulo={METRICS.sessoes.label} ajuda={METRICS.sessoes.help} icone="clientes"
+              <CartaoIndicador chave="sessoes" rotulo={METRICS.sessoes.label} ajuda={METRICS.sessoes.help} icone="clientes"
                 valor={num(atual.sessoes)} variacao={variacao(atual.sessoes, anterior.sessoes)} />
-              <CartaoIndicador rotulo={METRICS.cliquesWhatsapp.label} ajuda={METRICS.cliquesWhatsapp.help} icone="mensagem"
+              <CartaoIndicador chave="cliquesWhatsapp" rotulo={METRICS.cliquesWhatsapp.label} ajuda={METRICS.cliquesWhatsapp.help} icone="mensagem"
                 valor={num(atual.cliquesWhatsapp)} variacao={variacao(atual.cliquesWhatsapp, anterior.cliquesWhatsapp)} />
-              <CartaoIndicador rotulo={METRICS.formularios.label} ajuda={METRICS.formularios.help} icone="arquivo" destaque
+              <CartaoIndicador chave="formularios" rotulo={METRICS.formularios.label} ajuda={METRICS.formularios.help} icone="arquivo" destaque
                 href={`/leads?site=${site.id}&periodo=${entrada.key}`}
                 valor={num(atual.formularios)} variacao={variacao(atual.formularios, anterior.formularios)} />
-              <CartaoIndicador rotulo={METRICS.sessoesConvertidas.label} ajuda={METRICS.sessoesConvertidas.help} icone="tendencia"
+              <CartaoIndicador chave="sessoesConvertidas" rotulo={METRICS.sessoesConvertidas.label} ajuda={METRICS.sessoesConvertidas.help} icone="tendencia"
                 valor={pct(kpis.taxaSessoesConvertidas)}
                 variacao={{ texto: `${num(atual.sessoesConvertidasAbs)} de ${num(atual.sessoes)} sessões`, tom: 'neutro' }} />
 
-              <CartaoIndicador rotulo={METRICS.visitantesUnicos.label} ajuda={METRICS.visitantesUnicos.help} icone="pessoa"
+              <CartaoIndicador chave="visitantesUnicos" rotulo={METRICS.visitantesUnicos.label} ajuda={METRICS.visitantesUnicos.help} icone="pessoa"
                 valor={num(atual.visitantesUnicos)} variacao={variacao(atual.visitantesUnicos, anterior.visitantesUnicos)} />
-              <CartaoIndicador rotulo={METRICS.visualizacoes.label} ajuda={METRICS.visualizacoes.help} icone="olho"
+              <CartaoIndicador chave="visualizacoes" rotulo={METRICS.visualizacoes.label} ajuda={METRICS.visualizacoes.help} icone="olho"
                 valor={num(atual.visualizacoes)} variacao={variacao(atual.visualizacoes, anterior.visualizacoes)} />
-              <CartaoIndicador rotulo={METRICS.cliquesContato.label} ajuda={METRICS.cliquesContato.help} icone="telefone"
+              <CartaoIndicador chave="cliquesContato" rotulo={METRICS.cliquesContato.label} ajuda={METRICS.cliquesContato.help} icone="telefone"
                 valor={num(atual.cliquesContato)} variacao={variacao(atual.cliquesContato, anterior.cliquesContato)} />
-              <CartaoIndicador rotulo={METRICS.enviosPorSessao.label} ajuda={METRICS.enviosPorSessao.help} icone="pessoaOk"
+              <CartaoIndicador chave="enviosPorSessao" rotulo={METRICS.enviosPorSessao.label} ajuda={METRICS.enviosPorSessao.help} icone="pessoaOk"
                 valor={pct(kpis.taxaEnviosPorSessao)}
                 variacao={{ texto: `${num(atual.formularios)} envios ÷ ${num(atual.sessoes)} sessões`, tom: 'neutro' }} />
             </div>

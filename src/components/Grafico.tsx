@@ -145,11 +145,26 @@ export function Grafico({ pontos, periodo }: { pontos: DailyPoint[]; periodo: st
           return (
             <g key={t}>
               <line x1={PAD.left} y1={y} x2={PAD.left + INTERNO_L} y2={y} stroke="var(--rowbd)" strokeWidth="1" />
-              <text x={PAD.left - 8} y={y + 4} textAnchor="end" fontSize="10.5" fill="var(--tx3)" className="mono">
+              <text
+                x={PAD.left - 8}
+                y={y + 4}
+                textAnchor="end"
+                fontSize="10.5"
+                fill="var(--tx3)"
+                className="mono"
+                data-eixo="esquerda"
+              >
                 {num(Math.round(topoEsq * t))}
               </text>
               {mostrarSegunda && (
-                <text x={PAD.left + INTERNO_L + 8} y={y + 4} fontSize="10.5" fill="var(--tx3)" className="mono">
+                <text
+                  x={PAD.left + INTERNO_L + 8}
+                  y={y + 4}
+                  fontSize="10.5"
+                  fill="var(--tx3)"
+                  className="mono"
+                  data-eixo="direita"
+                >
                   {num(Math.round(topoDir * t))}
                 </text>
               )}
