@@ -34,6 +34,14 @@ git fetch origin
 git branch -u origin/main main
 ```
 
+> **Se o projeto da Vercel já existir, o rename exige um ajuste lá — e ele não é opcional.**
+> O campo **Settings → Git → Production Branch** guarda o *nome* da branch e **não acompanha** o
+> rename do GitHub. Depois de renomear, ele continua apontando para `claude/busy-hopper-3seo9l`,
+> uma branch que não existe mais. O resultado não é um erro visível: os pushes passam a gerar
+> apenas **Preview**, a produção congela no último build publicado, e o domínio serve código
+> antigo indefinidamente. Renomeou? Vá em **Settings → Git**, troque o Production Branch para
+> `main` e salve, antes de qualquer outra coisa.
+
 ---
 
 ## Passo 2 — Pegar a connection string do Supabase
@@ -102,12 +110,25 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 Ainda na mesma tela, expanda **Environment Variables** e adicione uma a uma. Para cada uma: digite
 o nome em **Key**, o valor em **Value**, e clique em **Add**.
 
+**As duas que fazem o painel subir.** Sem qualquer uma delas, ninguém entra:
+
 | Key | Value |
 |---|---|
 | `DATABASE_URL` | a string do `app_user` montada no passo 2 |
+| `SESSION_SECRET` | o segredo gerado no passo 2 |
+
+**As duas que ligam a coleta.** Faltando, os endpoints públicos respondem 503 e **só eles** — o
+painel continua funcionando, o que é útil para conferir o login primeiro:
+
+| Key | Value |
+|---|---|
 | `DATABASE_URL_INGEST` | a string do `app_ingest` |
 | `DATABASE_URL_FORMS` | a string do `app_forms` |
-| `SESSION_SECRET` | o segredo gerado no passo 2 |
+
+> **Marque os três ambientes em cada variável**: **Production**, **Preview** e **Development**.
+> A Vercel deixa marcar só um, e uma variável salva apenas em Production **não existe** num
+> deployment de Preview. O sintoma engana: o `/api/diagnostico` aberto pela URL de preview acusa
+> tudo ausente, como se você não tivesse salvado nada.
 
 **Não adicione `DATABASE_URL_ADMIN`.** Ela só serve para migração e seed, e o código da aplicação
 nunca a importa. Fora dali, ela seria uma credencial de superusuário exposta sem necessidade.
@@ -167,6 +188,68 @@ daqueles sites para de funcionar.
 
 ---
 
+## A produção está servindo um build antigo
+
+Este é o problema mais confuso da Vercel, porque **nada aparece quebrado**. O domínio responde, a
+tela de login abre, e ainda assim o código no ar é de dias atrás.
+
+O sintoma que denuncia: **um endereço que funcionava passa a responder 404** — ou um endereço novo
+nunca responde. Uma rota só existe no build que a contém. Se `/api/diagnostico` dá 404, o build no
+ar é anterior ao commit que criou essa rota, por mais recente que seja a data mostrada na lista.
+
+Nada disso é defeito do projeto: o repositório compila limpo, num clone novo, **sem nenhuma
+variável de ambiente definida**. Se o build quebrasse, quebraria aqui também.
+
+### Passo 1 — A lista de Deployments
+
+Abra **Deployments**, no menu do projeto, e olhe a entrada do topo:
+
+| O que você vê | O que significa | O que fazer |
+|---|---|---|
+| **Error** (vermelho) | O build falhou; a produção segue no último que deu certo | Abra o deployment, vá em **Building** e leia a **primeira** linha vermelha do log |
+| **Ready** (verde) com etiqueta **Production** | Esse build está no ar | O problema é outro; siga para *Quando algo dá errado* |
+| **Ready** (verde) com etiqueta **Preview** | O build existe, mas **não** está no ar | Passo 2 |
+| **Queued** / **Building** | Ainda rodando | Espere terminar |
+
+Na lista, cada deployment traz a etiqueta do ambiente ao lado do commit. Só a marcada
+**Production** é a que o seu domínio serve.
+
+### Passo 2 — Promover um build de Preview
+
+Um deployment de Preview não vira produção sozinho:
+
+1. Na linha do deployment verde mais recente, clique nos **três pontinhos** (⋯), à direita.
+2. Clique em **Promote to Production**.
+3. Confirme. Em segundos o domínio passa a servir esse build.
+
+O botão **Redeploy** desse mesmo menu resolve outra coisa e, quando o deployment não é o mais
+recente, a Vercel recusa — é o diálogo que aparece dizendo que só o último pode ser reconstruído.
+Para publicar um build que já existe, o caminho é **Promote**, não Redeploy.
+
+### Passo 3 — Por que ele saiu como Preview
+
+Se os builds saem como Preview, a branch que você envia não é a que a Vercel considera de
+produção. Confira os dois lados:
+
+- **GitHub** → **Settings** → **Branches**: qual é a branch padrão. Neste repositório é
+  `claude/busy-hopper-3seo9l`, e ela é a única que existe.
+- **Vercel** → **Settings** → **Git** → **Production Branch**: precisa ser exatamente esse nome.
+
+Diferentes? Ajuste o lado da Vercel e salve. O próximo push já sai como Production. Essa divergência
+é o efeito colateral do rename descrito no passo 1 deste documento.
+
+### Ainda assim, publicar de novo
+
+Não existe "limpar cache e publicar" na Vercel como um botão único. O que publica de novo é um
+commit novo na branch de produção. Um commit vazio serve:
+
+```bash
+git commit --allow-empty -m "Republicar"
+git push
+```
+
+---
+
 ## Quando algo dá errado
 
 ### Primeiro: abra `/api/diagnostico`
@@ -176,6 +259,9 @@ A aplicação publicada tem um endereço que testa as três conexões e diz o qu
 ```
 https://SEU-APP.vercel.app/api/diagnostico
 ```
+
+**Deu 404?** Então não é diagnóstico nenhum: o build no ar não tem essa rota. Volte para
+*A produção está servindo um build antigo*, acima — nenhuma variável de ambiente resolve isso.
 
 Resposta quando está tudo certo:
 

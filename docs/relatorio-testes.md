@@ -184,6 +184,29 @@ código estava certo e a expectativa estava errada. Foram corrigidas as expectat
 
 ---
 
+## Defeitos de documentação
+
+Uma revisão posterior, pedida depois que a produção passou a responder 404, conferiu GitHub, Vercel
+e os documentos. **Nenhum defeito novo de código** apareceu: um clone limpo, com `npm ci` e
+`npm run build` **sem nenhuma variável de ambiente**, compila e gera todas as rotas. O 404 é da
+configuração do deploy, não do projeto.
+
+Os documentos, porém, tinham seis erros — três deles descrevendo justamente as armadilhas em que
+este deploy caiu:
+
+| Onde | Defeito |
+|---|---|
+| `.env.example` e `docs/deploy-supabase.md` | Exemplos de connection string do Supabase com porta `5432` e **sem** o sufixo `.PROJECT_REF` no papel: as duas causas de `ETIMEDOUT` e de `Tenant or user not found`. Contradiziam o `deploy-vercel.md`, que estava certo |
+| `docs/deploy-vercel.md` | Nada sobre Preview × Production, escopo de variáveis por ambiente, nem **Promote to Production** |
+| `docs/deploy-vercel.md` | Sugeria renomear a branch para `main` sem avisar que o *Production Branch* da Vercel não acompanha o rename, e a produção congela em silêncio |
+| `docs/deploy-vercel.md` | Apresentava as quatro variáveis como obrigatórias; o painel sobe com duas |
+| `README.md` | Afirmava que o pool serverless abre **uma** conexão por instância; o código faz `max: serverless ? 3 : 10` |
+| `README.md` | A lista de documentação complementar não incluía `deploy-vercel.md` |
+
+Documento que descreve o sistema errado erra igual a código errado — só demora mais para aparecer.
+
+---
+
 ## O que NÃO foi testado
 
 **Conexão da aplicação com o Supabase.** O schema está aplicado no projeto e foi conferido por
@@ -211,13 +234,16 @@ criados por SQL ou pelo seed.
 
 Preenchido a cada execução completa:
 
-- `npm run doctor` — ambiente íntegro
+- `npm run doctor` — ambiente íntegro (9 verificações)
 - `npm run typecheck` — sem erros
 - `npm run lint` — sem avisos
-- `npm test` — 73 testes, todos passando
-- `npm run test:e2e` — 32 testes (26 desktop + 6 celular), todos passando
-- `npm run build` — build de produção concluído
+- `npm test` — 73 testes, todos passando (5 arquivos, 3,5 s)
+- `npm run test:e2e` — 32 testes (26 desktop + 6 celular), todos passando (3,0 min)
+- `npm run build` — build de produção concluído, 17 rotas
 - `npm start` — servidor de produção respondendo
+
+Reexecutada por inteiro depois da revisão de documentação descrita acima. A revisão não tocou em
+`src/`, e a suíte confirma que nada mudou de comportamento.
 
 Nota de honestidade: numa rodada anterior eu reportei "55 passando" apoiado numa execução que ficou
 em segundo plano e cuja saída eu não cheguei a ler. Quando rodei de fato, um teste estava quebrado —

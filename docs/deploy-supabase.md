@@ -112,12 +112,16 @@ select id, 'ferramentas@megaads.com.br', 'COLE_O_HASH_AQUI', 'Equipe de marketin
 No ambiente de produção (Vercel, ou onde a aplicação rodar):
 
 ```bash
-DATABASE_URL=postgres://app_user:SENHA@HOST:5432/postgres
-DATABASE_URL_INGEST=postgres://app_ingest:SENHA@HOST:5432/postgres
-DATABASE_URL_FORMS=postgres://app_forms:SENHA@HOST:5432/postgres
+DATABASE_URL=postgres://app_user.SEU_PROJECT_REF:SENHA@aws-N-REGIAO.pooler.supabase.com:6543/postgres
+DATABASE_URL_INGEST=postgres://app_ingest.SEU_PROJECT_REF:SENHA@aws-N-REGIAO.pooler.supabase.com:6543/postgres
+DATABASE_URL_FORMS=postgres://app_forms.SEU_PROJECT_REF:SENHA@aws-N-REGIAO.pooler.supabase.com:6543/postgres
 SESSION_SECRET=<32 bytes aleatórios>
 APP_URL=https://seu-painel.com.br
 ```
+
+Só `DATABASE_URL` e `SESSION_SECRET` são necessárias para o painel subir. Sem as outras duas, os
+endpoints públicos de coleta e de formulários respondem 503 e o restante funciona — o que permite
+conferir o login antes de ligar a coleta.
 
 `DATABASE_URL_ADMIN` **não** precisa existir em produção: só scripts de migração e seed a usam, e o
 código da aplicação nunca a importa.
@@ -127,12 +131,21 @@ código da aplicação nunca a importa.
 O Supabase oferece duas formas de conexão:
 
 - **Direta** (`db.<ref>.supabase.co:5432`) — só resolve em IPv6. Use se o seu ambiente de execução
-  tiver IPv6.
+  tiver IPv6. A Vercel **não** tem, e o sintoma é `ETIMEDOUT` sem mensagem melhor.
 - **Pooler** (`aws-*.pooler.supabase.com:5432` ou `:6543`) — tem IPv4. É a opção certa para a
   maioria das hospedagens. O modo transação (`:6543`) funciona com este projeto, porque `SET LOCAL`
   vale dentro da transação, que é justamente a unidade que o pooler preserva.
 
-O host exato está em Project Settings › Database › Connection string.
+O host exato está em Project Settings › Database › Connection string, aba **Transaction pooler**.
+
+### O sufixo do projeto no nome do papel
+
+No pooler, o usuário **não** é `app_user`, e sim `app_user.SEU_PROJECT_REF` — é assim que o
+Supavisor descobre para qual projeto encaminhar a conexão. Vale para os três papéis.
+
+Sem o sufixo, o erro é `Tenant or user not found`, que não se parece nada com "faltou um sufixo".
+Esses dois detalhes — a porta e o sufixo — são os dois motivos mais comuns de um deploy que compila
+e não conecta.
 
 ---
 

@@ -112,6 +112,7 @@ Documentação complementar:
 - [`docs/metricas.md`](docs/metricas.md) — o que cada indicador conta, e o que fica de fora
 - [`docs/instalacao-rastreamento.md`](docs/instalacao-rastreamento.md) — instalar o coletor num site
 - [`docs/deploy-supabase.md`](docs/deploy-supabase.md) — subir para o Supabase
+- [`docs/deploy-vercel.md`](docs/deploy-vercel.md) — publicar na Vercel, clique a clique
 - [`docs/relatorio-testes.md`](docs/relatorio-testes.md) — o que foi testado, e o que não foi
 - [`DESIGN.md`](DESIGN.md) — a identidade visual e seus componentes
 - [`CLAUDE.md`](CLAUDE.md) — decisões que valem para quem for continuar o trabalho
@@ -150,5 +151,6 @@ Duas coisas que o projeto já traz prontas para isso:
 - `vercel.json` fixa a região em `iad1` (Virgínia do Norte), a mesma do projeto
   Supabase. Cada tela faz várias consultas; com a aplicação e o banco em
   continentes diferentes, a latência aparece.
-- Em ambiente serverless o pool abre **uma** conexão por instância, não dez —
-  caso contrário o limite do banco se esgota com poucas invocações simultâneas.
+- Em ambiente serverless o pool abre no máximo **três** conexões por instância,
+  e não dez: cada tela faz várias consultas em paralelo, mas há muitas
+  instâncias, e dez em cada uma esgotaria o limite do banco.
