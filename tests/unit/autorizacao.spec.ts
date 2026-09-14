@@ -39,7 +39,11 @@ describe('isolamento entre contas', () => {
     const daAgencia = await listarSites(agencia);
     const doRival = await listarSites(rival);
 
-    expect(daAgencia.map((s) => s.name).sort()).toEqual(['alfa.teste', 'beta.teste', 'novo.teste']);
+    // Lista exata, não "contém": se um site alheio vazar para cá, o teste precisa
+    // falhar, e não passar por acaso.
+    expect(daAgencia.map((s) => s.name).sort()).toEqual([
+      'alfa.teste', 'beta.teste', 'escrita.teste', 'novo.teste',
+    ]);
     expect(doRival.map((s) => s.name)).toEqual(['rival.teste']);
   });
 

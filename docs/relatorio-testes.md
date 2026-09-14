@@ -162,6 +162,7 @@ por causa deles:
 | `ON CONFLICT DO UPDATE` exigindo privilégio que os papéis públicos não têm | Primeiro POST real em `/api/collect` |
 | Tela de desempenho estourando 8px na largura do celular | Suíte responsiva |
 | Suítes que gravam poluindo o site medido por outras | Teste de período falhando conforme a ordem |
+| Expectativa de lista de sites desatualizada ao acrescentar o site de escrita à massa | Execução de `npm test` antes do deploy |
 
 Três erros de contagem manual nos valores esperados da massa também apareceram — nesses casos o
 código estava certo e a expectativa estava errada. Foram corrigidas as expectativas.
@@ -195,7 +196,15 @@ criados por SQL ou pelo seed.
 
 Preenchido a cada execução completa:
 
+- `npm run doctor` — ambiente íntegro
 - `npm run typecheck` — sem erros
+- `npm run lint` — sem avisos
 - `npm test` — 55 testes, todos passando
 - `npm run test:e2e` — 32 testes (26 desktop + 6 celular), todos passando
 - `npm run build` — build de produção concluído
+- `npm start` — servidor de produção respondendo
+
+Nota de honestidade: numa rodada anterior eu reportei "55 passando" apoiado numa execução que ficou
+em segundo plano e cuja saída eu não cheguei a ler. Quando rodei de fato, um teste estava quebrado —
+uma expectativa que envelheceu ao eu acrescentar um site à massa. Está corrigido, e a execução acima
+foi lida linha a linha.

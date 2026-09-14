@@ -12,6 +12,7 @@ import { SeletorSiteRota } from '@/components/filtros';
 import { Snippet } from './Snippet';
 import { EventoTeste } from './EventoTeste';
 import { registrarSnippetVisto } from '@/server/services/cadastros';
+import { appUrl } from '@/lib/app-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +62,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
 
   const sites = await listarSites(usuario.accountId);
 
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
+  const endpoint = appUrl();
 
   const recentes = await withAccount(usuario.accountId, async (db) =>
     db.query<LinhaEvento>(
@@ -79,11 +80,11 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
   const passoAtual =
     site.totalEventos > 0 ? 5 : site.snippetSeenAt ? 4 : 3;
 
-  const snippet = `<script async src="${appUrl}/t.js"\n        data-site="${site.publicId}"></script>`;
+  const snippet = `<script async src="${endpoint}/t.js"\n        data-site="${site.publicId}"></script>`;
 
   const snippetBotao = `<a href="https://wa.me/5511999999999"\n   data-track-id="cta-whatsapp-hero"\n   data-track-sub="whatsapp"\n   data-track-pos="Hero">Falar no WhatsApp</a>`;
 
-  const snippetFormulario = `<form method="post"\n      action="${appUrl}/api/forms/${site.publicId}">\n  <input name="nome" required>\n  <input name="email" type="email">\n  <input name="telefone">\n  <input type="hidden" name="formulario" value="Fale conosco">\n  <input type="hidden" name="visitante" value="PREENCHER_COM_painel.visitante()">\n  <input type="hidden" name="idempotencia" value="PREENCHER_COM_crypto.randomUUID()">\n  <button type="submit">Enviar</button>\n</form>`;
+  const snippetFormulario = `<form method="post"\n      action="${endpoint}/api/forms/${site.publicId}">\n  <input name="nome" required>\n  <input name="email" type="email">\n  <input name="telefone">\n  <input type="hidden" name="formulario" value="Fale conosco">\n  <input type="hidden" name="visitante" value="PREENCHER_COM_painel.visitante()">\n  <input type="hidden" name="idempotencia" value="PREENCHER_COM_crypto.randomUUID()">\n  <button type="submit">Enviar</button>\n</form>`;
 
   const colunasEventos: Coluna<LinhaEvento>[] = [
     { chave: 'quando', titulo: 'Quando', mono: true, render: (l) => dataHora(l.quando) },
@@ -161,7 +162,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
           titulo="Script de coleta"
           subtitulo="Uma linha, antes de fechar o </head> de todas as páginas do site"
         >
-          <Snippet codigo={snippet} rotulo={`Endpoint configurado: ${appUrl}`} />
+          <Snippet codigo={snippet} rotulo={`Endpoint configurado: ${endpoint}`} />
           <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
             O script registra visualizações sozinho, e detecta cliques em links de WhatsApp, telefone e e-mail sem
             marcação adicional. Ele nunca lê campos de formulário.

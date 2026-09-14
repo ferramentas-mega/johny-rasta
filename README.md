@@ -37,6 +37,10 @@ usa o que estiver lá.
 O `setup` imprime as credenciais de acesso no final. Ele é idempotente, exceto
 pelo seed, que sempre recria a massa de desenvolvimento.
 
+**Deu algum erro?** Rode `npm run doctor`: ele verifica Node, dependências,
+variáveis, servidor de banco, migrações, massa e os três papéis, e diz o que
+fazer em cada caso.
+
 ### Passo a passo, se preferir controlar cada etapa
 
 ```bash
@@ -72,6 +76,7 @@ em [`docs/deploy-supabase.md`](docs/deploy-supabase.md).
 | `npm run db:migrate` | Só aplica migrações pendentes |
 | `npm run db:seed` | Recria a massa de desenvolvimento |
 | `npm run db:reset` | Apaga e recria o banco de desenvolvimento |
+| `npm run doctor` | Diagnostica o ambiente e diz como resolver o que estiver faltando |
 
 Os testes usam um banco separado (`painel_matrix_test`), recriado a cada execução. O banco de
 desenvolvimento nunca é tocado por eles.
@@ -130,3 +135,17 @@ gravar um formulário devolve erro; nunca uma confirmação sem gravação corre
 
 **Datas em UTC, recorte no fuso do site.** Toda coluna de tempo é `timestamptz` em UTC. Os períodos
 são recortados com `AT TIME ZONE` usando o fuso cadastrado no site, e não aritmética de 24 horas.
+
+---
+
+## Deploy na Vercel
+
+O passo a passo com os cliques está em [`docs/deploy-vercel.md`](docs/deploy-vercel.md).
+
+Duas coisas que o projeto já traz prontas para isso:
+
+- `vercel.json` fixa a região em `iad1` (Virgínia do Norte), a mesma do projeto
+  Supabase. Cada tela faz várias consultas; com a aplicação e o banco em
+  continentes diferentes, a latência aparece.
+- Em ambiente serverless o pool abre **uma** conexão por instância, não dez —
+  caso contrário o limite do banco se esgota com poucas invocações simultâneas.

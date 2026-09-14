@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withIngest } from '@/server/db';
 import { EventoRecebido, resolverSite, registrarEvento } from '@/server/services/ingestao';
+import { appHost } from '@/lib/app-url';
 
 /**
  * Endpoint público de coleta de analytics.
@@ -24,8 +25,7 @@ function origemPermitida(origin: string | null, domain: string): boolean {
     if (host === alvo || host.endsWith(`.${alvo}`)) return true;
 
     // A própria aplicação serve as páginas de teste de instalação.
-    const app = process.env.APP_URL ? new URL(process.env.APP_URL).hostname : 'localhost';
-    return host === app || host === 'localhost' || host === '127.0.0.1';
+    return host === appHost() || host === 'localhost' || host === '127.0.0.1';
   } catch {
     return false;
   }

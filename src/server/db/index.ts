@@ -25,7 +25,18 @@ function poolFor(envVar: string): Pool {
   if (!connectionString) {
     throw new Error(`Variável de ambiente ausente: ${envVar}. Copie .env.example para .env.local.`);
   }
-  const pool = new Pool({ connectionString, max: 10, idleTimeoutMillis: 30_000 });
+  // Em serverless cada instância abre o próprio pool, e há muitas instâncias.
+  // Dez conexões por instância esgotariam o limite do banco rapidamente; uma
+  // basta, porque cada invocação atende uma requisição por vez.
+  const serverless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+  const pool = new Pool({
+    connectionString,
+    max: serverless ? 1 : 10,
+    idleTimeoutMillis: serverless ? 10_000 : 30_000,
+    // O pooler do Supabase encerra conexões ociosas; falhar rápido é melhor do
+    // que pendurar a requisição esperando uma conexão morta.
+    connectionTimeoutMillis: 10_000,
+  });
   pools.set(envVar, pool);
   return pool;
 }
