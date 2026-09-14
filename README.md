@@ -76,7 +76,10 @@ em [`docs/deploy-supabase.md`](docs/deploy-supabase.md).
 | `npm run db:migrate` | Só aplica migrações pendentes |
 | `npm run db:seed` | Recria a massa de desenvolvimento |
 | `npm run db:reset` | Apaga e recria o banco de desenvolvimento |
-| `npm run doctor` | Diagnostica o ambiente e diz como resolver o que estiver faltando |
+| `npm run doctor` | Diagnostica o ambiente local e diz como resolver o que estiver faltando |
+
+Já publicado, o endereço `/api/diagnostico` faz a mesma verificação das conexões no servidor, sem
+expor host, usuário ou senha.
 
 Os testes usam um banco separado (`painel_matrix_test`), recriado a cada execução. O banco de
 desenvolvimento nunca é tocado por eles.

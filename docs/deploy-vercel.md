@@ -169,9 +169,35 @@ daqueles sites para de funcionar.
 
 ## Quando algo dá errado
 
-**A tela de login abre, mas entrar dá erro 500.**
-É a conexão com o banco. Vá em **Deployments** → clique no deploy → **Runtime Logs** e veja a
-mensagem:
+### Primeiro: abra `/api/diagnostico`
+
+A aplicação publicada tem um endereço que testa as três conexões e diz o que está errado:
+
+```
+https://SEU-APP.vercel.app/api/diagnostico
+```
+
+Resposta quando está tudo certo:
+
+```json
+{ "tudoOk": true, "conexoes": [ { "variavel": "DATABASE_URL", "causa": "ok", "papel": "app_user" } ] }
+```
+
+Quando não está, cada problema vem com a causa e o que fazer:
+
+```json
+{ "tudoOk": false,
+  "problemas": [
+    { "variavel": "DATABASE_URL",
+      "causa": "usuario_sem_sufixo_do_projeto",
+      "oQueFazer": "Falta o sufixo do projeto no nome do papel: app_user.SEU_PROJECT_REF" } ] }
+```
+
+O diagnóstico **não devolve host, usuário nem senha** — só a categoria do problema. É seguro abrir.
+
+### Depois: os logs, se precisar da mensagem crua
+
+Vá em **Deployments** → clique no deploy → **Runtime Logs** e procure linhas `[db]` ou `[entrar]`:
 
 | Mensagem | Causa | Solução |
 |---|---|---|
