@@ -15,41 +15,46 @@ definidos antes de serem agregados.
 | Ferramenta | Versão usada | Observação |
 |---|---|---|
 | Node.js | 22.x | |
-| PostgreSQL | 16 ou 17 | Local para desenvolvimento; Supabase em produção |
 | npm | 10.x | |
+| PostgreSQL | 16 ou 17 | Instalado na máquina **ou** via `docker compose` (incluso) |
 
-Não é necessário Docker.
+Docker é opcional: serve só para não precisar instalar o PostgreSQL.
 
-## Instalação
+## Rodar em 3 comandos
+
+Com Docker (não precisa ter PostgreSQL instalado):
 
 ```bash
 npm install
-cp .env.example .env.local     # preencha as senhas e o SESSION_SECRET
-```
-
-Gere o segredo de sessão:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-```
-
-Suba o banco local, crie os papéis e aplique as migrações:
-
-```bash
-service postgresql start       # ou o equivalente no seu sistema
-npm run db:setup
-npm run db:seed                # massa de desenvolvimento (2 contas, 4 sites)
-```
-
-`db:setup` é idempotente. Para recomeçar do zero: `npm run db:reset`.
-
-## Executar
-
-```bash
+docker compose up -d           # sobe um PostgreSQL 16 local
+npm run setup                  # .env.local, banco, papéis, migrações e massa
 npm run dev                    # http://localhost:3000
 ```
 
-O seed imprime as credenciais de acesso no final da saída.
+Já tem PostgreSQL rodando na porta 5432? Pule o `docker compose` — o `setup`
+usa o que estiver lá.
+
+O `setup` imprime as credenciais de acesso no final. Ele é idempotente, exceto
+pelo seed, que sempre recria a massa de desenvolvimento.
+
+### Passo a passo, se preferir controlar cada etapa
+
+```bash
+cp .env.example .env.local
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"   # SESSION_SECRET
+npm run db:setup               # cria banco, papéis e aplica migrações
+npm run db:seed                # 2 contas, 3 clientes, 4 sites, ~11 mil sessões
+npm run dev
+```
+
+Para recomeçar do zero: `npm run db:reset`.
+
+## Apontar para o Supabase
+
+O mesmo schema já está aplicado num projeto Supabase. Para usar a nuvem em vez
+do banco local, troque as três primeiras linhas do `.env.local` pelas
+connection strings do projeto — o passo a passo, incluindo qual host usar, está
+em [`docs/deploy-supabase.md`](docs/deploy-supabase.md).
 
 ## Comandos
 
@@ -62,6 +67,7 @@ O seed imprime as credenciais de acesso no final da saída.
 | `npm run lint` | ESLint |
 | `npm test` | Testes de unidade e integração (vitest) |
 | `npm run test:e2e` | Testes de navegador (Playwright) |
+| `npm run setup` | Tudo de uma vez: `.env.local`, banco, papéis, migrações e massa |
 | `npm run db:setup` | Cria banco, papéis e aplica migrações |
 | `npm run db:migrate` | Só aplica migrações pendentes |
 | `npm run db:seed` | Recria a massa de desenvolvimento |

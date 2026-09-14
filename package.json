@@ -14,7 +14,8 @@
     "db:reset": "tsx scripts/db-setup.ts --drop && tsx scripts/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "setup": "tsx scripts/setup.ts"
   },
   "dependencies": {
     "jose": "^6.2.12",
