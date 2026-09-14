@@ -1,0 +1,160 @@
+/*
+ * Identidade Matrix.
+ *
+ * Os tokens são os valores exatos do protótipo exportado do Claude Design
+ * (objeto THEMES), preservados para que a aparência não mude ao trocar de
+ * tecnologia. Escuro é o padrão; claro permanece disponível.
+ */
+
+:root,
+[data-tema='escuro'] {
+  --bg: #000000;
+  --side: #020502;
+  --card: #030703;
+  --elev: #0a150c;
+  --bd: #1a6b2e;
+  --bdc: #2fc957;
+  --glow: 0 0 18px rgba(112, 255, 139, 0.28);
+  --tx: #eef8f0;
+  --tx2: #a1b5a6;
+  --tx3: #809887;
+  --hover: #111d14;
+  --rowbd: rgba(34, 59, 41, 0.7);
+  --gold: #70ff8b;
+  --gold-fill: rgba(112, 255, 139, 0.12);
+  --gold-tx: #70ff8b;
+  --on-gold: #04120a;
+  --pos: #39c965;
+  --neg: #ff8585;
+  --ok-bg: rgba(112, 255, 139, 0.12);
+  --ok-tx: #70ff8b;
+  --soft-bg: rgba(161, 181, 166, 0.1);
+  --soft-tx: #a1b5a6;
+  --warn-bg: rgba(235, 203, 116, 0.14);
+  --warn-tx: #ebcb74;
+  --header-bg:
+    linear-gradient(rgba(34, 59, 41, 0.45) 1px, transparent 1px) 0 0 / 44px 44px,
+    linear-gradient(90deg, rgba(34, 59, 41, 0.45) 1px, transparent 1px) 0 0 / 44px 44px,
+    radial-gradient(65% 130% at 10% -20%, rgba(57, 201, 101, 0.16), transparent 60%), #050805;
+  --brand-bg: linear-gradient(90deg, rgba(112, 255, 139, 0.1), transparent 72%), #080d09;
+}
+
+[data-tema='claro'] {
+  --bg: #f1f6f2;
+  --side: #ffffff;
+  --card: #ffffff;
+  --elev: #e9f0ea;
+  --bd: #cbd9cd;
+  --bdc: #1f8f43;
+  --glow: none;
+  --tx: #0e1710;
+  --tx2: #4c5d50;
+  --tx3: #6b7d6f;
+  --hover: #e9f0ea;
+  --rowbd: rgba(14, 23, 16, 0.09);
+  --gold: #1f8f43;
+  --gold-fill: rgba(31, 143, 67, 0.12);
+  --gold-tx: #186e34;
+  --on-gold: #f4fff6;
+  --pos: #1f8f43;
+  --neg: #a83232;
+  --ok-bg: rgba(31, 143, 67, 0.12);
+  --ok-tx: #186e34;
+  --soft-bg: rgba(14, 23, 16, 0.07);
+  --soft-tx: #4c5d50;
+  --warn-bg: rgba(160, 120, 20, 0.14);
+  --warn-tx: #7a5c10;
+  --header-bg:
+    linear-gradient(rgba(14, 23, 16, 0.07) 1px, transparent 1px) 0 0 / 44px 44px,
+    linear-gradient(90deg, rgba(14, 23, 16, 0.07) 1px, transparent 1px) 0 0 / 44px 44px,
+    radial-gradient(65% 130% at 10% -20%, rgba(31, 143, 67, 0.1), transparent 60%), #f7fbf7;
+  --brand-bg: linear-gradient(90deg, rgba(31, 143, 67, 0.1), transparent 72%), #ffffff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font-family: var(--fonte-ui), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Números e rótulos técnicos em monoespaçada, como no protótipo. */
+.mono {
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+}
+
+a {
+  color: var(--gold-tx);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Foco sempre visível: a navegação por teclado é requisito, não detalhe. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+select option {
+  background: var(--elev);
+  color: var(--tx);
+}
+
+/* Quem pediu menos movimento não recebe animação alguma. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Grades responsivas: um cartão por linha no celular, quatro no desktop. */
+.grade-cartoes {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+}
+
+.grade-dupla {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+}
+
+/* Respiro lateral menor no celular, sem nunca zerar a margem. */
+@media (max-width: 640px) {
+  .pagina {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+/* Itens de grade encolhem abaixo do conteúdo. Sem isto, uma tabela larga
+   estoura a coluna em vez de rolar dentro do próprio painel. */
+.grade-dupla > *,
+.grade-cartoes > * {
+  min-width: 0;
+}

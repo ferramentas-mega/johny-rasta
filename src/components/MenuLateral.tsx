@@ -1,0 +1,164 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Marca } from '@/components/Marca';
+import { Icone, type IconeNome } from '@/components/icones';
+
+/**
+ * Menu lateral.
+ *
+ * O item ativo é derivado do pathname real. No protótipo o destaque vinha de um
+ * estado próprio, que podia discordar da tela mostrada — era exatamente o
+ * defeito em que "Leads" aparecia selecionado enquanto o conteúdo era
+ * Desempenho. Aqui isso não tem como acontecer: existe uma fonte só.
+ */
+
+type ItemMenu = { href: string; label: string; icone: IconeNome; prefixos?: string[] };
+
+const ITENS: ItemMenu[] = [
+  { href: '/visao-geral', label: 'Visão geral', icone: 'grafico' },
+  { href: '/clientes', label: 'Clientes', icone: 'clientes' },
+  { href: '/sites', label: 'Sites', icone: 'globo', prefixos: ['/sites'] },
+  { href: '/leads', label: 'Leads', icone: 'caixa' },
+  { href: '/configuracoes', label: 'Configurações', icone: 'ajustes' },
+];
+
+export function MenuLateral({
+  contagens,
+  contaNome,
+  usuarioNome,
+  busca,
+}: {
+  contagens: { clientes: number; sites: number; leads: number };
+  contaNome: string;
+  usuarioNome: string;
+  /** Filtros correntes, repassados para que trocar de seção não perca o contexto. */
+  busca: string;
+}) {
+  const pathname = usePathname();
+
+  const ativo = (item: ItemMenu) =>
+    pathname === item.href || (item.prefixos ?? []).some((p) => pathname.startsWith(`${p}/`));
+
+  const iniciais = usuarioNome
+    .split(' ')
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+
+  return (
+    <aside
+      style={{
+        flex: '1 1 240px',
+        minWidth: 240,
+        maxWidth: 300,
+        background: 'var(--side)',
+        borderRight: '1px solid var(--bd)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 18,
+        padding: '20px 14px 24px',
+      }}
+    >
+      <Marca />
+
+      <nav aria-label="Seções do painel" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {ITENS.map((item) => {
+          const on = ativo(item);
+          const contagem =
+            item.href === '/clientes' ? contagens.clientes
+            : item.href === '/sites' ? contagens.sites
+            : item.href === '/leads' ? contagens.leads
+            : null;
+
+          return (
+            <Link
+              key={item.href}
+              href={`${item.href}${busca}`}
+              aria-current={on ? 'page' : undefined}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '10px 12px',
+                borderRadius: 8,
+                fontWeight: 500,
+                fontSize: 13.5,
+                textDecoration: 'none',
+                color: on ? 'var(--tx)' : 'var(--tx2)',
+                background: on ? 'var(--gold-fill)' : 'transparent',
+                boxShadow: on ? 'inset 2px 0 0 var(--gold)' : 'none',
+              }}
+            >
+              <Icone nome={item.icone} />
+              <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>
+              {contagem !== null && (
+                <span
+                  className="mono"
+                  style={{
+                    marginLeft: 'auto',
+                    fontSize: 10.5,
+                    letterSpacing: '.04em',
+                    color: on ? 'var(--gold)' : 'var(--tx3)',
+                  }}
+                >
+                  {contagem}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div
+        style={{
+          marginTop: 'auto',
+          borderTop: '1px solid var(--bd)',
+          paddingTop: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        <span
+          className="mono"
+          aria-hidden="true"
+          style={{
+            flex: 'none',
+            width: 30,
+            height: 30,
+            borderRadius: '50%',
+            background: 'var(--elev)',
+            border: '1px solid var(--bd)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 12,
+            color: 'var(--gold)',
+          }}
+        >
+          {iniciais || '·'}
+        </span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap' }}>{contaNome}</div>
+          <form action="/api/sair" method="post">
+            <button
+              type="submit"
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                fontSize: 11.5,
+                color: 'var(--gold-tx)',
+              }}
+            >
+              Sair
+            </button>
+          </form>
+        </div>
+      </div>
+    </aside>
+  );
+}
