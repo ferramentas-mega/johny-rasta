@@ -120,6 +120,20 @@ async function verificar(envVar: string) {
   }
 }
 
+/**
+ * Nomes de variáveis relacionadas presentes no ambiente — apenas os NOMES.
+ *
+ * Existe para pegar o erro mais chato de diagnosticar: um nome digitado errado.
+ * "DATABASE-URL", "DATABSE_URL" ou um espaço no fim produzem exatamente o mesmo
+ * "variável ausente" de quem simplesmente não criou a variável, e olhando o
+ * painel da hospedagem a diferença passa batido.
+ */
+function nomesParecidos(): string[] {
+  return Object.keys(process.env)
+    .filter((k) => /^(DATABASE|SESSION|APP_URL|POSTGRES|SUPABASE)/i.test(k))
+    .sort();
+}
+
 export async function GET() {
   const conexoes = [];
   for (const v of VARIAVEIS) conexoes.push(await verificar(v));
@@ -129,14 +143,28 @@ export async function GET() {
     .filter((c) => !c.conecta)
     .map((c) => ({ variavel: c.variavel, causa: c.causa, oQueFazer: COMO_RESOLVER[c.causa] }));
 
+  const encontradas = nomesParecidos();
+  const faltando = VARIAVEIS.filter((v) => !process.env[v]);
+
   return NextResponse.json(
     {
       tudoOk,
       sessaoConfigurada: !!process.env.SESSION_SECRET,
+
+      // Em qual ambiente este build está rodando. Uma variável salva só em
+      // "Preview" não existe em "Production", e o sintoma é idêntico ao de não
+      // ter sido salva.
+      ambiente: process.env.VERCEL_ENV ?? (process.env.VERCEL ? 'desconhecido' : 'fora da Vercel'),
+      publicadoEm: process.env.VERCEL_URL ?? null,
+
+      // Nomes presentes, para revelar erro de digitação.
+      variaveisEncontradas: encontradas,
+      variaveisFaltando: faltando,
+
       conexoes,
       problemas,
       observacao:
-        'Este diagnóstico não expõe host, usuário nem senha. Para a mensagem completa do Postgres, veja o log do servidor.',
+        'Este diagnóstico expõe apenas NOMES de variáveis, nunca seus valores, e nenhum dado de conexão.',
     },
     { status: tudoOk ? 200 : 503 },
   );
