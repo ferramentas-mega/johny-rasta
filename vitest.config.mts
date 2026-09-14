@@ -4,11 +4,11 @@ import { resolve } from 'node:path';
 export default defineConfig({
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': resolve(import.meta.dirname, 'src'),
       // `server-only` existe para quebrar o build quando um módulo de servidor
       // é importado pelo cliente. Nos testes isso não se aplica, então o alias
       // aponta para um módulo vazio.
-      'server-only': resolve(__dirname, 'tests/stubs/server-only.ts'),
+      'server-only': resolve(import.meta.dirname, 'tests/stubs/server-only.ts'),
     },
   },
   test: {

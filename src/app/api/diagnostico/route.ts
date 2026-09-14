@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { verificarConexao, type CausaDeFalha } from '@/server/db';
+import { getSessionUser } from '@/server/auth/session';
 
 /**
  * Diagnóstico da conexão com o banco, para quando a aplicação já está publicada
  * e o log da hospedagem não está à mão.
  *
- * Responde uma CAUSA, nunca os dados de conexão: não devolve host, usuário,
- * senha nem a mensagem crua do Postgres. O que sai daqui é uma categoria de
- * problema e o que fazer a respeito — informação que a própria tela de login já
- * revela ("não foi possível falar com o banco"), só que acionável.
+ * O endereço é público por necessidade: quando o banco não conecta, ninguém
+ * consegue entrar para ver um diagnóstico protegido por login. Então a resposta
+ * pública é deliberadamente pobre — só o que a própria tela de login já revela
+ * ("não foi possível falar com o banco"), organizado de forma acionável:
+ *
+ *   - se cada uma das três variáveis esperadas existe e conecta;
+ *   - a categoria do problema e o que fazer a respeito.
+ *
+ * NÃO sai daqui, sem autorização: host, usuário, senha, o nome do papel do
+ * Postgres, contagem de tabelas, URL do deploy, nem a lista de variáveis de
+ * ambiente existentes (que revelaria integrações não relacionadas).
+ *
+ * Esse detalhe extra aparece para quem está autenticado, ou para quem apresenta
+ * `?token=` igual a `DIAGNOSTIC_TOKEN`. A verificação usa os MESMOS pools e a
+ * MESMA configuração de TLS da aplicação: um diagnóstico que testa outra coisa
+ * mente justamente quando mais importa.
  */
 
 export const runtime = 'nodejs';
@@ -16,25 +29,10 @@ export const dynamic = 'force-dynamic';
 
 const VARIAVEIS = ['DATABASE_URL', 'DATABASE_URL_INGEST', 'DATABASE_URL_FORMS'] as const;
 
-type Causa =
-  | 'ok'
-  | 'variavel_ausente'
-  | 'variavel_malformada'
-  | 'host_nao_resolve'
-  | 'sem_resposta'
-  | 'senha_incorreta'
-  | 'usuario_sem_sufixo_do_projeto'
-  | 'papel_expirado'
-  | 'tls_recusado'
-  | 'banco_inexistente'
-  | 'desconhecida';
-
-const COMO_RESOLVER: Record<Causa, string> = {
+const COMO_RESOLVER: Record<CausaDeFalha, string> = {
   ok: 'Conexão estabelecida.',
   variavel_ausente:
     'A variável não existe no ambiente. Defina-a nas configurações da hospedagem e publique de novo — variáveis só valem a partir do próximo build.',
-  variavel_malformada:
-    'O valor não é uma URL de conexão válida. O formato é postgresql://USUARIO:SENHA@HOST:PORTA/postgres',
   host_nao_resolve:
     'O endereço do banco não existe. Copie o host da própria tela de connection string do provedor.',
   sem_resposta:
@@ -45,126 +43,64 @@ const COMO_RESOLVER: Record<Causa, string> = {
     'O pooler não reconheceu o usuário. Falta o sufixo do projeto no nome do papel: app_user.SEU_PROJECT_REF',
   papel_expirado:
     "O papel tem prazo de validade vencido. Rode no SQL do provedor: alter role app_user valid until 'infinity';",
-  tls_recusado: 'O servidor recusou a negociação de TLS.',
+  tls_recusado:
+    'O servidor recusou a negociação de TLS. Se DATABASE_SSL_CA estiver definida, confira se o certificado é o do provedor.',
   banco_inexistente: 'O banco indicado no fim da URL não existe. No Supabase o nome é postgres.',
   desconhecida: 'Causa não reconhecida. Consulte o log do servidor para a mensagem completa.',
 };
 
-function classificar(erro: unknown): Causa {
-  const msg = erro instanceof Error ? erro.message : String(erro);
-
-  if (/Tenant or user not found/i.test(msg)) return 'usuario_sem_sufixo_do_projeto';
-  if (/EAUTHQUERY|invalid secret format/i.test(msg)) return 'papel_expirado';
-  if (/password authentication failed|SASL|SCRAM/i.test(msg)) return 'senha_incorreta';
-  if (/ENOTFOUND|EAI_AGAIN/i.test(msg)) return 'host_nao_resolve';
-  if (/ETIMEDOUT|ECONNREFUSED|timeout expired|Connection terminated/i.test(msg)) return 'sem_resposta';
-  if (/SSL|pg_hba/i.test(msg)) return 'tls_recusado';
-  if (/database .* does not exist/i.test(msg)) return 'banco_inexistente';
-  return 'desconhecida';
+/** Comparação em tempo constante, para o token não vazar por tempo de resposta. */
+function tokenConfere(recebido: string | null): boolean {
+  const esperado = process.env.DIAGNOSTIC_TOKEN;
+  if (!esperado || !recebido) return false;
+  if (recebido.length !== esperado.length) return false;
+  let diferenca = 0;
+  for (let i = 0; i < esperado.length; i += 1) {
+    diferenca |= esperado.charCodeAt(i) ^ recebido.charCodeAt(i);
+  }
+  return diferenca === 0;
 }
 
-/** Verifica UMA conexão, sem guardar o pool: isto não é caminho de produção. */
-async function verificar(envVar: string) {
-  const connectionString = process.env[envVar];
-  if (!connectionString) {
-    return { variavel: envVar, causa: 'variavel_ausente' as Causa, conecta: false };
-  }
+export async function GET(request: Request) {
+  const token = new URL(request.url).searchParams.get('token');
+  // Quem já está autenticado tem acesso legítimo ao detalhe; quem não está
+  // precisa do token. Sem nenhum dos dois, a resposta é a versão pobre.
+  const autorizado = tokenConfere(token) || (await getSessionUser().catch(() => null)) !== null;
 
-  let host: string;
-  let porta: string;
-  let usuarioTemSufixo: boolean;
-  try {
-    const url = new URL(connectionString);
-    host = url.hostname;
-    porta = url.port || '5432';
-    // Só o FORMATO do usuário, nunca o valor.
-    usuarioTemSufixo = decodeURIComponent(url.username).includes('.');
-  } catch {
-    return { variavel: envVar, causa: 'variavel_malformada' as Causa, conecta: false };
-  }
-
-  const local = ['localhost', '127.0.0.1', '::1'].includes(host);
-  const pool = new Pool({
-    connectionString,
-    ssl: local ? false : { rejectUnauthorized: false },
-    max: 1,
-    connectionTimeoutMillis: 8000,
-  });
-
-  try {
-    const r = await pool.query<{ papel: string; tabelas: string }>(
-      `select current_user as papel,
-              (select count(*)::text from information_schema.tables
-                where table_schema = 'public' and table_type = 'BASE TABLE') as tabelas`,
-    );
-    return {
-      variavel: envVar,
-      causa: 'ok' as Causa,
-      conecta: true,
-      papel: r.rows[0]!.papel,
-      tabelasVisiveis: Number(r.rows[0]!.tabelas),
-      // Pistas de forma, úteis sem revelar credencial.
-      portaUsada: porta,
-      pareceConexaoDireta: !usuarioTemSufixo && porta === '5432' && !local,
-    };
-  } catch (erro) {
-    return {
-      variavel: envVar,
-      causa: classificar(erro),
-      conecta: false,
-      portaUsada: porta,
-      usuarioTemSufixoDoProjeto: usuarioTemSufixo,
-    };
-  } finally {
-    await pool.end().catch(() => {});
-  }
-}
-
-/**
- * Nomes de variáveis relacionadas presentes no ambiente — apenas os NOMES.
- *
- * Existe para pegar o erro mais chato de diagnosticar: um nome digitado errado.
- * "DATABASE-URL", "DATABSE_URL" ou um espaço no fim produzem exatamente o mesmo
- * "variável ausente" de quem simplesmente não criou a variável, e olhando o
- * painel da hospedagem a diferença passa batido.
- */
-function nomesParecidos(): string[] {
-  return Object.keys(process.env)
-    .filter((k) => /^(DATABASE|SESSION|APP_URL|POSTGRES|SUPABASE)/i.test(k))
-    .sort();
-}
-
-export async function GET() {
   const conexoes = [];
-  for (const v of VARIAVEIS) conexoes.push(await verificar(v));
+  for (const v of VARIAVEIS) conexoes.push(await verificarConexao(v, autorizado));
 
   const tudoOk = conexoes.every((c) => c.conecta);
-  const problemas = conexoes
-    .filter((c) => !c.conecta)
-    .map((c) => ({ variavel: c.variavel, causa: c.causa, oQueFazer: COMO_RESOLVER[c.causa] }));
 
-  const encontradas = nomesParecidos();
-  const faltando = VARIAVEIS.filter((v) => !process.env[v]);
+  const publico = {
+    tudoOk,
+    // Os nomes das três variáveis esperadas estão no .env.example do projeto:
+    // dizer qual delas falta não revela nada que já não esteja documentado.
+    problemas: conexoes
+      .filter((c) => !c.conecta)
+      .map((c) => ({ variavel: c.variavel, causa: c.causa, oQueFazer: COMO_RESOLVER[c.causa] })),
+    observacao: autorizado
+      ? undefined
+      : 'Resposta reduzida. Para o detalhe, entre no painel ou informe ?token= com o valor de DIAGNOSTIC_TOKEN.',
+  };
+
+  if (!autorizado) {
+    return NextResponse.json(publico, { status: tudoOk ? 200 : 503 });
+  }
 
   return NextResponse.json(
     {
-      tudoOk,
+      ...publico,
       sessaoConfigurada: !!process.env.SESSION_SECRET,
-
-      // Em qual ambiente este build está rodando. Uma variável salva só em
-      // "Preview" não existe em "Production", e o sintoma é idêntico ao de não
-      // ter sido salva.
+      // Uma variável salva só em "Preview" não existe em "Production", e o
+      // sintoma é idêntico ao de não ter sido salva.
       ambiente: process.env.VERCEL_ENV ?? (process.env.VERCEL ? 'desconhecido' : 'fora da Vercel'),
-      publicadoEm: process.env.VERCEL_URL ?? null,
-
-      // Nomes presentes, para revelar erro de digitação.
-      variaveisEncontradas: encontradas,
-      variaveisFaltando: faltando,
-
+      // Só os NOMES, e só para quem está autorizado: revela nome digitado
+      // errado, que produz exatamente o mesmo "ausente" de quem não criou nada.
+      variaveisEncontradas: Object.keys(process.env)
+        .filter((k) => /^(DATABASE|SESSION|APP_URL|DIAGNOSTIC)/i.test(k))
+        .sort(),
       conexoes,
-      problemas,
-      observacao:
-        'Este diagnóstico expõe apenas NOMES de variáveis, nunca seus valores, e nenhum dado de conexão.',
     },
     { status: tudoOk ? 200 : 503 },
   );

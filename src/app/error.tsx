@@ -3,14 +3,19 @@
 import { useEffect } from 'react';
 
 /**
- * Tela de erro do painel.
+ * Tela de erro da aplicação.
  *
  * Existe para que uma falha de servidor — banco fora do ar, variável de conexão
  * errada — não vire a página branca de digest do Next, que não diz nada a
- * ninguém. Aqui o usuário entende o que aconteceu e onde procurar, sem que a
- * string de conexão apareça no navegador.
+ * ninguém.
+ *
+ * Fica na RAIZ, e não dentro de (painel), de propósito: um `error.tsx` captura
+ * erros dos filhos do seu segmento, mas não do `layout.tsx` do próprio
+ * segmento. Como é justamente o layout do painel que consulta o banco, uma
+ * fronteira colocada ao lado dele não pegaria nada — o caso para o qual ela
+ * existe seria o único que escaparia.
  */
-export default function ErroDoPainel({
+export default function ErroDaAplicacao({
   error,
   reset,
 }: {

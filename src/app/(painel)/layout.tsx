@@ -1,5 +1,4 @@
 import { exigirSessao } from '@/server/contexto';
-import { listarClientes, listarSites } from '@/server/services/sites';
 import { withAccount } from '@/server/db';
 import { MenuLateral } from '@/components/MenuLateral';
 
@@ -14,14 +13,18 @@ import { MenuLateral } from '@/components/MenuLateral';
 export default async function LayoutPainel({ children }: { children: React.ReactNode }) {
   const usuario = await exigirSessao();
 
-  const [clientes, sites, leads] = await Promise.all([
-    listarClientes(usuario.accountId),
-    listarSites(usuario.accountId),
-    withAccount(usuario.accountId, async (db) => {
-      const linha = await db.one<{ total: number }>('select count(*)::int as total from leads');
-      return linha?.total ?? 0;
-    }),
-  ]);
+  // Uma transação só, em vez de três simultâneas. Cada `withAccount` toma uma
+  // conexão do pool, e em serverless o pool é pequeno de propósito: três
+  // chamadas concorrentes ficariam disputando conexão e tempo limite entre si.
+  const { clientes, sites, leads } = await withAccount(usuario.accountId, async (db) => ({
+    clientes: await db.query<{ id: string }>(
+      'select id from clients where archived_at is null',
+    ),
+    sites: await db.query<{ id: string }>(
+      'select id from sites where archived_at is null',
+    ),
+    leads: (await db.one<{ total: number }>('select count(*)::int as total from leads'))?.total ?? 0,
+  }));
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', minHeight: '100vh' }}>

@@ -180,7 +180,7 @@ https://SEU-APP.vercel.app/api/diagnostico
 Resposta quando está tudo certo:
 
 ```json
-{ "tudoOk": true, "conexoes": [ { "variavel": "DATABASE_URL", "causa": "ok", "papel": "app_user" } ] }
+{ "tudoOk": true, "problemas": [] }
 ```
 
 Quando não está, cada problema vem com a causa e o que fazer:
@@ -193,7 +193,19 @@ Quando não está, cada problema vem com a causa e o que fazer:
       "oQueFazer": "Falta o sufixo do projeto no nome do papel: app_user.SEU_PROJECT_REF" } ] }
 ```
 
-O diagnóstico **não devolve host, usuário nem senha** — só a categoria do problema. É seguro abrir.
+O endereço é público por necessidade — quando o banco não conecta, ninguém consegue entrar para ver
+um diagnóstico protegido por login. Por isso a resposta pública é deliberadamente pobre: diz apenas
+o que a tela de login já revela, organizado de forma acionável. **Não** devolve host, usuário, senha,
+nome de papel, contagem de tabelas nem lista de variáveis de ambiente.
+
+### Detalhe adicional
+
+Para ver o ambiente do build (`production` ou `preview`) e os nomes de variáveis presentes — útil
+quando o nome foi digitado errado —, há duas formas:
+
+- **estar autenticado** no painel, ou
+- definir uma variável `DIAGNOSTIC_TOKEN` na hospedagem e abrir
+  `/api/diagnostico?token=SEU_TOKEN`.
 
 ### Depois: os logs, se precisar da mensagem crua
 

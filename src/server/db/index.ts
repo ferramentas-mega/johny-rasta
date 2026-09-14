@@ -35,17 +35,22 @@ const HOSTS_LOCAIS = new Set(['localhost', '127.0.0.1', '::1', 'host.docker.inte
  * das hospedagens gerenciadas acaba usando; se o seu provedor publica o
  * certificado raiz, vale defini-lo.
  */
-function tlsPara(connectionString: string): false | { rejectUnauthorized: boolean; ca?: string } {
+export function tlsPara(connectionString: string): false | { rejectUnauthorized: boolean; ca?: string } {
+  const ca = process.env.DATABASE_SSL_CA;
+  const remoto = ca ? { rejectUnauthorized: true, ca } : { rejectUnauthorized: false };
+
   let host: string;
   try {
     host = new URL(connectionString).hostname;
   } catch {
-    return false;
+    // String em formato que não é URL (o `pg` também aceita "host=... user=...").
+    // Não dá para saber se o destino é local, e desligar o TLS por não saber
+    // seria falhar ABERTO: a conexão sairia em texto claro sem ninguém notar.
+    // Na dúvida, exige TLS.
+    return remoto;
   }
-  if (HOSTS_LOCAIS.has(host)) return false;
 
-  const ca = process.env.DATABASE_SSL_CA;
-  return ca ? { rejectUnauthorized: true, ca } : { rejectUnauthorized: false };
+  return HOSTS_LOCAIS.has(host) ? false : remoto;
 }
 
 function poolFor(envVar: string): Pool {
@@ -61,14 +66,19 @@ function poolFor(envVar: string): Pool {
     );
   }
 
-  // Em serverless cada instância abre o próprio pool, e há muitas instâncias.
-  // Dez conexões por instância esgotariam o limite do banco rapidamente; uma
-  // basta, porque cada invocação atende uma requisição por vez.
+  // Em serverless cada instância abre o próprio pool, e há muitas instâncias —
+  // então o pool precisa ser pequeno. Mas não pode ser 1: uma única renderização
+  // dispara mais de um `withAccount`, e com uma conexão só os demais ficam na
+  // fila disputando o mesmo `connectionTimeoutMillis`, que o pg arma também para
+  // quem está esperando. Sob concorrência modesta isso vira erro 500.
+  //
+  // Três cobre a concorrência real de um render, e continua modesto o bastante
+  // para não esgotar o limite de clientes do pooler.
   const serverless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
   const pool = new Pool({
     connectionString,
     ssl: tlsPara(connectionString),
-    max: serverless ? 1 : 10,
+    max: serverless ? 3 : 10,
     idleTimeoutMillis: serverless ? 10_000 : 30_000,
     // Um pooler gerenciado encerra conexões ociosas; falhar rápido é melhor do
     // que pendurar a requisição esperando uma conexão morta.
@@ -114,6 +124,78 @@ function explicar(erro: unknown, envVar: string): Error {
   const explicado = new Error(`${msg} — ${dica}`);
   explicado.cause = bruto;
   return explicado;
+}
+
+/** Categorias que o diagnóstico sabe explicar. */
+export type CausaDeFalha =
+  | 'ok'
+  | 'variavel_ausente'
+  | 'host_nao_resolve'
+  | 'sem_resposta'
+  | 'senha_incorreta'
+  | 'usuario_sem_sufixo_do_projeto'
+  | 'papel_expirado'
+  | 'tls_recusado'
+  | 'banco_inexistente'
+  | 'desconhecida';
+
+export function classificarFalha(erro: unknown): CausaDeFalha {
+  const msg = erro instanceof Error ? erro.message : String(erro);
+
+  if (/Tenant or user not found/i.test(msg)) return 'usuario_sem_sufixo_do_projeto';
+  if (/EAUTHQUERY|invalid secret format/i.test(msg)) return 'papel_expirado';
+  if (/password authentication failed|SASL|SCRAM/i.test(msg)) return 'senha_incorreta';
+  if (/ENOTFOUND|EAI_AGAIN/i.test(msg)) return 'host_nao_resolve';
+  if (/ETIMEDOUT|ECONNREFUSED|timeout expired|Connection terminated/i.test(msg)) return 'sem_resposta';
+  if (/SSL|pg_hba/i.test(msg)) return 'tls_recusado';
+  if (/database .* does not exist/i.test(msg)) return 'banco_inexistente';
+  return 'desconhecida';
+}
+
+export type ResultadoDaVerificacao = {
+  variavel: string;
+  causa: CausaDeFalha;
+  conecta: boolean;
+  /** Papel do Postgres e tabelas visíveis. Só quando explicitamente pedido. */
+  detalhe?: { papel: string; tabelasVisiveis: number };
+};
+
+/**
+ * Testa UMA conexão, pelo MESMO pool e MESMA configuração de TLS que a
+ * aplicação usa de verdade.
+ *
+ * Reaproveitar o pool é o ponto. Uma verificação que abrisse conexões próprias
+ * poderia reportar sucesso com uma configuração que a aplicação não usa — e um
+ * diagnóstico que mente é pior do que não existir. Também evita que chamadas
+ * repetidas ao endpoint de diagnóstico abram conexões sem limite.
+ */
+export async function verificarConexao(
+  envVar: string,
+  comDetalhe = false,
+): Promise<ResultadoDaVerificacao> {
+  if (!process.env[envVar]) {
+    return { variavel: envVar, causa: 'variavel_ausente', conecta: false };
+  }
+
+  try {
+    const pool = poolFor(envVar);
+    const r = await pool.query<{ papel: string; tabelas: string }>(
+      `select current_user as papel,
+              (select count(*)::text from information_schema.tables
+                where table_schema = 'public' and table_type = 'BASE TABLE') as tabelas`,
+    );
+    return {
+      variavel: envVar,
+      causa: 'ok',
+      conecta: true,
+      detalhe: comDetalhe
+        ? { papel: r.rows[0]!.papel, tabelasVisiveis: Number(r.rows[0]!.tabelas) }
+        : undefined,
+    };
+  } catch (erro) {
+    console.error(`[db] verificação de ${envVar} falhou:`, explicar(erro, envVar).message);
+    return { variavel: envVar, causa: classificarFalha(erro), conecta: false };
+  }
 }
 
 export type Queryable = {

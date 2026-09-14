@@ -90,6 +90,14 @@ sessão de 30 minutos, recusa de `cta_click` sem subtipo, rejeição de carimbo 
 teste fora das métricas, validação de formulário, reenvio idempotente, dois envios do mesmo contato
 gerando um lead só, e **ausência de dado pessoal no evento de analytics da submissão**.
 
+### `conexao.spec.ts`
+
+Decisões que os demais testes não exercitam, porque todos rodam contra um Postgres local — que é
+justamente o caso em que elas não têm efeito. Foi assim que o defeito de TLS chegou à produção sem
+ser notado: TLS exigido em host remoto e dispensado em local, verificação de certificado quando há
+CA, falha FECHADA em string ilegível, classificação das oito causas de erro de conexão, e resolução
+da URL pública (incluindo ignorar `APP_URL` sem esquema).
+
 ### `periodo.spec.ts`
 
 Leitura dos parâmetros da URL, recorte no fuso do site (o dia de São Paulo começa às 03:00 UTC),
@@ -163,6 +171,13 @@ por causa deles:
 | Tela de desempenho estourando 8px na largura do celular | Suíte responsiva |
 | Suítes que gravam poluindo o site medido por outras | Teste de período falhando conforme a ordem |
 | Expectativa de lista de sites desatualizada ao acrescentar o site de escrita à massa | Execução de `npm test` antes do deploy |
+| Conexão sem TLS, que um banco gerenciado recusa | Primeiro login em produção |
+| Endpoint de diagnóstico público devolvendo papel, contagem de tabelas e nomes de variáveis | Revisão de código |
+| Diagnóstico com TLS próprio, que poderia reportar sucesso onde a aplicação falha | Revisão de código |
+| `error.tsx` dentro de (painel) não captura erros do layout do próprio segmento | Revisão de código |
+| Pool de uma conexão em serverless, com três `withAccount` concorrentes por render | Revisão de código |
+| `tlsPara` falhando ABERTO em string de conexão ilegível | Revisão de código |
+| `APP_URL` sem esquema virando caminho relativo no site do cliente | Revisão de código |
 
 Três erros de contagem manual nos valores esperados da massa também apareceram — nesses casos o
 código estava certo e a expectativa estava errada. Foram corrigidas as expectativas.
@@ -199,7 +214,7 @@ Preenchido a cada execução completa:
 - `npm run doctor` — ambiente íntegro
 - `npm run typecheck` — sem erros
 - `npm run lint` — sem avisos
-- `npm test` — 55 testes, todos passando
+- `npm test` — 73 testes, todos passando
 - `npm run test:e2e` — 32 testes (26 desktop + 6 celular), todos passando
 - `npm run build` — build de produção concluído
 - `npm start` — servidor de produção respondendo

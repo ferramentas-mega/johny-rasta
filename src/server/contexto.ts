@@ -43,10 +43,11 @@ export async function contextoPainel(searchParams: ParametrosBusca): Promise<Con
   const usuario = await exigirSessao();
 
   const clienteId = texto(searchParams.cliente);
-  const [clientes, sites] = await Promise.all([
-    listarClientes(usuario.accountId),
-    listarSites(usuario.accountId, clienteId ?? undefined),
-  ]);
+  // Sequencial, não `Promise.all`: cada chamada abre a própria transação, e o
+  // pool em serverless é pequeno. Duas conexões simultâneas por render, somadas
+  // às do layout, chegariam ao limite sem necessidade.
+  const clientes = await listarClientes(usuario.accountId);
+  const sites = await listarSites(usuario.accountId, clienteId ?? undefined);
 
   const pedido = texto(searchParams.site);
   // Um id de outra conta simplesmente não está na lista: cai no padrão em vez

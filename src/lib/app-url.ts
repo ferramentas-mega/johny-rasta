@@ -10,8 +10,18 @@
  * informa.
  */
 export function appUrl(): string {
-  // Definida à mão: sempre ganha. É o domínio próprio, quando existe.
-  if (process.env.APP_URL) return semBarraFinal(process.env.APP_URL);
+  // Definida à mão: sempre ganha. É o domínio próprio, quando existe — desde
+  // que seja absoluta. "painel.megaads.com.br" sem esquema viraria um caminho
+  // relativo dentro do site do cliente, e nada seria coletado; pior, o erro só
+  // apareceria no site de terceiro, não aqui.
+  const definida = process.env.APP_URL?.trim();
+  if (definida) {
+    if (/^https?:\/\//i.test(definida)) return semBarraFinal(definida);
+    console.warn(
+      `[app-url] APP_URL="${definida}" não começa com http:// ou https:// e foi ignorada. ` +
+        'Defina a URL completa, incluindo o esquema.',
+    );
+  }
 
   // Domínio estável de produção na Vercel (não muda a cada deploy).
   const producao = process.env.VERCEL_PROJECT_PRODUCTION_URL;
