@@ -22,12 +22,22 @@ export async function entrar(_anterior: EstadoLogin, dados: FormData): Promise<E
     return { erro: analise.error.issues[0]?.message ?? 'Dados inválidos.' };
   }
 
-  const usuario = await withoutAccount((db) =>
-    db.one<{ user_id: string; password_hash: string }>(
-      'select user_id, password_hash from app.find_user_for_login($1)',
-      [analise.data.email],
-    ),
-  );
+  let usuario: { user_id: string; password_hash: string } | null;
+  try {
+    usuario = await withoutAccount((db) =>
+      db.one<{ user_id: string; password_hash: string }>(
+        'select user_id, password_hash from app.find_user_for_login($1)',
+        [analise.data.email],
+      ),
+    );
+  } catch (erro) {
+    // O detalhe vai para o log do servidor, onde é útil. Para o navegador vai
+    // uma mensagem genérica: a string de conexão não é assunto do visitante.
+    console.error('[entrar] falha ao consultar o usuário:', erro);
+    return {
+      erro: 'Não foi possível falar com o banco de dados. Verifique as variáveis de conexão do servidor.',
+    };
+  }
 
   // Mesma mensagem para e-mail inexistente e senha errada: responder de forma
   // diferente revelaria quais endereços existem na base.

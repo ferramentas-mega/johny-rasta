@@ -17,28 +17,103 @@ declare global {
 
 const pools = (globalThis.__painelPools ??= new Map<string, Pool>());
 
+const HOSTS_LOCAIS = new Set(['localhost', '127.0.0.1', '::1', 'host.docker.internal']);
+
+/**
+ * Configuração de TLS.
+ *
+ * O `pg` não usa TLS por padrão. Contra um Postgres na própria máquina isso é
+ * irrelevante; contra um banco gerenciado, a conexão é recusada — e o erro que
+ * chega ao navegador é só um digest, sem pista do motivo.
+ *
+ * Fora de hosts locais, portanto, TLS é obrigatório.
+ *
+ * Sobre a verificação do certificado: com `DATABASE_SSL_CA` definida (o
+ * certificado raiz que o provedor fornece), a cadeia é verificada de verdade.
+ * Sem ela, a conexão continua cifrada mas não autenticada — protege contra
+ * escuta passiva, não contra um intermediário ativo. É o arranjo que a maioria
+ * das hospedagens gerenciadas acaba usando; se o seu provedor publica o
+ * certificado raiz, vale defini-lo.
+ */
+function tlsPara(connectionString: string): false | { rejectUnauthorized: boolean; ca?: string } {
+  let host: string;
+  try {
+    host = new URL(connectionString).hostname;
+  } catch {
+    return false;
+  }
+  if (HOSTS_LOCAIS.has(host)) return false;
+
+  const ca = process.env.DATABASE_SSL_CA;
+  return ca ? { rejectUnauthorized: true, ca } : { rejectUnauthorized: false };
+}
+
 function poolFor(envVar: string): Pool {
   const existing = pools.get(envVar);
   if (existing) return existing;
 
   const connectionString = process.env[envVar];
   if (!connectionString) {
-    throw new Error(`Variável de ambiente ausente: ${envVar}. Copie .env.example para .env.local.`);
+    throw new Error(
+      `Variável de ambiente ausente: ${envVar}. ` +
+        'Em desenvolvimento, copie .env.example para .env.local. ' +
+        'Em produção, defina-a no painel da hospedagem.',
+    );
   }
+
   // Em serverless cada instância abre o próprio pool, e há muitas instâncias.
   // Dez conexões por instância esgotariam o limite do banco rapidamente; uma
   // basta, porque cada invocação atende uma requisição por vez.
   const serverless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
   const pool = new Pool({
     connectionString,
+    ssl: tlsPara(connectionString),
     max: serverless ? 1 : 10,
     idleTimeoutMillis: serverless ? 10_000 : 30_000,
-    // O pooler do Supabase encerra conexões ociosas; falhar rápido é melhor do
+    // Um pooler gerenciado encerra conexões ociosas; falhar rápido é melhor do
     // que pendurar a requisição esperando uma conexão morta.
     connectionTimeoutMillis: 10_000,
   });
+
+  // Sem este ouvinte, um erro numa conexão ociosa derruba o processo inteiro.
+  pool.on('error', (erro) => {
+    console.error(`[db] erro em conexão ociosa (${envVar}):`, erro.message);
+  });
+
   pools.set(envVar, pool);
   return pool;
+}
+
+/**
+ * Traduz falhas de conexão para algo acionável.
+ *
+ * O texto vai para o log do servidor, onde alguém vai procurar quando a tela
+ * mostrar "erro inesperado". Um `ECONNREFUSED` cru não diz o que fazer.
+ */
+function explicar(erro: unknown, envVar: string): Error {
+  const bruto = erro instanceof Error ? erro : new Error(String(erro));
+  const msg = bruto.message;
+
+  const dica =
+    msg.includes('no pg_hba.conf entry') && msg.includes('SSL off')
+      ? 'O servidor exige TLS. Confirme que o host não é local — fora de localhost o TLS é ligado automaticamente.'
+      : msg.includes('password authentication failed') || msg.includes('SASL')
+        ? `Usuário ou senha incorretos em ${envVar}. Num pooler gerenciado o usuário costuma exigir sufixo do projeto, como "app_user.abcdefgh".`
+        : msg.includes('Tenant or user not found')
+          ? `O pooler não reconheceu o usuário de ${envVar}. Falta o sufixo do projeto no nome do papel.`
+          : msg.includes('ENOTFOUND') || msg.includes('EAI_AGAIN')
+            ? `Host de ${envVar} não resolve. Confira o endereço.`
+            : msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')
+              ? `Sem resposta do banco em ${envVar}. Se o host só tem endereço IPv6, use o pooler, que atende em IPv4.`
+              : msg.includes('does not support SSL')
+                ? 'O servidor não aceita TLS. Use um host local ou desative o TLS nesta conexão.'
+                : null;
+
+  if (!dica) return bruto;
+
+  const explicado = new Error(`${msg} — ${dica}`);
+  explicado.cause = bruto;
+  return explicado;
 }
 
 export type Queryable = {
@@ -71,8 +146,21 @@ function wrap(client: PoolClient): Queryable {
   };
 }
 
-async function transaction<T>(pool: Pool, accountId: string | null, fn: (db: Queryable) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
+async function transaction<T>(
+  pool: Pool,
+  accountId: string | null,
+  fn: (db: Queryable) => Promise<T>,
+  envVar: string,
+): Promise<T> {
+  let client: PoolClient;
+  try {
+    client = await pool.connect();
+  } catch (erro) {
+    const explicado = explicar(erro, envVar);
+    console.error('[db] falha ao obter conexão:', explicado.message);
+    throw explicado;
+  }
+
   try {
     await client.query('begin');
     if (accountId !== null) {
@@ -99,20 +187,20 @@ async function transaction<T>(pool: Pool, accountId: string | null, fn: (db: Que
  * "nenhuma linha", e não em vazamento.
  */
 export function withAccount<T>(accountId: string, fn: (db: Queryable) => Promise<T>): Promise<T> {
-  return transaction(poolFor('DATABASE_URL'), accountId, fn);
+  return transaction(poolFor('DATABASE_URL'), accountId, fn, 'DATABASE_URL');
 }
 
 /** Leituras que antecedem o login (buscar usuário por e-mail). Sem conta ainda. */
 export function withoutAccount<T>(fn: (db: Queryable) => Promise<T>): Promise<T> {
-  return transaction(poolFor('DATABASE_URL'), null, fn);
+  return transaction(poolFor('DATABASE_URL'), null, fn, 'DATABASE_URL');
 }
 
 /** Endpoint público de analytics. Sem privilégio algum sobre leads. */
 export function withIngest<T>(fn: (db: Queryable) => Promise<T>): Promise<T> {
-  return transaction(poolFor('DATABASE_URL_INGEST'), null, fn);
+  return transaction(poolFor('DATABASE_URL_INGEST'), null, fn, 'DATABASE_URL_INGEST');
 }
 
 /** Endpoint público de formulários. Grava submissões e leads, nada administrativo. */
 export function withForms<T>(fn: (db: Queryable) => Promise<T>): Promise<T> {
-  return transaction(poolFor('DATABASE_URL_FORMS'), null, fn);
+  return transaction(poolFor('DATABASE_URL_FORMS'), null, fn, 'DATABASE_URL_FORMS');
 }

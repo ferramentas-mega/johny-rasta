@@ -180,6 +180,11 @@ mensagem:
 | `Tenant or user not found` | o sufixo do projeto está faltando ou errado | O usuário precisa ser `app_user.cihsheaiqinrmftjwexu` |
 | `permission denied for table ...` | os papéis não foram criados naquele projeto | Rode o SQL do passo 1 de `docs/deploy-supabase.md` |
 | `EAUTHQUERY` / `unsupported or invalid secret format` | o papel tem prazo de validade vencido | `alter role app_user valid until 'infinity';` (idem para os outros dois) |
+| `no pg_hba.conf entry ... SSL off` | versão antiga do código, sem TLS | Atualize para o commit mais recente e faça **Redeploy** |
+
+A aplicação liga TLS sozinha para qualquer host que não seja local. Se quiser que o certificado do
+servidor seja *verificado* (e não apenas usado para cifrar), defina `DATABASE_SSL_CA` com o
+certificado raiz que o Supabase disponibiliza em **Project Settings → Database → SSL Configuration**.
 
 **O build falha.**
 Abra o log e procure a primeira linha vermelha. O projeto compila limpo (`npm run build` local),
