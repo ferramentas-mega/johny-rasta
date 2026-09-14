@@ -2,7 +2,9 @@
 -- Escrito para rodar igual no Postgres local e num projeto Supabase.
 -- Autorização vive em DUAS camadas: o app filtra por conta, e o banco força RLS.
 
-create extension if not exists "pgcrypto";
+-- `gen_random_uuid()` é função do núcleo desde o PostgreSQL 13, então não há
+-- extensão a instalar. Isso também evita pedir privilégio de extensão em
+-- ambientes gerenciados, como o Supabase.
 
 -- ───────────────────────── contas e usuários ─────────────────────────
 

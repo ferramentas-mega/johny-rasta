@@ -302,3 +302,100 @@ export async function getBySource(db: Queryable, site: SiteContext, period: Reso
     [site.id, period.from, period.to],
   );
 }
+
+// ───────────────────────── comportamento ─────────────────────────
+
+export type ComportamentoRow = { rotulo: string; sessoes: number };
+
+export type Comportamento = {
+  /** Média de páginas vistas por sessão. `null` quando não há sessões. */
+  paginasPorSessao: number | null;
+  /** Sessões que viram uma única página e não clicaram em nada. */
+  sessoesDeUmaPagina: number;
+  dispositivos: ComportamentoRow[];
+  entradas: ComportamentoRow[];
+  profundidade: ComportamentoRow[];
+  porHora: ComportamentoRow[];
+};
+
+/**
+ * Leitura de comportamento a partir do rastreamento próprio.
+ *
+ * Tudo aqui sai dos mesmos eventos que alimentam o Desempenho — não há segunda
+ * fonte nem provedor externo envolvido. As horas são as do fuso do site.
+ */
+export async function getBehavior(
+  db: Queryable,
+  site: SiteContext,
+  period: ResolvedPeriod,
+): Promise<Comportamento> {
+  const resumo = await db.one<{ paginas: string | null; umaPagina: number; sessoes: number }>(
+    `with ${ELIGIBLE}, ${EVENTS},
+     porSessao as (
+       select e.id,
+              count(*) filter (where ev.type = 'page_view')::int as vistas,
+              count(*) filter (where ev.type = 'cta_click')::int  as cliques
+         from eligible e
+         left join ev on ev.session_id = e.id
+        group by e.id
+     )
+     select avg(vistas)::numeric(10,2)                          as paginas,
+            count(*) filter (where vistas <= 1 and cliques = 0)::int as "umaPagina",
+            count(*)::int                                        as sessoes
+       from porSessao`,
+    [site.id, period.from, period.to],
+  );
+
+  const dispositivos = await db.query<ComportamentoRow>(
+    `with ${ELIGIBLE}
+     select device as rotulo, count(*)::int as sessoes
+       from eligible group by device order by 2 desc`,
+    [site.id, period.from, period.to],
+  );
+
+  const entradas = await db.query<ComportamentoRow>(
+    `with ${ELIGIBLE}
+     select coalesce(p.path, 'Não identificada') as rotulo, count(*)::int as sessoes
+       from eligible e
+       left join pages p on p.id = e.entry_page_id
+      group by p.path order by 2 desc limit 10`,
+    [site.id, period.from, period.to],
+  );
+
+  const profundidade = await db.query<ComportamentoRow>(
+    `with ${ELIGIBLE}, ${EVENTS},
+     porSessao as (
+       select e.id, count(*) filter (where ev.type = 'page_view')::int as vistas
+         from eligible e left join ev on ev.session_id = e.id
+        group by e.id
+     )
+     select case when vistas <= 1 then '1 página'
+                 when vistas = 2  then '2 páginas'
+                 when vistas = 3  then '3 páginas'
+                 else '4 ou mais' end as rotulo,
+            count(*)::int as sessoes
+       from porSessao
+      group by 1
+      order by 1`,
+    [site.id, period.from, period.to],
+  );
+
+  // Hora local do site, não do servidor: um pico às 20h em São Paulo precisa
+  // aparecer às 20h, mesmo com o banco gravando tudo em UTC.
+  const porHora = await db.query<ComportamentoRow>(
+    `with ${ELIGIBLE}
+     select lpad(extract(hour from (started_at at time zone $4))::text, 2, '0') || 'h' as rotulo,
+            count(*)::int as sessoes
+       from eligible group by 1 order by 1`,
+    [site.id, period.from, period.to, site.timezone],
+  );
+
+  return {
+    paginasPorSessao: resumo && resumo.paginas !== null ? Number(resumo.paginas) : null,
+    sessoesDeUmaPagina: resumo?.umaPagina ?? 0,
+    dispositivos,
+    entradas,
+    profundidade,
+    porHora,
+  };
+}
