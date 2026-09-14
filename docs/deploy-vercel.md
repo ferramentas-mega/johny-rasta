@@ -7,21 +7,32 @@ e acesso ao painel do Supabase.
 
 ---
 
-## Passo 1 — Levar o código para a branch principal
+## Passo 1 — Conferir a branch (provavelmente nada a fazer)
 
-O trabalho está na branch `claude/busy-hopper-3seo9l`. A Vercel consegue publicar a partir dela,
-mas é mais simples ter `main` como branch de produção.
+O repositório tem **uma única branch**, `claude/busy-hopper-3seo9l`, e ela já é a branch padrão.
+Não existe `main`, e não há nada para mesclar — a Vercel vai publicar a partir da padrão sozinha.
 
-1. Abra `https://github.com/ferramentas-mega/johny-rasta`.
-2. Se aparecer um aviso amarelo **"claude/busy-hopper-3seo9l had recent pushes"**, clique em
-   **Compare & pull request**. Se não aparecer, clique na aba **Pull requests** → **New pull
-   request**, e em **compare:** escolha `claude/busy-hopper-3seo9l`.
-3. Clique em **Create pull request** e depois em **Merge pull request** → **Confirm merge**.
+Se você abriu a tela **Compare changes** do GitHub e ela mostrou a mesma branch dos dois lados,
+foi exatamente por isso. Pode fechar e seguir para o passo 2.
 
-Pronto: o código está em `main`.
+### Quer que a branch se chame `main`?
 
-> Preferindo não mexer no GitHub agora, pule este passo. No passo 3 você troca a branch de
-> produção na Vercel.
+Opcional, e é só cosmético — mas `claude/busy-hopper-3seo9l` é um nome estranho para uma branch de
+produção permanente. Renomear no GitHub leva dois cliques e não quebra nada:
+
+1. No repositório, clique em **Settings**.
+2. No menu lateral, clique em **Branches**.
+3. Ao lado de `claude/busy-hopper-3seo9l`, clique no ícone de lápis (**Rename branch**).
+4. Digite `main` e clique em **Rename branch**.
+
+O GitHub redireciona as referências antigas automaticamente. Se você já tiver clonado o repositório
+em algum lugar, rode lá:
+
+```bash
+git branch -m claude/busy-hopper-3seo9l main
+git fetch origin
+git branch -u origin/main main
+```
 
 ---
 
@@ -82,7 +93,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
    - **Framework Preset**: já vem como **Next.js**. Não mexa.
    - **Root Directory**: deixe em branco.
    - **Build and Output Settings**: não mexa. O `vercel.json` do projeto já cuida disso.
-5. **Se você pulou o passo 1**, clique em **Git Branch** e escolha `claude/busy-hopper-3seo9l`.
+5. **Git Branch**: a Vercel já seleciona a branch padrão do repositório. Não precisa mexer.
 
 ---
 
