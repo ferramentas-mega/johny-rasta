@@ -207,24 +207,39 @@ Abra **Deployments**, no menu do projeto, e olhe a entrada do topo:
 | O que você vê | O que significa | O que fazer |
 |---|---|---|
 | **Error** (vermelho) | O build falhou; a produção segue no último que deu certo | Abra o deployment, vá em **Building** e leia a **primeira** linha vermelha do log |
-| **Ready** (verde) com etiqueta **Production** | Esse build está no ar | O problema é outro; siga para *Quando algo dá errado* |
-| **Ready** (verde) com etiqueta **Preview** | O build existe, mas **não** está no ar | Passo 2 |
+| **Ready** (verde), **Production**, sem mais nada | Esse build está no ar | O problema é outro; siga para *Quando algo dá errado* |
+| **Ready** (verde), **Production · Staged** | O build está pronto, mas o domínio **não** aponta para ele | Passo 2 |
+| **Ready** (verde), **Preview** | Build de outra branch; nunca vira produção sozinho | Passo 2, e depois o passo 3 |
 | **Queued** / **Building** | Ainda rodando | Espere terminar |
 
-Na lista, cada deployment traz a etiqueta do ambiente ao lado do commit. Só a marcada
-**Production** é a que o seu domínio serve.
+**`Staged` é a pegadinha.** Um deployment pode ser de produção, ter compilado sem erro nenhum, e
+mesmo assim não estar no ar. É o que acontece quando a atribuição automática de domínio está
+desligada no projeto — a tela do deployment avisa, em amarelo:
 
-### Passo 2 — Promover um build de Preview
+> Custom domains won't be assigned — auto-assignment is disabled.
 
-Um deployment de Preview não vira produção sozinho:
+A partir daí **todo** build novo nasce staged e se acumula, enquanto o domínio segue servindo o
+último build que chegou a receber o domínio. Nenhuma variável de ambiente muda isso.
 
-1. Na linha do deployment verde mais recente, clique nos **três pontinhos** (⋯), à direita.
+### Passo 2 — Publicar o build que já existe
+
+1. Em **Deployments**, na linha do deployment verde mais recente, clique nos **três pontinhos**
+   (⋯), à direita.
 2. Clique em **Promote to Production**.
 3. Confirme. Em segundos o domínio passa a servir esse build.
 
-O botão **Redeploy** desse mesmo menu resolve outra coisa e, quando o deployment não é o mais
-recente, a Vercel recusa — é o diálogo que aparece dizendo que só o último pode ser reconstruído.
-Para publicar um build que já existe, o caminho é **Promote**, não Redeploy.
+**Não use o Redeploy.** Ele reconstrói, o que é outra coisa, e a Vercel só aceita reconstruir o
+deployment mais recente — em qualquer outro aparece *"A more recent Production Deployment has been
+created, so the one you are looking at cannot be redeployed anymore"*. Para pôr no ar um build que
+já está pronto, o botão é **Promote**.
+
+### Desligar a pegadinha de vez
+
+Promover resolve uma vez. Para os próximos builds subirem sozinhos, religue a atribuição
+automática: **Settings** → **Domains** → no domínio de produção, **Edit** → que ele siga a **branch
+de produção**, e não um deployment fixo.
+
+Enquanto isso estiver desligado, cada push exige um **Promote** manual.
 
 ### Passo 3 — Por que ele saiu como Preview
 
