@@ -31,11 +31,20 @@ export async function entrar(_anterior: EstadoLogin, dados: FormData): Promise<E
       ),
     );
   } catch (erro) {
-    // O detalhe vai para o log do servidor, onde é útil. Para o navegador vai
-    // uma mensagem genérica: a string de conexão não é assunto do visitante.
     console.error('[entrar] falha ao consultar o usuário:', erro);
+
+    // Quando a causa é configuração ausente, dizer QUAL falta poupa uma
+    // investigação inteira. Nomes de variáveis não são segredo — estão no
+    // .env.example do projeto. O valor delas, esse nunca sai daqui.
+    const faltando = ['DATABASE_URL', 'SESSION_SECRET'].filter((v) => !process.env[v]);
+    if (faltando.length > 0) {
+      return {
+        erro: `Faltam variáveis de ambiente no servidor: ${faltando.join(' e ')}. Defina no painel da hospedagem e publique de novo.`,
+      };
+    }
+
     return {
-      erro: 'Não foi possível falar com o banco de dados. Verifique as variáveis de conexão do servidor.',
+      erro: 'O banco de dados recusou a conexão. Abra /api/diagnostico para ver a causa.',
     };
   }
 

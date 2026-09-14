@@ -27,7 +27,19 @@ import { getSessionUser } from '@/server/auth/session';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const VARIAVEIS = ['DATABASE_URL', 'DATABASE_URL_INGEST', 'DATABASE_URL_FORMS'] as const;
+/**
+ * Nem toda variável tem o mesmo peso.
+ *
+ * Sem `DATABASE_URL` ninguém entra — é a credencial de leitura do painel.
+ * As outras duas servem só aos endpoints públicos de coleta e de formulários:
+ * faltando, aqueles dois endpoints param, e o painel segue funcionando.
+ *
+ * A distinção importa para quem está configurando: são duas variáveis para
+ * entrar, não quatro.
+ */
+const ESSENCIAIS = ['DATABASE_URL'] as const;
+const OPCIONAIS = ['DATABASE_URL_INGEST', 'DATABASE_URL_FORMS'] as const;
+const VARIAVEIS = [...ESSENCIAIS, ...OPCIONAIS] as const;
 
 const COMO_RESOLVER: Record<CausaDeFalha, string> = {
   ok: 'Conexão estabelecida.',
@@ -71,14 +83,28 @@ export async function GET(request: Request) {
   for (const v of VARIAVEIS) conexoes.push(await verificarConexao(v, autorizado));
 
   const tudoOk = conexoes.every((c) => c.conecta);
+  const painelFunciona =
+    conexoes.filter((c) => (ESSENCIAIS as readonly string[]).includes(c.variavel)).every((c) => c.conecta) &&
+    !!process.env.SESSION_SECRET;
 
   const publico = {
     tudoOk,
+    // O que realmente responde "consigo entrar?".
+    painelFunciona,
+    coletaFunciona: conexoes
+      .filter((c) => (OPCIONAIS as readonly string[]).includes(c.variavel))
+      .every((c) => c.conecta),
     // Os nomes das três variáveis esperadas estão no .env.example do projeto:
     // dizer qual delas falta não revela nada que já não esteja documentado.
     problemas: conexoes
       .filter((c) => !c.conecta)
-      .map((c) => ({ variavel: c.variavel, causa: c.causa, oQueFazer: COMO_RESOLVER[c.causa] })),
+      .map((c) => ({
+        variavel: c.variavel,
+        essencial: (ESSENCIAIS as readonly string[]).includes(c.variavel),
+        causa: c.causa,
+        oQueFazer: COMO_RESOLVER[c.causa],
+      })),
+    faltaSessionSecret: !process.env.SESSION_SECRET,
     observacao: autorizado
       ? undefined
       : 'Resposta reduzida. Para o detalhe, entre no painel ou informe ?token= com o valor de DIAGNOSTIC_TOKEN.',

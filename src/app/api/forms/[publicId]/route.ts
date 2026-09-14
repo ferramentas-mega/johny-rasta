@@ -59,6 +59,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ pub
     return NextResponse.json({ ok: false, erro: 'Dados inválidos.', campos }, { status: 422, headers: cabecalhos });
   }
 
+  if (!process.env.DATABASE_URL_FORMS) {
+    console.error('[forms] DATABASE_URL_FORMS não configurada: recebimento desativado.');
+    return NextResponse.json(
+      { ok: false, erro: 'Recebimento de formulários não configurado neste servidor.' },
+      { status: 503, headers: cabecalhos },
+    );
+  }
+
   try {
     const resultado = await withForms(async (db) => {
       const site = await resolverSite(db, publicId);

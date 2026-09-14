@@ -68,6 +68,19 @@ export async function POST(request: Request) {
     );
   }
 
+  // A coleta tem credencial própria, de propósito. Se ela não estiver
+  // configurada, este endpoint para — e só ele. O painel continua funcionando
+  // com a credencial de leitura, porque prender o painel à credencial do
+  // coletor seria acoplar duas coisas que existem separadas justamente para
+  // terem privilégios diferentes.
+  if (!process.env.DATABASE_URL_INGEST) {
+    console.error('[collect] DATABASE_URL_INGEST não configurada: coleta desativada.');
+    return NextResponse.json(
+      { erro: 'Coleta não configurada neste servidor.' },
+      { status: 503, headers: cabecalhos },
+    );
+  }
+
   try {
     const resultado = await withIngest(async (db) => {
       const site = await resolverSite(db, analise.data.site);
