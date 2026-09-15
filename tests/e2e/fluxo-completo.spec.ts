@@ -61,16 +61,19 @@ test('cliente, site, coleta, formulário, lead e dashboard', async ({ page, cont
   const publicId = ((await snippet.textContent()) ?? '').match(/sit_[a-f0-9]+/)?.[0];
   expect(publicId, 'o cadastro precisa gerar um identificador público').toBeTruthy();
 
-  // O site aparece na listagem, e ainda NÃO está coletando.
+  // O site aparece na listagem, e ainda NÃO está coletando. A lista é de
+  // cartões: cada site é um bloco, não uma linha de tabela.
   await page.goto('/sites');
-  await expect(page.getByRole('cell', { name: nomeSite })).toBeVisible();
-  const linhaSite = page.getByRole('row').filter({ hasText: nomeSite });
-  await expect(linhaSite).toContainText(/Aguardando/);
-  // Dois recursos escolhidos e nenhum verificado: a lista mostra a pendência.
-  await expect(linhaSite).toContainText('2 pendência(s)');
+  const cartao = page.locator('.cartao-site').filter({ hasText: nomeSite });
+  await expect(cartao).toBeVisible();
+  await expect(cartao).toContainText(/Aguardando/);
+  // Dois recursos escolhidos e nenhum verificado: o cartão diz o que falta, e
+  // a cor dele é a do estado "em configuração".
+  await expect(cartao).toContainText('Em configuração');
+  await expect(cartao).toContainText('Falta verificar');
 
-  // A ação da linha é continuar a configuração enquanto houver pendência.
-  await linhaSite.getByRole('link', { name: 'Continuar configuração →' }).click();
+  // A ação do cartão é continuar a configuração enquanto houver pendência.
+  await cartao.getByRole('link', { name: 'Continuar configuração →' }).click();
   await page.waitForURL('**/configurar**');
 
   // Cadastrar não instala: a aba de rastreamento continua em espera.
@@ -121,7 +124,8 @@ test('cliente, site, coleta, formulário, lead e dashboard', async ({ page, cont
 
   // ─── 9. O dashboard reflete tudo ──────────────────────────────────────────
   await page.goto('/sites');
-  await page.getByRole('row').filter({ hasText: nomeSite }).getByRole('link', { name: nomeSite }).click();
+  await page.locator('.cartao-site').filter({ hasText: nomeSite })
+    .getByRole('link', { name: nomeSite }).click();
   await page.waitForURL('**/desempenho**');
 
   // Agora sim: coletando.

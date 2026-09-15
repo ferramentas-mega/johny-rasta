@@ -1,10 +1,8 @@
 import Link from 'next/link';
 import { contextoPainel, type ParametrosBusca } from '@/server/contexto';
-import { ESTADO_LABEL, ESTADO_TOM, type Site } from '@/server/services/sites';
-import { dataHora } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel } from '@/components/Cartoes';
-import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
+import { CartaoSite } from '@/components/CartaoSite';
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { FormularioSite } from './FormularioSite';
 
@@ -25,55 +23,6 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
     ctx.usuario.accountId,
     ctx.sites.map((s) => s.id),
   );
-
-  const colunas: Coluna<Site>[] = [
-    { chave: 'nome', titulo: 'Site',
-      render: (s) => <Link href={`/sites/${s.id}/desempenho`}>{s.name}</Link> },
-    { chave: 'dominio', titulo: 'Domínio', mono: true, render: (s) => s.domain },
-    { chave: 'cliente', titulo: 'Cliente',
-      render: (s) => <Link href={`/sites?cliente=${s.clientId}`}>{s.clienteNome}</Link> },
-    { chave: 'publicId', titulo: 'Identificador público', mono: true,
-      ajuda: 'Endereça o site no coletor. Aparece no HTML de quem instalar, então não funciona como credencial.',
-      render: (s) => s.publicId },
-    { chave: 'estado', titulo: 'Rastreamento',
-      ajuda: 'Derivado dos eventos realmente recebidos, nunca do cadastro.',
-      render: (s) => (
-        <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 3 }}>
-          <Etiqueta
-            texto={ESTADO_LABEL[s.estado]}
-            tom={ESTADO_TOM[s.estado] === 'ok' ? 'ok' : ESTADO_TOM[s.estado] === 'aguardando' ? 'warn' : 'soft'}
-          />
-          {s.ultimoEvento && (
-            <span style={{ fontSize: 10.5, color: 'var(--tx3)' }}>último: {dataHora(s.ultimoEvento)}</span>
-          )}
-        </span>
-      ) },
-    { chave: 'configuracao', titulo: 'Configuração',
-      ajuda: 'Recursos escolhidos e verificados. "Não iniciada" significa que ninguém escolheu o que este site deve medir.',
-      render: (s) => {
-        const r = resumos.get(s.id);
-        if (!r || r.naoIniciado) return <Etiqueta texto="Não iniciada" tom="soft" />;
-        if (r.pendentes > 0) {
-          return <Etiqueta texto={`${r.pendentes} pendência(s)`} tom="warn" />;
-        }
-        return <Etiqueta texto={`${r.verificados} verificado(s)`} tom="ok" />;
-      } },
-    { chave: 'acoes', titulo: '', alinhamento: 'direita',
-      render: (s) => {
-        const r = resumos.get(s.id);
-        const falta = !r || r.naoIniciado || r.pendentes > 0;
-        return (
-          <span style={{ display: 'inline-flex', gap: 12, whiteSpace: 'nowrap' }}>
-            <Link href={`/sites?editar=${s.id}`}>Editar</Link>
-            {/* Ação clara e única por linha: enquanto houver pendência, o
-                caminho é continuar a configuração. Sem ela, é o painel. */}
-            <Link href={`/sites/${s.id}/configurar`}>
-              {falta ? 'Continuar configuração →' : 'Configuração'}
-            </Link>
-          </span>
-        );
-      } },
-  ];
 
   return (
     <>
@@ -113,16 +62,24 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
             />
           }
         >
-          <Tabela
-            colunas={colunas}
-            linhas={ctx.sites}
-            vazio={ctx.clientes.length === 0
-              ? 'Cadastre um cliente primeiro, em Clientes.'
-              : 'Nenhum site cadastrado para este filtro.'}
-          />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
-            Cadastrar o domínio e gerar o identificador não instala o rastreamento. O estado só muda quando um
-            evento real chega ao servidor.
+          {ctx.sites.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--tx2)' }}>
+              {ctx.clientes.length === 0
+                ? 'Cadastre um cliente primeiro, em Clientes.'
+                : 'Nenhum site cadastrado para este filtro.'}
+            </p>
+          ) : (
+            <div className="grade-sites">
+              {ctx.sites.map((site) => (
+                <CartaoSite key={site.id} site={site} resumo={resumos.get(site.id)} />
+              ))}
+            </div>
+          )}
+          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 14, lineHeight: 1.6 }}>
+            A cor da faixa é o estado da <strong>configuração</strong>: cinza não iniciada, âmbar com recurso
+            escolhido esperando verificação, vermelho com erro registrado, verde tudo verificado. A etiqueta do
+            rodapé é outra coisa — o <strong>rastreamento</strong>, derivado dos eventos recebidos. Cadastrar o
+            domínio e gerar o identificador não instala nada.
           </p>
         </Painel>
       </div>

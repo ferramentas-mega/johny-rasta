@@ -310,11 +310,22 @@ export async function resumoDeConfiguracao(
       pendentes: number;
       verificados: number;
       escolhidos: Date | null;
+      faltando: Recurso[] | null;
+      com_erro: Recurso[] | null;
     }>(
       `select s.id as site_id,
               coalesce(sum(case when f.selecionado and f.verificado_em is null then 1 else 0 end), 0)::int as pendentes,
               coalesce(sum(case when f.selecionado and f.verificado_em is not null then 1 else 0 end), 0)::int as verificados,
-              s.recursos_escolhidos_em as escolhidos
+              s.recursos_escolhidos_em as escolhidos,
+              -- QUAIS faltam, e não só quantos: um número sozinho não diz o que
+              -- fazer em seguida. \`filter\` em vez de \`case\`, para o array não
+              -- ganhar nulos.
+              array_agg(f.feature) filter (
+                where f.selecionado and f.verificado_em is null
+              ) as faltando,
+              array_agg(f.feature) filter (
+                where f.selecionado and f.erro is not null and f.verificado_em is null
+              ) as com_erro
          from sites s
          left join site_features f on f.site_id = s.id
         where s.id = any($1::uuid[])
@@ -330,6 +341,8 @@ export async function resumoDeConfiguracao(
           pendentes: l.pendentes,
           verificados: l.verificados,
           naoIniciado: l.escolhidos === null,
+          faltando: l.faltando ?? [],
+          comErro: l.com_erro ?? [],
         },
       ]),
     );

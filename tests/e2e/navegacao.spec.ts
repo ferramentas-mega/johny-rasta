@@ -26,7 +26,15 @@ test('o item ativo do menu corresponde sempre à tela mostrada', async ({ page }
     await page.goto(caso.rota);
     await expect(page.locator('h1')).toHaveText(caso.titulo);
 
-    const ativos = page.locator('nav[aria-label="Seções do painel"] a[aria-current="page"]');
+    // `getByRole` e não um seletor CSS: existem DOIS menus no DOM — a barra
+    // lateral e a faixa de rodapé do celular —, e só um deles está visível por
+    // vez. O seletor CSS contaria os dois; a consulta por papel respeita a
+    // árvore de acessibilidade, que é justamente o que "um item ativo" quer
+    // dizer.
+    const ativos = page
+      .getByRole('navigation', { name: 'Seções do painel' })
+      .getByRole('link')
+      .and(page.locator('[aria-current="page"]'));
     await expect(ativos).toHaveCount(1);
     await expect(ativos).toContainText(caso.item);
   }
@@ -37,7 +45,10 @@ test('dentro de um site, o menu aponta Sites e a aba correta fica ativa', async 
   await page.getByRole('link', { name: 'alfa.teste' }).click();
   await page.waitForURL('**/desempenho**');
 
-  const ativoMenu = page.locator('nav[aria-label="Seções do painel"] a[aria-current="page"]');
+  const ativoMenu = page
+    .getByRole('navigation', { name: 'Seções do painel' })
+    .getByRole('link')
+    .and(page.locator('[aria-current="page"]'));
   await expect(ativoMenu).toHaveCount(1);
   await expect(ativoMenu).toContainText('Sites');
 
@@ -143,12 +154,12 @@ test('editar o nome de um site atualiza sua identificação nas outras telas', a
   const novoNome = `beta-renomeado-${Date.now()}`;
 
   await page.goto('/sites');
-  const linha = page.getByRole('row').filter({ hasText: 'beta.teste' });
-  const href = await linha.getByRole('link', { name: 'beta.teste' }).getAttribute('href');
+  const cartao = page.locator('.cartao-site').filter({ hasText: 'beta.teste' });
+  const href = await cartao.getByRole('link', { name: 'beta.teste' }).getAttribute('href');
   const siteId = href!.split('/')[2];
 
-  await linha.getByRole('link', { name: 'Editar' }).click();
-  await page.waitForURL(/editar=/);
+  // A edição continua sendo pela URL, como os demais filtros.
+  await page.goto(`/sites?editar=${siteId}`);
 
   const campoNome = page.locator('input[name=nome]');
   await expect(campoNome).toHaveValue('beta.teste');
@@ -158,7 +169,7 @@ test('editar o nome de um site atualiza sua identificação nas outras telas', a
 
   // Existe UM registro do site, então o nome novo vale em toda parte.
   await page.goto('/sites');
-  await expect(page.getByRole('cell', { name: novoNome })).toBeVisible();
+  await expect(page.locator('.cartao-site').filter({ hasText: novoNome })).toBeVisible();
 
   // A Visão geral passou a listar CLIENTES, um por linha, somando os sites de
   // cada um — então o nome do site não aparece mais lá, e não deve mesmo. Quem
@@ -169,7 +180,7 @@ test('editar o nome de um site atualiza sua identificação nas outras telas', a
   // O cliente é identificado pelo link que leva a `?cliente=<id>` — posição de
   // coluna mudaria com o layout, o destino do link não.
   const clienteDoSite = (await page
-    .getByRole('row').filter({ hasText: novoNome })
+    .locator('.cartao-site').filter({ hasText: novoNome })
     .locator('a[href^="/sites?cliente="]')
     .innerText()).trim();
 

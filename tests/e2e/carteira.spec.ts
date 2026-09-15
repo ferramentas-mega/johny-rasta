@@ -72,7 +72,7 @@ test('conversão sem base aparece como "Sem base", nunca como 0%', async ({ page
 
 test('a aba de qualidade técnica abre e declara o que os números são', async ({ page }) => {
   await page.goto('/sites');
-  const href = await page.locator('table tbody a[href*="/desempenho"]').first().getAttribute('href');
+  const href = await page.locator('.cartao-site a[href*="/desempenho"]').first().getAttribute('href');
   const siteId = href!.split('/')[2];
 
   await page.goto(`/sites/${siteId}/qualidade`);
@@ -88,7 +88,7 @@ test('a aba de qualidade técnica abre e declara o que os números são', async 
 
 test('sem análise, a tela diz que não há — e não mostra nota zerada', async ({ page }) => {
   await page.goto('/sites');
-  const href = await page.locator('table tbody a[href*="/desempenho"]').first().getAttribute('href');
+  const href = await page.locator('.cartao-site a[href*="/desempenho"]').first().getAttribute('href');
   await page.goto(`/sites/${href!.split('/')[2]}/qualidade`);
 
   const texto = await page.locator('body').innerText();
@@ -100,7 +100,7 @@ test('sem análise, a tela diz que não há — e não mostra nota zerada', asyn
 
 test('URL fora do domínio do site é recusada', async ({ page }) => {
   await page.goto('/sites');
-  const href = await page.locator('table tbody a[href*="/desempenho"]').first().getAttribute('href');
+  const href = await page.locator('.cartao-site a[href*="/desempenho"]').first().getAttribute('href');
   await page.goto(`/sites/${href!.split('/')[2]}/qualidade`);
 
   await page.getByLabel('URL para monitorar').fill('https://site-de-outra-pessoa.com/');
@@ -112,7 +112,7 @@ test('URL fora do domínio do site é recusada', async ({ page }) => {
 
 test('endereço privado é recusado antes de qualquer chamada externa', async ({ page }) => {
   await page.goto('/sites');
-  const href = await page.locator('table tbody a[href*="/desempenho"]').first().getAttribute('href');
+  const href = await page.locator('.cartao-site a[href*="/desempenho"]').first().getAttribute('href');
   await page.goto(`/sites/${href!.split('/')[2]}/qualidade`);
 
   await page.getByLabel('URL para monitorar').fill('http://169.254.169.254/latest/meta-data/');

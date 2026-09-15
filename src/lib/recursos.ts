@@ -302,7 +302,34 @@ export type ResumoDeConfiguracao = {
   verificados: number;
   /** Nenhum recurso escolhido ainda: o assistente nem começou. */
   naoIniciado: boolean;
+  /** QUAIS faltam. Um número sozinho não diz o que fazer em seguida. */
+  faltando: Recurso[];
+  /** Recursos com erro registrado. Vencem a pendência simples na cor do cartão. */
+  comErro: Recurso[];
 };
+
+/**
+ * O estado de configuração do site inteiro, para cor e rótulo num cartão.
+ *
+ * Note que isto NÃO é um `configurado: true` guardado: é derivado do resumo, na
+ * hora. A distinção importa — um campo persistido envelheceria no instante em
+ * que alguém desmarcasse um recurso.
+ */
+export type EstadoDaConfiguracao = 'nao_iniciada' | 'com_erro' | 'pendente' | 'completa';
+
+export const ESTADO_CONFIG_LABEL: Record<EstadoDaConfiguracao, string> = {
+  nao_iniciada: 'Não iniciada',
+  com_erro: 'Erro identificado',
+  pendente: 'Em configuração',
+  completa: 'Configuração verificada',
+};
+
+export function estadoDaConfiguracao(r: ResumoDeConfiguracao | undefined): EstadoDaConfiguracao {
+  if (!r || r.naoIniciado) return 'nao_iniciada';
+  if (r.comErro.length > 0) return 'com_erro';
+  if (r.pendentes > 0) return 'pendente';
+  return 'completa';
+}
 
 export type SessaoDiagnostico = { id: string; token: string; abertaEm: Date };
 
