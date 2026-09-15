@@ -160,8 +160,24 @@ test('editar o nome de um site atualiza sua identificação nas outras telas', a
   await page.goto('/sites');
   await expect(page.getByRole('cell', { name: novoNome })).toBeVisible();
 
+  // A Visão geral passou a listar CLIENTES, um por linha, somando os sites de
+  // cada um — então o nome do site não aparece mais lá, e não deve mesmo. Quem
+  // mostra sites por nome agora é o painel do cliente, e é lá que o rename
+  // precisa ter chegado. O cliente é derivado da própria tela de Sites, para o
+  // teste não depender de um nome fixo da massa.
+  await page.goto('/sites');
+  // O cliente é identificado pelo link que leva a `?cliente=<id>` — posição de
+  // coluna mudaria com o layout, o destino do link não.
+  const clienteDoSite = (await page
+    .getByRole('row').filter({ hasText: novoNome })
+    .locator('a[href^="/sites?cliente="]')
+    .innerText()).trim();
+
   await page.goto('/visao-geral');
-  await expect(page.getByRole('cell', { name: novoNome })).toBeVisible();
+  await expect(page.getByRole('cell', { name: novoNome })).toHaveCount(0);
+  await page.getByRole('link', { name: clienteDoSite.trim(), exact: true }).click();
+  await page.waitForURL(/\/clientes\//);
+  await expect(page.getByRole('cell', { name: new RegExp(novoNome) })).toBeVisible();
 
   await page.goto(`/sites/${siteId}/desempenho`);
   await expect(page.locator('h1')).toHaveText(novoNome);

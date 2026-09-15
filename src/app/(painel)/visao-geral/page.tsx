@@ -1,83 +1,109 @@
 import Link from 'next/link';
 import { withAccount } from '@/server/db';
 import { contextoPainel, type ParametrosBusca } from '@/server/contexto';
-import { getKpis } from '@/server/metrics/queries';
-import { ESTADO_LABEL, ESTADO_TOM } from '@/server/services/sites';
-import { num } from '@/lib/formato';
+import { getCarteira, totalizarCarteira, type LinhaCarteira } from '@/server/metrics/queries';
+import { num, pct } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso } from '@/components/Cartoes';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { SeletorPeriodo } from '@/components/filtros';
+import { BuscaCarteira } from './busca';
 
 export const dynamic = 'force-dynamic';
 
-type LinhaSite = {
-  id: string;
-  nome: string;
-  cliente: string;
-  estado: keyof typeof ESTADO_LABEL;
-  sessoes: number | null;
-  leads: number | null;
-};
+/** Quantos dias cada chave de período representa, para a consulta da carteira. */
+const DIAS: Record<string, number> = { hoje: 1, '7d': 7, '30d': 30, '90d': 90 };
+
+/**
+ * Sem um volume mínimo, uma conversão em três sessões vira "33%" e o cliente
+ * sobe ao topo da lista. É REGRA DE PRODUTO, não garantia estatística: serve
+ * para não exibir classificação enganosa, e está documentada como tal.
+ */
+const MIN_SESSOES_PARA_COMPARAR = 30;
+
+type Prioridade = { texto: string; tom: 'ok' | 'warn' | 'soft' };
+
+/**
+ * Por que este cliente precisa de atenção — com o motivo dito, não um "score"
+ * que ninguém consegue auditar.
+ */
+function prioridade(l: LinhaCarteira): Prioridade {
+  if (l.sites === 0) return { texto: 'Sem site cadastrado', tom: 'soft' };
+  if (l.sitesComColeta === 0) return { texto: 'Rastreamento pendente', tom: 'warn' };
+  if (l.sitesComColeta < l.sites) return { texto: `${l.sites - l.sitesComColeta} site(s) sem coleta`, tom: 'warn' };
+  if (l.sessoes < MIN_SESSOES_PARA_COMPARAR) return { texto: 'Volume baixo para comparar', tom: 'soft' };
+  if (l.sessoesAnterior > 0 && l.sessoes < l.sessoesAnterior * 0.7) {
+    return { texto: 'Queda de sessões', tom: 'warn' };
+  }
+  if (l.leads === 0) return { texto: 'Sem leads no período', tom: 'warn' };
+  return { texto: 'Sem pendência', tom: 'ok' };
+}
+
+function Evolucao({ atual, anterior }: { atual: number; anterior: number }) {
+  // Base zero não gera crescimento infinito: não há com o que comparar.
+  if (anterior === 0) {
+    return <span style={{ color: 'var(--tx3)' }}>Sem base</span>;
+  }
+  const r = (atual - anterior) / anterior;
+  const cor = r > 0 ? 'var(--pos)' : r < 0 ? 'var(--neg)' : 'var(--tx2)';
+  return <span style={{ color: cor }}>{r > 0 ? '+' : ''}{pct(r)}</span>;
+}
 
 export default async function PaginaVisaoGeral({ searchParams }: { searchParams: Promise<ParametrosBusca> }) {
   const ctx = await contextoPainel(await searchParams);
+  const params = await searchParams;
+  const busca = (typeof params.q === 'string' ? params.q : '').trim().toLowerCase();
+  const dias = DIAS[ctx.periodoInput.key] ?? 7;
 
-  if (!ctx.site || !ctx.periodo) {
-    return (
-      <>
-        <Cabecalho kicker="VISÃO GERAL" titulo="Nenhum site cadastrado" />
-        <div className="pagina">
-          <Painel titulo="Comece cadastrando um cliente e um site" subtitulo="Sem site cadastrado não há o que medir.">
-            <Link href="/clientes">Ir para Clientes →</Link>
-          </Painel>
-        </div>
-      </>
-    );
-  }
+  const todas = await withAccount(ctx.usuario.accountId, (db) => getCarteira(db, dias));
+  const linhas = busca
+    ? todas.filter((l) => l.cliente.toLowerCase().includes(busca))
+    : todas;
+  const totais = totalizarCarteira(linhas);
 
-  const periodo = ctx.periodo;
+  const precisamAtencao = linhas.filter((l) => prioridade(l).tom === 'warn').length;
 
-  // Um agregado por site: os mesmos números que cada tela de site mostraria.
-  const linhas: LinhaSite[] = await withAccount(ctx.usuario.accountId, async (db) => {
-    const resultado: LinhaSite[] = [];
-    for (const site of ctx.sites) {
-      if (site.totalEventos === 0) {
-        resultado.push({ id: site.id, nome: site.name, cliente: site.clienteNome, estado: site.estado, sessoes: null, leads: null });
-        continue;
-      }
-      const kpis = await getKpis(db, site, periodo);
-      resultado.push({
-        id: site.id, nome: site.name, cliente: site.clienteNome, estado: site.estado,
-        sessoes: kpis.atual.sessoes, leads: kpis.atual.leads,
-      });
-    }
-    return resultado;
-  });
-
-  const totalSessoes = linhas.reduce((t, l) => t + (l.sessoes ?? 0), 0);
-  const totalLeads = linhas.reduce((t, l) => t + (l.leads ?? 0), 0);
-  const comEventos = linhas.filter((l) => l.sessoes !== null).length;
-
-  const colunas: Coluna<LinhaSite>[] = [
-    { chave: 'site', titulo: 'Site', render: (l) => <Link href={`/sites/${l.id}/desempenho?periodo=${ctx.periodoInput.key}`}>{l.nome}</Link>, total: () => 'Total' },
-    { chave: 'cliente', titulo: 'Cliente', render: (l) => l.cliente },
-    { chave: 'estado', titulo: 'Situação', render: (l) => (
-        <Etiqueta texto={ESTADO_LABEL[l.estado]} tom={ESTADO_TOM[l.estado] === 'ok' ? 'ok' : ESTADO_TOM[l.estado] === 'aguardando' ? 'warn' : 'soft'} />
-      ) },
+  const colunas: Coluna<LinhaCarteira>[] = [
+    {
+      chave: 'cliente', titulo: 'Cliente', total: () => 'Total',
+      render: (l) => <Link href={`/clientes/${l.clienteId}?periodo=${ctx.periodoInput.key}`}>{l.cliente}</Link>,
+    },
+    {
+      chave: 'sites', titulo: 'Sites', alinhamento: 'direita', mono: true,
+      render: (l) => (l.sites === l.sitesComColeta ? num(l.sites) : `${num(l.sitesComColeta)}/${num(l.sites)}`),
+      total: () => `${num(totais.sitesComColeta)}/${num(totais.sites)}`,
+    },
     { chave: 'sessoes', titulo: 'Sessões', alinhamento: 'direita', mono: true,
-      render: (l) => (l.sessoes === null ? <span style={{ color: 'var(--tx3)' }}>Indisponível</span> : num(l.sessoes)),
-      total: () => num(totalSessoes) },
+      render: (l) => num(l.sessoes), total: () => num(totais.sessoes) },
+    { chave: 'whatsapp', titulo: 'WhatsApp', alinhamento: 'direita', mono: true,
+      render: (l) => num(l.cliquesWhatsapp), total: () => num(totais.cliquesWhatsapp) },
     { chave: 'leads', titulo: 'Leads', alinhamento: 'direita', mono: true,
-      render: (l) => (l.leads === null ? <span style={{ color: 'var(--tx3)' }}>Indisponível</span> : num(l.leads)),
-      total: () => num(totalLeads) },
+      render: (l) => num(l.leads), total: () => num(totais.leads) },
+    {
+      chave: 'conversao', titulo: 'Conversão', alinhamento: 'direita', mono: true,
+      render: (l) =>
+        l.sessoes === 0
+          ? <span style={{ color: 'var(--tx3)' }}>Sem base</span>
+          : pct(l.sessoesConvertidasAbs / l.sessoes),
+      total: () => (totais.taxaConversao === null ? 'Sem base' : pct(totais.taxaConversao)),
+    },
+    {
+      chave: 'evolucao', titulo: 'Sessões vs. anterior', alinhamento: 'direita', mono: true,
+      render: (l) => <Evolucao atual={l.sessoes} anterior={l.sessoesAnterior} />,
+    },
+    {
+      chave: 'prioridade', titulo: 'Atenção',
+      render: (l) => { const p = prioridade(l); return <Etiqueta texto={p.texto} tom={p.tom} />; },
+    },
   ];
 
-  const resumo = [
-    { rotulo: 'Sites cadastrados', valor: num(ctx.sites.length), nota: `em ${ctx.clientes.length} cliente(s)` },
-    { rotulo: 'Com eventos no período', valor: num(comEventos), nota: 'os demais aguardam instalação' },
-    { rotulo: 'Sessões no período', valor: num(totalSessoes), nota: 'somadas entre os sites' },
-    { rotulo: 'Leads no período', valor: num(totalLeads), nota: 'somados entre os sites' },
+  const cartoes = [
+    { rotulo: 'Clientes', valor: num(totais.clientes), nota: busca ? 'filtrados pela busca' : 'na carteira' },
+    { rotulo: 'Sites com coleta', valor: `${num(totais.sitesComColeta)}/${num(totais.sites)}`, nota: 'cadastrar não é coletar' },
+    { rotulo: 'Sessões', valor: num(totais.sessoes), nota: 'somadas entre os sites' },
+    { rotulo: 'Cliques no WhatsApp', valor: num(totais.cliquesWhatsapp), nota: 'clique não é conversa iniciada' },
+    { rotulo: 'Leads', valor: num(totais.leads), nota: 'contatos registrados' },
+    { rotulo: 'Precisam de atenção', valor: num(precisamAtencao), nota: 'com motivo declarado na tabela' },
   ];
 
   return (
@@ -85,13 +111,18 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
       <Cabecalho
         kicker="VISÃO GERAL"
         titulo={ctx.usuario.accountName}
-        meta={`${ctx.sites.length} site(s) · ${periodo.label}`}
-        filtros={<SeletorPeriodo atual={ctx.periodoInput.key} />}
+        meta={`${totais.clientes} cliente(s) · ${totais.sites} site(s)`}
+        filtros={
+          <>
+            <BuscaCarteira valor={busca} />
+            <SeletorPeriodo atual={ctx.periodoInput.key} />
+          </>
+        }
       />
 
       <div className="pagina">
         <div className="grade-cartoes">
-          {resumo.map((c) => (
+          {cartoes.map((c) => (
             <div key={c.rotulo} style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--bd)', background: 'var(--card)' }}>
               <div style={{ fontSize: 12.5, color: 'var(--tx2)' }}>{c.rotulo}</div>
               <div className="mono" style={{ fontSize: 28, fontWeight: 500, margin: '8px 0 4px' }}>{c.valor}</div>
@@ -100,17 +131,23 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
           ))}
         </div>
 
-        <Painel titulo="Sites monitorados" subtitulo={`Resumo dos sites da conta · ${periodo.label}`}>
-          <Tabela colunas={colunas} linhas={linhas} vazio="Nenhum site cadastrado." />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
-            Sites sem rastreamento instalado não têm histórico: aparecem como "Indisponível", nunca como zero
-            estimado. Zero significaria "medimos e não houve" — não é o caso.
+        <Painel
+          titulo="Carteira"
+          subtitulo={`Um cliente por linha, somando os sites dele${busca ? ` · busca: "${busca}"` : ''}`}
+        >
+          <Tabela colunas={colunas} linhas={linhas} vazio={busca ? 'Nenhum cliente com esse nome.' : 'Nenhum cliente cadastrado.'} />
+          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+            A conversão da linha Total é a soma das sessões convertidas dividida pela soma das sessões — não a
+            média das taxas dos clientes, que daria outro número quando os volumes são diferentes.
+            Comparações com menos de {MIN_SESSOES_PARA_COMPARAR} sessões são marcadas como volume baixo: é
+            regra deste painel para não exibir classificação enganosa, não garantia estatística.
+            Visitantes únicos não são somados entre sites — quem visita dois sites seria contado duas vezes.
           </p>
         </Painel>
 
         <footer style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
           <Aviso tom="ok">FONTE: RASTREAMENTO PRÓPRIO</Aviso>
-          <Aviso>PERÍODO: {periodo.label.toUpperCase()}</Aviso>
+          <Aviso>PERÍODO: {ctx.periodoInput.key.toUpperCase()}</Aviso>
         </footer>
       </div>
     </>

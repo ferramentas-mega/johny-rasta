@@ -399,3 +399,143 @@ export async function getBehavior(
     porHora,
   };
 }
+
+// ───────────────────────────── carteira ─────────────────────────────
+
+export type LinhaCarteira = {
+  clienteId: string;
+  cliente: string;
+  sites: number;
+  /** Sites que já receberam ao menos um evento real. Cadastrar não é coletar. */
+  sitesComColeta: number;
+  sessoes: number;
+  cliquesWhatsapp: number;
+  leads: number;
+  formularios: number;
+  sessoesConvertidasAbs: number;
+  sessoesAnterior: number;
+  leadsAnterior: number;
+  ultimoEvento: Date | null;
+};
+
+/**
+ * Uma linha por cliente, agregando todos os sites dele.
+ *
+ * Duas decisões que mudam o número e por isso estão explícitas:
+ *
+ * 1. **A janela é calculada no fuso de CADA site.** Sem isso, a carteira
+ *    discordaria do painel individual sempre que dois sites estivessem em
+ *    fusos diferentes — e o requisito é que o geral seja exatamente a soma dos
+ *    individuais sob os mesmos filtros.
+ *
+ * 2. **Visitantes únicos NÃO são somados.** Somar únicos de sites diferentes e
+ *    chamar de "pessoas únicas da carteira" contaria duas vezes quem visitou
+ *    dois sites. Aqui a carteira devolve sessões, que somam sem mentir.
+ */
+const CARTEIRA_SQL = `
+  with janela as (
+    select s.id, s.client_id, s.timezone,
+           (date_trunc('day', now() at time zone s.timezone)
+             - make_interval(days => $1::int - 1)) at time zone s.timezone as inicio,
+           (date_trunc('day', now() at time zone s.timezone)
+             + interval '1 day')                   at time zone s.timezone as fim
+      from sites s
+     where s.archived_at is null
+  ),
+  periodos as (
+    select j.*, j.inicio - (j.fim - j.inicio) as inicio_ant, j.inicio as fim_ant
+      from janela j
+  ),
+  por_site as (
+    select p.id, p.client_id,
+      (select count(*) from sessions se
+        where se.site_id = p.id and not se.is_test
+          and se.started_at >= p.inicio and se.started_at < p.fim)::int            as sessoes,
+      (select count(*) from sessions se
+        where se.site_id = p.id and not se.is_test
+          and se.started_at >= p.inicio_ant and se.started_at < p.fim_ant)::int    as sessoes_ant,
+      (select count(*) from events e join sessions se on se.id = e.session_id
+        where se.site_id = p.id and not se.is_test and not e.is_test
+          and se.started_at >= p.inicio and se.started_at < p.fim
+          and e.type = 'cta_click' and e.subtype = 'whatsapp')::int                as whatsapp,
+      (select count(*) from form_submissions fs
+        where fs.site_id = p.id and fs.status = 'confirmada' and not fs.is_test
+          and fs.created_at >= p.inicio and fs.created_at < p.fim)::int            as formularios,
+      (select count(distinct fs.session_id) from form_submissions fs
+        where fs.site_id = p.id and fs.status = 'confirmada' and not fs.is_test
+          and fs.session_id is not null
+          and fs.created_at >= p.inicio and fs.created_at < p.fim)::int            as convertidas,
+      (select count(*) from leads l
+        where l.site_id = p.id
+          and l.first_seen_at >= p.inicio and l.first_seen_at < p.fim)::int        as leads,
+      (select count(*) from leads l
+        where l.site_id = p.id
+          and l.first_seen_at >= p.inicio_ant and l.first_seen_at < p.fim_ant)::int as leads_ant,
+      (select max(e.occurred_at) from events e
+        where e.site_id = p.id and not e.is_test)                                  as ultimo_evento
+      from periodos p
+  )
+  select c.id                                       as "clienteId",
+         c.name                                     as "cliente",
+         count(ps.id)::int                          as "sites",
+         count(ps.ultimo_evento)::int               as "sitesComColeta",
+         coalesce(sum(ps.sessoes), 0)::int          as "sessoes",
+         coalesce(sum(ps.whatsapp), 0)::int         as "cliquesWhatsapp",
+         coalesce(sum(ps.leads), 0)::int            as "leads",
+         coalesce(sum(ps.formularios), 0)::int      as "formularios",
+         coalesce(sum(ps.convertidas), 0)::int      as "sessoesConvertidasAbs",
+         coalesce(sum(ps.sessoes_ant), 0)::int      as "sessoesAnterior",
+         coalesce(sum(ps.leads_ant), 0)::int        as "leadsAnterior",
+         max(ps.ultimo_evento)                      as "ultimoEvento"
+    from clients c
+    left join por_site ps on ps.client_id = c.id
+   group by c.id, c.name
+   order by c.name
+`;
+
+export async function getCarteira(db: Queryable, dias: number): Promise<LinhaCarteira[]> {
+  return db.query<LinhaCarteira>(CARTEIRA_SQL, [dias]);
+}
+
+/**
+ * Totais da carteira. São a soma das linhas, e não uma consulta paralela —
+ * duas consultas independentes podem divergir; esta não tem como.
+ */
+export type TotaisCarteira = {
+  clientes: number;
+  sites: number;
+  sitesComColeta: number;
+  sessoes: number;
+  cliquesWhatsapp: number;
+  leads: number;
+  /** Σ convertidas ÷ Σ sessões. NUNCA a média das taxas por cliente. */
+  taxaConversao: number | null;
+  variacaoSessoes: number | null;
+  variacaoLeads: number | null;
+};
+
+/** `null` quando não há base: crescimento sobre zero não é infinito, é indefinido. */
+export function variacao(atual: number, anterior: number): number | null {
+  if (anterior === 0) return null;
+  return (atual - anterior) / anterior;
+}
+
+export function totalizarCarteira(linhas: LinhaCarteira[]): TotaisCarteira {
+  const soma = (f: (l: LinhaCarteira) => number) => linhas.reduce((t, l) => t + f(l), 0);
+  const sessoes = soma((l) => l.sessoes);
+  const convertidas = soma((l) => l.sessoesConvertidasAbs);
+  const sessoesAnt = soma((l) => l.sessoesAnterior);
+  const leads = soma((l) => l.leads);
+
+  return {
+    clientes: linhas.length,
+    sites: soma((l) => l.sites),
+    sitesComColeta: soma((l) => l.sitesComColeta),
+    sessoes,
+    cliquesWhatsapp: soma((l) => l.cliquesWhatsapp),
+    leads,
+    taxaConversao: sessoes > 0 ? convertidas / sessoes : null,
+    variacaoSessoes: variacao(sessoes, sessoesAnt),
+    variacaoLeads: variacao(leads, soma((l) => l.leadsAnterior)),
+  };
+}
