@@ -47,7 +47,9 @@ const COMO_RESOLVER: Record<CausaDeFalha, string> = {
   variavel_ausente:
     'A variável não existe no ambiente. Defina-a nas configurações da hospedagem e publique de novo — variáveis só valem a partir do próximo build.',
   host_nao_resolve:
-    'O endereço do banco não existe. Copie o host da própria tela de connection string do provedor.',
+    'O endereço do banco não resolve. Confira a digitação do host — e, se for Supabase, use o host do pooler (Connect › Transaction pooler), não o da conexão direta.',
+  host_direto_do_supabase:
+    'Esta é a connection string DIRETA do Supabase (db.<projeto>.supabase.co), que só existe em IPv6 — a Vercel não alcança. Troque pelo host do pooler em Connect › Transaction pooler (aws-…pooler.supabase.com, porta 6543) e acrescente o sufixo do projeto ao papel: app_user.SEU_PROJECT_REF',
   sem_resposta:
     'O host não respondeu. A causa mais comum é usar a conexão direta, que em muitos provedores só atende em IPv6. Use o host do pooler (transaction mode, porta 6543).',
   senha_incorreta:

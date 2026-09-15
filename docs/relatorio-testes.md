@@ -92,6 +92,12 @@ gerando um lead só, e **ausência de dado pessoal no evento de analytics da sub
 
 ### `conexao.spec.ts`
 
+Inclui a distinção entre as duas causas de `ENOTFOUND`, que pedem ações opostas: host digitado
+errado (conferir a digitação) e host da **conexão direta** do Supabase, `db.<ref>.supabase.co`, que
+só publica registro AAAA e por isso não resolve num runtime sem IPv6 (trocar pelo pooler). Sem essa
+distinção o diagnóstico mandava procurar um erro de digitação que não existia — foi o que aconteceu
+em produção.
+
 Decisões que os demais testes não exercitam, porque todos rodam contra um Postgres local — que é
 justamente o caso em que elas não têm efeito. Foi assim que o defeito de TLS chegou à produção sem
 ser notado: TLS exigido em host remoto e dispensado em local, verificação de certificado quando há
@@ -255,7 +261,9 @@ Preenchido a cada execução completa:
 - `npm run doctor` — ambiente íntegro (9 verificações)
 - `npm run typecheck` — sem erros
 - `npm run lint` — sem avisos
-- `npm test` — 79 testes, todos passando (6 arquivos, 3,3 s)
+- `npm test` — **103 testes**, todos passando (6 arquivos)
+  (autorizacao 10 · build 4 · conexao 42 · ingestao 20 · metricas 14 · periodo 13 — a soma por
+  arquivo foi conferida contra o total, depois de eu ter reportado 79 numa rodada anterior)
 - `npm run test:e2e` — 32 testes (26 desktop + 6 celular), todos passando (3,0 min)
 - `npm run build` — build de produção concluído, 17 rotas
 - `npm start` — servidor de produção respondendo

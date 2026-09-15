@@ -342,6 +342,8 @@ Vá em **Deployments** → clique no deploy → **Runtime Logs** e procure linha
 |---|---|---|
 | `password authentication failed` | senha errada, ou falta o sufixo `.cihsheaiqinrmftjwexu` no usuário | Refaça as três strings do passo 2 |
 | `ENOTFOUND` / `ETIMEDOUT` | está usando o host da conexão direta (IPv6) | Troque pelo host do **Transaction pooler** |
+| `/api/diagnostico` diz `host_direto_do_supabase` | o `DATABASE_URL` aponta para `db.<projeto>.supabase.co` | É a conexão direta, que só existe em IPv6. Troque pelo host do **Transaction pooler** e ponha o sufixo do projeto no papel |
+| `/api/diagnostico` diz `host_nao_resolve` no host do pooler | host digitado errado | Copie de novo em **Connect › Transaction pooler** |
 | `Tenant or user not found` | o sufixo do projeto está faltando ou errado | O usuário precisa ser `app_user.cihsheaiqinrmftjwexu` |
 | `permission denied for table ...` | os papéis não foram criados naquele projeto | Rode o SQL do passo 1 de `docs/deploy-supabase.md` |
 | `EAUTHQUERY` / `unsupported or invalid secret format` | o papel tem prazo de validade vencido | `alter role app_user valid until 'infinity';` (idem para os outros dois) |

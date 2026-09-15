@@ -61,6 +61,33 @@ describe('classificação de falhas de conexão', () => {
     it(`reconhece "${mensagem.slice(0, 40)}" como ${esperado}`, () => {
       expect(classificarFalha(new Error(mensagem))).toBe(esperado);
     });
+
+  it('ENOTFOUND no host DIRETO do Supabase é diagnóstico diferente de host digitado errado', () => {
+    const enotfound = new Error('getaddrinfo ENOTFOUND db.cihsheaiqinrmftjwexu.supabase.co');
+
+    // Sem a string de conexão, só dá para dizer que não resolveu.
+    expect(classificarFalha(enotfound)).toBe('host_nao_resolve');
+
+    // Com ela, dá para dizer POR QUE: o host direto só publica AAAA, e o
+    // runtime não tem IPv6. Pedir para "conferir a digitação" mandaria o leitor
+    // procurar um erro que não existe.
+    expect(
+      classificarFalha(enotfound, 'postgres://app_user:s@db.cihsheaiqinrmftjwexu.supabase.co:5432/postgres'),
+    ).toBe('host_direto_do_supabase');
+  });
+
+  it('o host do pooler, esse sim, é host_nao_resolve quando não resolve', () => {
+    expect(
+      classificarFalha(
+        new Error('getaddrinfo ENOTFOUND aws-1-us-east-1.pooler.supabase.com'),
+        'postgres://app_user.ref:s@aws-1-us-east-1.pooler.supabase.com:6543/postgres',
+      ),
+    ).toBe('host_nao_resolve');
+  });
+
+  it('string de conexão ilegível não vira diagnóstico inventado', () => {
+    expect(classificarFalha(new Error('getaddrinfo ENOTFOUND algo'), 'não é uma url')).toBe('host_nao_resolve');
+  });
   }
 });
 

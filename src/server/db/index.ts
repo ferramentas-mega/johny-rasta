@@ -131,6 +131,7 @@ export type CausaDeFalha =
   | 'ok'
   | 'variavel_ausente'
   | 'host_nao_resolve'
+  | 'host_direto_do_supabase'
   | 'sem_resposta'
   | 'senha_incorreta'
   | 'usuario_sem_sufixo_do_projeto'
@@ -139,17 +140,38 @@ export type CausaDeFalha =
   | 'banco_inexistente'
   | 'desconhecida';
 
-export function classificarFalha(erro: unknown): CausaDeFalha {
+/**
+ * O host da conexão DIRETA do Supabase: `db.<ref>.supabase.co`.
+ *
+ * Ele só publica registro AAAA. Num runtime sem IPv6 — a Vercel, entre outros —
+ * a resolução falha com ENOTFOUND, indistinguível de um host digitado errado.
+ * São diagnósticos opostos: um pede conferir a digitação, o outro pede trocar
+ * de host. Reconhecer o formato permite dizer qual dos dois é.
+ */
+const HOST_DIRETO_DO_SUPABASE = /^db\.[a-z0-9]+\.supabase\.co$/i;
+
+export function classificarFalha(erro: unknown, connectionString?: string): CausaDeFalha {
   const msg = erro instanceof Error ? erro.message : String(erro);
 
   if (/Tenant or user not found/i.test(msg)) return 'usuario_sem_sufixo_do_projeto';
   if (/EAUTHQUERY|invalid secret format/i.test(msg)) return 'papel_expirado';
   if (/password authentication failed|SASL|SCRAM/i.test(msg)) return 'senha_incorreta';
-  if (/ENOTFOUND|EAI_AGAIN/i.test(msg)) return 'host_nao_resolve';
+  if (/ENOTFOUND|EAI_AGAIN/i.test(msg)) {
+    return hostDiretoDoSupabase(connectionString) ? 'host_direto_do_supabase' : 'host_nao_resolve';
+  }
   if (/ETIMEDOUT|ECONNREFUSED|timeout expired|Connection terminated/i.test(msg)) return 'sem_resposta';
   if (/SSL|pg_hba/i.test(msg)) return 'tls_recusado';
   if (/database .* does not exist/i.test(msg)) return 'banco_inexistente';
   return 'desconhecida';
+}
+
+function hostDiretoDoSupabase(connectionString?: string): boolean {
+  if (!connectionString) return false;
+  try {
+    return HOST_DIRETO_DO_SUPABASE.test(new URL(connectionString).hostname);
+  } catch {
+    return false;
+  }
 }
 
 export type ResultadoDaVerificacao = {
@@ -194,7 +216,7 @@ export async function verificarConexao(
     };
   } catch (erro) {
     console.error(`[db] verificação de ${envVar} falhou:`, explicar(erro, envVar).message);
-    return { variavel: envVar, causa: classificarFalha(erro), conecta: false };
+    return { variavel: envVar, causa: classificarFalha(erro, process.env[envVar]), conecta: false };
   }
 }
 
