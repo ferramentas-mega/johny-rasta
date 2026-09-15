@@ -42,6 +42,22 @@ um `withAccount` não quebra — ele espera. Fora de uma transação, `Promise.a
 
 ---
 
+## Indexação
+
+Nenhuma página deste aplicativo é feita para busca. As decisões, e o porquê:
+
+- `src/app/robots.ts` declara `Disallow` para as rotas autenticadas. **Não é proteção** — quem
+  ignora o arquivo entra igual. Quem protege é a sessão exigida em `(painel)`.
+- `/entrar` e `/teste/[publicId]` **não** aparecem no `Disallow`, de propósito: bloquear o
+  rastreamento e ao mesmo tempo esperar que o buscador leia o `noindex` delas é contraditório — ele
+  precisa buscar a página para ver a meta tag. Elas carregam `noindex` no HTML, pelo `metadata` do
+  layout raiz, que é o mecanismo certo para desindexar.
+- **Não existe `sitemap.xml`, e não deve existir.** Sitemap serve para ajudar a indexar conteúdo
+  público destinado à busca; aqui não há nenhum. Criar um só para eliminar um 404 seria publicar um
+  índice de rotas administrativas sem ganho algum. O 404 em `/sitemap.xml` é a resposta correta.
+
+---
+
 ## Autorização
 
 Três papéis do Postgres, com privilégios diferentes:

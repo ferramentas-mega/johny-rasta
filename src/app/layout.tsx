@@ -5,6 +5,11 @@ import '@/styles/theme.css';
 export const metadata: Metadata = {
   title: 'Painel de Sites',
   description: 'Análise de desempenho de sites e landing pages',
+  // Painel interno: nenhuma página deste aplicativo é feita para busca, nem as
+  // públicas. O `noindex` vale para as que um rastreador consegue alcançar —
+  // login e página de teste de instalação. As demais estão atrás de sessão, e é
+  // a autenticação que as protege; meta tag não protege nada, só desindexa.
+  robots: { index: false, follow: false, nocache: true },
 };
 
 /**
