@@ -265,12 +265,28 @@ identificador público pode gravar eventos que ficam fora dos relatórios. Não 
 para esconder tráfego alheio com isso — só para injetar o próprio, que já é
 possível. O token de diagnóstico, esse, força `is_test` no **servidor**.
 
-**SSRF: a posse do domínio não é verificada.** A análise técnica exige que a URL
-seja do domínio do site cadastrado, mas nada prova que o domínio é seu — basta
-cadastrar um site com o domínio alvo. O validador recusa endereço privado por
-forma, porém **não resolve DNS**, então um nome público apontando para IP privado
-passa. O alcance real é o que o PageSpeed do Google consegue buscar, não a rede
-interna da Vercel: quem faz a requisição externa é o Google, não este servidor.
+**A posse do domínio não é verificada.** A análise técnica exige que a URL seja
+do domínio do site cadastrado, mas nada prova que o domínio é seu — basta
+cadastrar um site com o domínio alvo. O que se ganha com isso é gastar a quota da
+própria conta analisando a página de outra pessoa; os dados do CrUX são públicos,
+qualquer um os consulta para qualquer origem. Fechar pede verificação por
+registro DNS ou arquivo no servidor, que é trabalho de produto, não de correção.
+
+**Isto NÃO é SSRF, e a entrada anterior estava errada.** Vale registrar porque
+modelo de ameaça errado leva a correção errada. Auditei as saídas: as **únicas**
+requisições externas do aplicativo vão para dois endereços FIXOS — a API do
+PageSpeed e a do CrUX —, com a URL do usuário como **parâmetro**, nunca como
+destino. Quem busca a página é o Google. Não existe aqui o SSRF clássico em que o
+chamador escolhe para onde o backend se conecta, e a versão anterior deste
+documento afirmava que existia.
+
+Daí decorre que **resolver DNS no validador seria teatro**: contra um fetch que
+este servidor não faz, resolver o nome não protege nada. E, contra um que se
+fizesse, resolver antes e buscar depois é exatamente a janela do DNS rebinding —
+quem passar a buscar a página precisa validar o IP **no momento da conexão**. A
+ausência agora está documentada no próprio `url-publica.ts`, junto com o que a
+validação de fato cobre: quota, não pedir ao Google o que ele não pode buscar, e
+defesa em profundidade para o dia em que o servidor buscar a página.
 
 **Sem justiça entre contas na fila de auditoria.** FIFO global, uma execução por
 dia no plano Hobby. Uma conta com muitas URLs atrasa as demais.

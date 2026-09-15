@@ -1,15 +1,30 @@
 /**
  * Só URLs públicas podem ser auditadas.
  *
- * Duas razões, e as duas importam:
+ * **Quem busca a página é o Google, não este servidor.** Vale começar por aí,
+ * porque a versão anterior deste comentário dizia o contrário e apontava para a
+ * defesa errada. As únicas requisições externas do aplicativo saem para dois
+ * endereços FIXOS (`pagespeed.ts` e `crux.ts`), com a URL do usuário como
+ * **parâmetro**, nunca como destino. Não há aqui o SSRF clássico em que o
+ * chamador escolhe para onde o backend se conecta.
  *
- * 1. **SSRF.** O servidor é quem faz a requisição. Sem validação, `url` vira um
- *    pedido para o backend alcançar `169.254.169.254` (metadados da nuvem),
- *    `127.0.0.1` (serviços internos) ou `10.0.0.0/8`. O Google buscaria a
- *    página, mas o dano é a própria existência de um endpoint que aponta o
- *    servidor para onde o chamador quiser.
- * 2. **Quota.** São 25.000 análises por dia por chave. Um endpoint irrestrito é
- *    um jeito barato de alguém esgotar isso.
+ * O que sobra, e que esta validação cobre de verdade:
+ *
+ * 1. **Quota.** São 25.000 análises por dia por chave. Um endpoint que aceite
+ *    qualquer endereço é um jeito barato de alguém esgotar isso.
+ * 2. **Não pedir ao Google o que ele não pode buscar.** `127.0.0.1` e
+ *    `10.0.0.0/8` não existem para o crawler. A requisição gasta quota e volta
+ *    com `runtimeError`, e uma fila cheia de análise impossível atrasa a
+ *    análise real de quem cadastrou o site direito.
+ * 3. **Defesa em profundidade.** Se um dia este servidor passar a buscar a
+ *    página (uma verificação de posse do domínio faria isso), a validação já
+ *    está no caminho. Ela é barata; tirá-la e reintroduzi-la depois não é.
+ *
+ * Por isso **não** resolvemos DNS aqui, e a ausência é deliberada: contra um
+ * fetch que este servidor não faz, resolver o nome não protege nada — e, para
+ * quem faz, resolver antes e buscar depois é justamente a janela do DNS
+ * rebinding. Quem passar a buscar a página precisa validar o IP **no momento da
+ * conexão**, não aqui.
  *
  * A validação de formato mora aqui; a de autorização (a URL estar cadastrada
  * naquele site, e o site pertencer à conta da sessão) mora no serviço, porque
