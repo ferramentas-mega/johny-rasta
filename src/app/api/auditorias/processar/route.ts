@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { withAccount, withoutAccount } from '@/server/db';
 import { getSessionUser } from '@/server/auth/session';
 import { analisar, IntegracaoNaoConfigurada, FalhaNaAnalise } from '@/server/qualidade/pagespeed';
-import { reivindicarProximo, registrarSucesso, registrarFalha } from '@/server/qualidade/auditoria';
+import { reivindicarProximo, registrarSucesso, registrarFalha, salvarSnapshotCrux } from '@/server/qualidade/auditoria';
+import { consultarPaginaOuOrigem, CruxNaoConfigurado } from '@/server/qualidade/crux';
 
 /**
  * Processa UMA auditoria da fila.
@@ -70,7 +71,36 @@ export async function POST(request: Request) {
     // sozinhas respondiam por 96 dos 285 KB de uma resposta real.
     const auditorias = Object.fromEntries(resultado.diagnosticos.map((d) => [d.id, d]));
     await executar((db) => registrarSucesso(db, job, resultado, auditorias));
-    return NextResponse.json({ processado: true, jobId: job.id, url: job.url, strategy: job.strategy });
+
+    // A experiência real vem junto da auditoria, e não a cada carregamento da
+    // tela: são 25.000 pedidos por dia, e uma consulta por visita queimaria a
+    // quota sem trazer dado novo — a janela do CrUX anda de 28 em 28 dias.
+    //
+    // Falhar aqui NÃO invalida a auditoria que acabou de dar certo. São medidas
+    // independentes: laboratório e campo. Por isso o catch é próprio e silencioso
+    // no retorno, apenas registrado no log.
+    let campo: 'coletado' | 'sem_dados' | 'indisponivel' = 'indisponivel';
+    try {
+      const leitura = await consultarPaginaOuOrigem(
+        job.url,
+        job.strategy === 'mobile' ? 'PHONE' : 'DESKTOP',
+        controle.signal,
+      );
+      if (leitura) {
+        await executar((db) => salvarSnapshotCrux(db, job.site_id, leitura));
+        campo = 'coletado';
+      } else {
+        campo = 'sem_dados';
+      }
+    } catch (erro) {
+      console.error(
+        '[auditoria] CrUX indisponível para',
+        job.id,
+        erro instanceof CruxNaoConfigurado ? 'API não habilitada' : String(erro).slice(0, 120),
+      );
+    }
+
+    return NextResponse.json({ processado: true, jobId: job.id, url: job.url, strategy: job.strategy, campo });
   } catch (erro) {
     const motivo =
       erro instanceof IntegracaoNaoConfigurada ? 'Integração não configurada'

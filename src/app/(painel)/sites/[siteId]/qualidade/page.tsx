@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { withAccount } from '@/server/db';
 import { exigirSessao } from '@/server/contexto';
 import { obterSite, listarSites } from '@/server/services/sites';
-import { ultimasAnalises } from '@/server/qualidade/auditoria';
+import { ultimasAnalises, ultimosCrux, type SnapshotCrux } from '@/server/qualidade/auditoria';
 import { paraCem } from '@/server/qualidade/pagespeed';
 import { dataHora, num } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
@@ -38,12 +38,13 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
   if (!site) notFound();
   const sites = await listarSites(usuario.accountId);
 
-  const { urls, analises, fila } = await withAccount(usuario.accountId, async (db) => ({
+  const { urls, analises, fila, campo } = await withAccount(usuario.accountId, async (db) => ({
     urls: await db.query<UrlMonitorada>(
       'select id, url, prioritaria from monitored_urls where site_id = $1 order by prioritaria desc, url',
       [siteId],
     ),
     analises: await ultimasAnalises(db, siteId),
+    campo: await ultimosCrux(db, siteId),
     fila: await db.query<Job>(
       `select id, url, strategy, status, erro, criado_em from audit_jobs
         where site_id = $1 order by criado_em desc limit 10`,
@@ -63,6 +64,29 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
     { chave: 'lcp', titulo: 'LCP', alinhamento: 'direita', mono: true, render: (a) => ms(a.lcp_ms) },
     { chave: 'tbt', titulo: 'TBT', alinhamento: 'direita', mono: true, render: (a) => ms(a.tbt_ms) },
     { chave: 'quando', titulo: 'Medido em', render: (a) => <span style={{ fontSize: 12, color: 'var(--tx2)' }}>{dataHora(a.medido_em)}</span> },
+  ];
+
+  const colunasCampo: Coluna<SnapshotCrux>[] = [
+    { chave: 'alvo', titulo: 'Alvo', render: (c) => (
+        <>
+          <span className="mono" style={{ fontSize: 11.5 }}>{c.alvo.replace(/^https?:\/\/[^/]+/, '') || c.alvo}</span>
+          <span style={{ display: 'block', fontSize: 10.5, color: 'var(--tx3)' }}>
+            {c.escopo === 'url' ? 'esta página' : 'origem — média do site inteiro'}
+          </span>
+        </>
+      ) },
+    { chave: 'disp', titulo: 'Dispositivo', render: (c) => <Etiqueta texto={c.form_factor === 'PHONE' ? 'Celular' : 'Computador'} tom="soft" /> },
+    { chave: 'lcp', titulo: 'LCP (p75)', alinhamento: 'direita', mono: true, render: (c) => ms(c.lcp_p75_ms) },
+    { chave: 'inp', titulo: 'INP (p75)', alinhamento: 'direita', mono: true, render: (c) => ms(c.inp_p75_ms) },
+    { chave: 'cls', titulo: 'CLS (p75)', alinhamento: 'direita', mono: true,
+      render: (c) => (c.cls_p75 === null ? <span style={{ color: 'var(--tx3)' }}>—</span> : Number(c.cls_p75).toFixed(3)) },
+    { chave: 'janela', titulo: 'Janela medida', render: (c) => (
+        <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>
+          {c.janela_inicio && c.janela_fim
+            ? `${new Date(c.janela_inicio).toLocaleDateString('pt-BR')} – ${new Date(c.janela_fim).toLocaleDateString('pt-BR')}`
+            : 'Não informada'}
+        </span>
+      ) },
   ];
 
   const colunasFila: Coluna<Job>[] = [
@@ -114,6 +138,29 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
           </p>
         </Painel>
 
+        <Painel
+          titulo="Experiência real dos visitantes"
+          subtitulo="Dado de campo do Chrome, independente das notas acima"
+        >
+          {campo.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.6 }}>
+              Nenhuma leitura ainda. A experiência real é buscada junto com a análise técnica —
+              execute uma análise para coletá-la.
+            </p>
+          ) : (
+            <Tabela colunas={colunasCampo} linhas={campo} vazio="Sem leitura." />
+          )}
+          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+            Estes números vêm de visitantes reais do Chrome, não de teste sintético — e por isso o
+            <strong> INP só aparece aqui</strong>: o Lighthouse não o mede.
+            A janela é a que o Google devolveu (cerca de 28 dias corridos) e <strong>não muda</strong> com o
+            período escolhido no painel. Leitura marcada como <em>origem</em> é a média do site inteiro, não
+            daquela página: serve de referência quando a página não tem amostra própria, e está rotulada
+            para não ser confundida com ela. Sem amostra em nenhum dos dois níveis, a resposta é
+            "Dados insuficientes" — nunca zero.
+          </p>
+        </Painel>
+
         {fila.length > 0 && (
           <Painel titulo="Fila" subtitulo="As dez solicitações mais recentes deste site">
             <Tabela colunas={colunasFila} linhas={fila} vazio="Nenhuma solicitação." />
@@ -128,7 +175,9 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
           <Aviso tom={configurada ? 'ok' : 'warn'}>
             {configurada ? 'FONTE: PAGESPEED INSIGHTS (LIGHTHOUSE)' : 'INTEGRAÇÃO NÃO CONFIGURADA'}
           </Aviso>
-          <Aviso>EXPERIÊNCIA REAL (CrUX): DEPENDE DE API PRÓPRIA</Aviso>
+          <Aviso tom={campo.length ? 'ok' : 'soft'}>
+            {campo.length ? 'EXPERIÊNCIA REAL: CrUX (CAMPO)' : 'EXPERIÊNCIA REAL: SEM LEITURA AINDA'}
+          </Aviso>
         </footer>
       </div>
     </>

@@ -187,3 +187,63 @@ export async function ultimasAnalises(db: Queryable, siteId: string): Promise<Ul
     [siteId],
   );
 }
+
+// ───────────────────────────── experiência real (CrUX) ─────────────────────────────
+
+export type SnapshotCrux = {
+  escopo: 'url' | 'origem';
+  alvo: string;
+  form_factor: string;
+  lcp_p75_ms: string | null;
+  inp_p75_ms: string | null;
+  cls_p75: string | null;
+  janela_inicio: Date | null;
+  janela_fim: Date | null;
+  coletado_em: Date;
+};
+
+/**
+ * Guarda uma leitura do CrUX.
+ *
+ * Linha nova a cada coleta, como nas auditorias: a janela do CrUX anda sozinha
+ * (são 28 dias corridos), e sobrescrever apagaria a possibilidade de comparar
+ * como a experiência real evoluiu.
+ */
+export async function salvarSnapshotCrux(
+  db: Queryable,
+  siteId: string,
+  leitura: {
+    escopo: 'url' | 'origem';
+    alvo: string;
+    formFactor: string;
+    lcpP75Ms: number | null;
+    inpP75Ms: number | null;
+    clsP75: number | null;
+    janela: { inicio: string; fim: string } | null;
+  },
+): Promise<void> {
+  await db.query(
+    `insert into crux_snapshots
+       (account_id, site_id, escopo, alvo, form_factor, lcp_p75_ms, inp_p75_ms, cls_p75,
+        janela_inicio, janela_fim)
+     values (app.current_account_id(), $1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      siteId, leitura.escopo, leitura.alvo, leitura.formFactor,
+      leitura.lcpP75Ms, leitura.inpP75Ms, leitura.clsP75,
+      leitura.janela?.inicio ?? null, leitura.janela?.fim ?? null,
+    ],
+  );
+}
+
+/** A leitura mais recente de cada (alvo, escopo, dispositivo). */
+export async function ultimosCrux(db: Queryable, siteId: string): Promise<SnapshotCrux[]> {
+  return db.query<SnapshotCrux>(
+    `select distinct on (alvo, escopo, form_factor)
+            escopo, alvo, form_factor, lcp_p75_ms, inp_p75_ms, cls_p75,
+            janela_inicio, janela_fim, coletado_em
+       from crux_snapshots
+      where site_id = $1
+      order by alvo, escopo, form_factor, coletado_em desc`,
+    [siteId],
+  );
+}
