@@ -47,7 +47,7 @@ const VARIANTES: Record<VarianteChuva, { tamanho: number; estilo: React.CSSPrope
   // um formulário é exatamente onde a legibilidade costuma se perder. A máscara
   // apaga o centro, que é onde o texto fica.
   tela: {
-    tamanho: 26,
+    tamanho: 20,
     estilo: {
       position: 'fixed',
       inset: 0,
@@ -108,8 +108,11 @@ export function ChuvaMatrix({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       // As colunas são recalculadas: redimensionar com a contagem antiga
       // deixaria faixas vazias ou colunas fora da tela.
-      // Começam em linhas diferentes para a chuva já nascer espalhada.
-      colunas = new Array(Math.ceil(largura / TAMANHO)).fill(0).map((_, i) => (i * 37) % 40);
+      // Começam ACIMA da tela, em alturas sorteadas: a chuva já nasce
+      // espalhada, em vez de todas as colunas entrando juntas pelo topo.
+      colunas = new Array(Math.ceil(largura / TAMANHO))
+        .fill(0)
+        .map(() => Math.floor(Math.random() * -100));
       ctx.clearRect(0, 0, largura, altura);
     };
 
@@ -126,35 +129,27 @@ export function ChuvaMatrix({
      * acumulador desacopla isso da taxa de quadros: numa tela de 120 Hz a
      * queda tem a mesma velocidade que numa de 60.
      */
-    const MS_POR_LINHA = 90;
+    const MS_POR_LINHA = 33;
 
     const desenhar = (claro: boolean) => {
       ctx.font = `${TAMANHO}px var(--fonte-mono), ui-monospace, monospace`;
-      // Corpo mais forte que antes (#3FBF63): os dígitos precisam ser LIDOS,
-      // não apenas percebidos como textura verde.
-      const corpo = claro ? '#1F8F43' : '#5BE886';
-      const cabeca = claro ? '#0C5C28' : '#E6FFEE';
+      // COR ÚNICA para toda a coluna. Uma versão anterior deixava a cabeça mais
+      // clara que o rastro; é bonito, mas muda a aparência — a chuva de
+      // referência é um campo uniforme de dígitos, onde a profundidade vem só
+      // do desbotamento progressivo do véu.
+      ctx.fillStyle = claro ? '#1F8F43' : '#00FF41';
       const linhas = Math.ceil(altura / TAMANHO);
 
       for (let i = 0; i < colunas.length; i += 1) {
         const linha = colunas[i]!;
-        const y = linha * TAMANHO;
+        // Dígito SORTEADO a cada passo, não derivado da posição. Derivar produz
+        // padrões diagonais perceptíveis; sortear dá o ruído binário do original.
+        ctx.fillText(CHARS[Math.floor(Math.random() * CHARS.length)]!, i * TAMANHO, linha * TAMANHO);
 
-        // A cabeça é mais clara que o rastro. Sem esse contraste a chuva lê
-        // como um borrão uniforme em vez de gotas caindo.
-        ctx.fillStyle = cabeca;
-        ctx.fillText(CHARS[(i * 7 + linha) % CHARS.length]!, i * TAMANHO, y);
-
-        // Um glifo logo atrás, já na cor do corpo: dá espessura à gota sem
-        // depender só do véu para sugerir movimento.
-        if (linha > 0) {
-          ctx.fillStyle = corpo;
-          ctx.fillText(CHARS[(i * 11 + linha + 1) % CHARS.length]!, i * TAMANHO, y - TAMANHO);
-        }
-
-        // Reinício espalhado: se todas as colunas voltassem ao mesmo tempo, a
-        // chuva pulsaria em bloco em vez de cair contínua.
-        colunas[i] = linha > linhas + ((i * 13) % 24) ? 0 : linha + 1;
+        // Reinício probabilístico depois de sair pela base: as colunas voltam
+        // em momentos diferentes, então a chuva cai contínua em vez de pulsar
+        // em bloco.
+        colunas[i] = linha > linhas && Math.random() > 0.975 ? 0 : linha + 1;
       }
     };
 
@@ -175,12 +170,11 @@ export function ChuvaMatrix({
       // O véu de cada passo é o que APAGA o passado: quanto mais fraco, mais
       // longo o rastro. É daqui que vem a cauda desbotada característica. Usa a
       // cor do PRÓPRIO tema — um preto fixo sujaria o tema claro.
-      // Véu fraco de propósito: quanto menor o alfa, mais passos um dígito
-      // sobrevive, e mais longa a coluna de números. Com 0,085 o rastro tinha
-      // ~10 dígitos e a tela ficava esparsa; com 0,04 passa de 20 e a coluna
-      // lê como um fluxo contínuo, que é o da referência.
+      // 0,1 é o valor do componente de referência: com um passo a cada 33 ms,
+      // um dígito sobrevive ~10 passos, e o rastro fica com ~10 caracteres.
+      // Usa a cor do PRÓPRIO tema — um preto fixo sujaria o tema claro.
       const claro = root.dataset.tema === 'claro';
-      ctx.fillStyle = claro ? 'rgba(247,251,247,0.05)' : 'rgba(5,8,5,0.04)';
+      ctx.fillStyle = claro ? 'rgba(247,251,247,0.1)' : 'rgba(0,0,0,0.1)';
       ctx.fillRect(0, 0, largura, altura);
 
       desenhar(claro);
