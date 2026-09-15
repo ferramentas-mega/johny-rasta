@@ -127,3 +127,55 @@ test('a chuva de fundo não intercepta o login', async ({ page }) => {
   await page.click('button[type=submit]');
   await page.waitForURL('**/visao-geral**');
 });
+
+test('o painel se declara instalável, com os ícones que o Chrome exige', async ({ page }) => {
+  // O manifesto é servido de verdade, e não só declarado: um caminho errado
+  // aqui some sem erro — o navegador simplesmente não oferece a instalação.
+  const resposta = await page.goto('/manifest.webmanifest');
+  expect(resposta?.status()).toBe(200);
+
+  const manifesto = JSON.parse((await resposta!.text()) ?? '{}');
+  expect(manifesto.name).toBeTruthy();
+  expect(manifesto.short_name).toBeTruthy();
+  expect(manifesto.display).toBe('standalone');
+  // Começa na visão geral, não na raiz: a raiz só redireciona, e um salto a
+  // cada abertura é um salto por dia de uso.
+  expect(manifesto.start_url).toBe('/visao-geral');
+
+  const tamanhos = manifesto.icons.map((i: { sizes: string }) => i.sizes);
+  expect(tamanhos).toContain('192x192');
+  expect(tamanhos).toContain('512x512');
+  // O Android recorta o ícone; sem uma versão `maskable` o recorte come o
+  // desenho.
+  expect(manifesto.icons.some((i: { purpose?: string }) => i.purpose === 'maskable')).toBe(true);
+
+  // Os arquivos existem mesmo.
+  for (const icone of manifesto.icons) {
+    const r = await page.request.get(icone.src);
+    expect(r.status(), `${icone.src} precisa existir`).toBe(200);
+    expect(r.headers()['content-type']).toContain('image/png');
+  }
+
+  // A página aponta para o manifesto: sem este link, nada acima é procurado.
+  await page.goto('/entrar');
+  await expect(page.locator('link[rel=manifest]')).toHaveAttribute('href', /manifest/);
+});
+
+test('a navegação do celular é uma faixa curta, não uma tela inteira', async ({ page }) => {
+  await entrar(page);
+
+  // Era um `aside` de largura mínima 240px que quebrava para uma linha própria
+  // e ocupava a tela inteira: no celular era preciso rolar o menu completo
+  // antes de chegar a qualquer número. A faixa precisa caber numa fração do
+  // topo, e continuar visível ao rolar.
+  const menu = page.locator('.lateral');
+  const altura = await menu.evaluate((el) => el.getBoundingClientRect().height);
+  const tela = page.viewportSize()!.height;
+  expect(altura, 'o menu não pode comer mais de 15% da altura do celular').toBeLessThan(tela * 0.15);
+
+  expect(await menu.evaluate((el) => getComputedStyle(el).position)).toBe('sticky');
+
+  // Todos os itens continuam alcançáveis, rolando na horizontal.
+  await expect(page.getByRole('navigation', { name: 'Seções do painel' }).getByRole('link')).toHaveCount(6);
+  await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible();
+});

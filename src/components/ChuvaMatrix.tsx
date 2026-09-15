@@ -23,12 +23,16 @@ export type VarianteChuva = 'cabecalho' | 'tela';
  * Cada variante define onde a chuva mora, o tamanho do dígito e a velocidade.
  *
  * `msPorLinha` é o intervalo entre passos: quanto MAIOR, mais devagar a queda.
- * As duas variantes usam o mesmo ritmo hoje; o campo existe para que mudar uma
- * delas não exija mexer no motor.
+ *
+ * São dois valores, e a diferença não é capricho: na tela do celular a chuva
+ * percorre uma altura muito menor, então o mesmo intervalo entrega uma queda
+ * que parece lenta demais. No desktop, o contrário — a mesma cadência vira
+ * agitação atrás do conteúdo. O ponto de corte acompanha o mesmo 640px que o
+ * resto do layout já usa.
  */
 const VARIANTES: Record<
   VarianteChuva,
-  { tamanho: number; msPorLinha: number; estilo: React.CSSProperties }
+  { tamanho: number; msPorLinha: { celular: number; desktop: number }; estilo: React.CSSProperties }
 > = {
   // Cabeçalho inteiro.
   //
@@ -38,7 +42,7 @@ const VARIANTES: Record<
   // leitura se perde primeiro.
   cabecalho: {
     tamanho: 20,
-    msPorLinha: 33,
+    msPorLinha: { celular: 55, desktop: 90 },
     estilo: {
       position: 'absolute',
       inset: 0,
@@ -54,7 +58,7 @@ const VARIANTES: Record<
   // Tela inteira, atrás do conteúdo.
   tela: {
     tamanho: 28,
-    msPorLinha: 33,
+    msPorLinha: { celular: 55, desktop: 90 },
     estilo: {
       position: 'fixed',
       inset: 0,
@@ -88,7 +92,7 @@ export function ChuvaMatrix({
   caracteres?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const { tamanho: TAMANHO, msPorLinha: MS_POR_LINHA, estilo } = VARIANTES[variante];
+  const { tamanho: TAMANHO, msPorLinha: RITMO, estilo } = VARIANTES[variante];
 
   useEffect(() => {
     const canvas = ref.current;
@@ -96,6 +100,15 @@ export function ChuvaMatrix({
     if (!canvas || !ctx) return;
 
     const CHARS = (caracteres || ALFABETO_PADRAO).split('');
+
+    // Lido do próprio navegador, e reavaliado quando a largura cruza o corte:
+    // girar o celular ou redimensionar a janela troca o ritmo sem recarregar.
+    const estreito = window.matchMedia('(max-width: 640px)');
+    let MS_POR_LINHA = estreito.matches ? RITMO.celular : RITMO.desktop;
+    const aoTrocarLargura = (e: MediaQueryListEvent) => {
+      MS_POR_LINHA = e.matches ? RITMO.celular : RITMO.desktop;
+    };
+    estreito.addEventListener('change', aoTrocarLargura);
     /** Linha atual de cada coluna — INTEIRO, não fração. Veja `passo`. */
     let colunas: number[] = [];
     let largura = 0;
@@ -230,8 +243,9 @@ export function ChuvaMatrix({
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', redimensionar);
+      estreito.removeEventListener('change', aoTrocarLargura);
     };
-  }, [TAMANHO, MS_POR_LINHA, caracteres]);
+  }, [TAMANHO, RITMO, caracteres]);
 
   return (
     <canvas

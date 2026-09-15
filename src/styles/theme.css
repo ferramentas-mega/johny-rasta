@@ -423,3 +423,297 @@ select option {
     transform: rotate(360deg);
   }
 }
+
+/* Texto só para leitor de tela. Existe porque vários indicadores do painel são
+   ícones ou cores — e cor não é informação para quem não a vê. Recorte de 1px
+   em vez de `display:none`, que tiraria o texto da árvore de acessibilidade. */
+.apenas-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   Navegação: estados de ponteiro e teclado
+   ==========================================================================
+
+   Vive em CSS, e não em estilo inline, por um motivo simples: `:hover` não
+   existe em estilo inline. Estava tudo inline, e por isso os itens do menu não
+   reagiam ao ponteiro. */
+
+.item-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 13.5px;
+  text-decoration: none;
+  color: var(--tx2);
+  background: transparent;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.item-menu:hover {
+  background: var(--hover);
+  color: var(--tx);
+}
+
+.item-menu[aria-current='page'] {
+  color: var(--tx);
+  background: var(--gold-fill);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+/* O item ativo não clareia mais ao passar o mouse: ele já é o destaque da tela,
+   e piscar ao encostar o ponteiro só tira a atenção do que mudou. */
+.item-menu[aria-current='page']:hover {
+  background: var(--gold-fill);
+}
+
+.aba-site {
+  padding: 11px 14px;
+  font-size: 13.5px;
+  text-decoration: none;
+  color: var(--tx2);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.aba-site:hover {
+  color: var(--tx);
+  background: var(--hover);
+  border-bottom-color: var(--bd);
+}
+
+.aba-site[aria-current='page'] {
+  color: var(--tx);
+  font-weight: 600;
+  border-bottom-color: var(--gold);
+}
+
+/* ==========================================================================
+   Entrada suave
+   ==========================================================================
+
+   Um deslocamento de 6px e um fade. O escalonamento é por posição, em CSS, e
+   não por um atraso calculado em JavaScript — que exigiria o componente saber
+   quantos irmãos tem.
+
+   Nada aqui precisa de guarda própria: o bloco `prefers-reduced-motion` no topo
+   deste arquivo zera a duração de toda animação, e `both` garante que o
+   elemento termine no estado final mesmo com duração quase nula. Quem pede
+   menos movimento vê a tela pronta, não uma tela vazia. */
+
+@keyframes entrada-suave {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pagina > * {
+  animation: entrada-suave 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.pagina > *:nth-child(2) {
+  animation-delay: 0.04s;
+}
+.pagina > *:nth-child(3) {
+  animation-delay: 0.08s;
+}
+.pagina > *:nth-child(4) {
+  animation-delay: 0.12s;
+}
+.pagina > *:nth-child(n + 5) {
+  animation-delay: 0.16s;
+}
+
+/* ==========================================================================
+   Casca do painel: barra lateral no desktop, faixa no celular
+   ==========================================================================
+
+   O layout era um `flex-wrap` com o aside pedindo 240px. Abaixo dessa largura
+   o aside quebrava para uma linha própria e ocupava a TELA INTEIRA: no celular
+   era preciso rolar o menu completo — marca, seis itens e o rodapé de conta —
+   antes de chegar a qualquer número. A correção é trocar o eixo, não encolher
+   o menu. */
+
+.casca-painel {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+}
+
+.lateral {
+  flex: 0 0 248px;
+  min-width: 0;
+  background: var(--side);
+  border-right: 1px solid var(--bd);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 14px 24px;
+}
+
+.lateral-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lateral-rodape {
+  margin-top: auto;
+  border-top: 1px solid var(--bd);
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.conteudo-painel {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 860px) {
+  .casca-painel {
+    flex-direction: column;
+  }
+
+  /* Uma faixa horizontal de ~56px, grudada no topo, em vez de uma barra lateral
+     que ocupava a tela inteira antes do conteúdo. Navegação, conta e "Sair"
+     dividem a MESMA linha: cada linha extra aqui é uma linha a menos de dado.
+     O `z-index` a mantém acima do canvas do cabeçalho, que é `absolute`. */
+  .lateral {
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    border-right: none;
+    border-bottom: 1px solid var(--bd);
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  /* A marca já aparece no cabeçalho de cada tela; repeti-la aqui custaria uma
+     faixa inteira da altura útil do celular. */
+  .lateral-marca {
+    display: none;
+  }
+
+  /* Rola na horizontal em vez de empilhar. `min-width: 0` é o que permite ao
+     item flexível encolher abaixo do conteúdo — sem ele a faixa empurraria o
+     rodapé para fora da tela. */
+  .lateral-nav {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px;
+  }
+  .lateral-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .item-menu {
+    white-space: nowrap;
+    padding: 9px 12px;
+    gap: 8px;
+  }
+
+  /* O indicador do item ativo era uma barra à esquerda; deitado, ele precisa
+     ficar embaixo, senão desaparece entre dois itens vizinhos. */
+  .item-menu[aria-current='page'] {
+    box-shadow: inset 0 -2px 0 var(--gold);
+  }
+
+  .lateral-rodape {
+    flex: none;
+    margin-top: 0;
+    border-top: none;
+    border-left: 1px solid var(--bd);
+    padding: 0 0 0 10px;
+  }
+
+  /* O nome da conta sai; ele já está no título da Visão geral, e aqui custaria
+     a largura que a navegação precisa. O botão "Sair" fica — esconder uma
+     função para ganhar espaço é outra coisa. */
+  .lateral-rodape > div > div:first-child {
+    display: none;
+  }
+}
+
+
+/* Telas com recorte (notch, ilha, cantos arredondados).
+   `viewport-fit=cover` deixa a interface ir até a borda; estas regras devolvem
+   o respiro onde ele é necessário. Sem elas, a faixa de navegação fica embaixo
+   do relógio do sistema quando o painel roda instalado, em tela cheia. */
+@supports (padding: env(safe-area-inset-left)) {
+  @media (max-width: 860px) {
+    .lateral {
+      padding-top: calc(8px + env(safe-area-inset-top, 0px));
+      padding-left: calc(10px + env(safe-area-inset-left, 0px));
+      padding-right: calc(10px + env(safe-area-inset-right, 0px));
+    }
+    .pagina,
+    .cabecalho,
+    .abas {
+      padding-left: calc(16px + env(safe-area-inset-left, 0px));
+      padding-right: calc(16px + env(safe-area-inset-right, 0px));
+    }
+    .conteudo-painel {
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+  }
+}
+
+/* Alvos de toque: o mínimo confortável é ~44px. Vale só onde o ponteiro é
+   grosseiro — no mouse, botões desse tamanho deixam a interface esparramada. */
+@media (pointer: coarse) {
+  .item-menu,
+  .aba-site {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  button,
+  select,
+  input[type='checkbox'],
+  input[type='radio'] {
+    /* Não força altura em tudo: só garante que nada fique abaixo do alcance
+       do dedo. Campos de texto já têm padding suficiente. */
+    min-height: 40px;
+  }
+  input[type='checkbox'],
+  input[type='radio'] {
+    min-height: 0;
+    width: 20px;
+    height: 20px;
+  }
+}

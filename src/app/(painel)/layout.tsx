@@ -27,16 +27,19 @@ export default async function LayoutPainel({ children }: { children: React.React
   }));
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', minHeight: '100vh' }}>
+    // No celular esta casca vira uma coluna, e o menu deixa de ser uma barra
+    // lateral para virar uma faixa horizontal no topo. Ver `.casca-painel` em
+    // theme.css: com `flex-wrap`, o menu ocupava a tela inteira antes do
+    // conteúdo, e era preciso rolar um aside inteiro para chegar a qualquer
+    // número.
+    <div className="casca-painel">
       <MenuLateral
         contagens={{ clientes: clientes.length, sites: sites.length, leads }}
         contaNome={usuario.accountName}
         usuarioNome={usuario.name}
         busca=""
       />
-      <main style={{ flex: '999 1 640px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {children}
-      </main>
+      <main className="conteudo-painel">{children}</main>
     </div>
   );
 }

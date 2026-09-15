@@ -42,22 +42,41 @@ test('cliente, site, coleta, formulário, lead e dashboard', async ({ page, cont
   await page.fill('input[name=dominio]', dominio);
   await page.getByRole('button', { name: 'Cadastrar site' }).click();
 
-  const aviso = page.getByRole('status');
-  await expect(aviso).toContainText('identificador');
-  const textoAviso = (await aviso.textContent()) ?? '';
-  const publicId = textoAviso.match(/sit_[a-f0-9]+/)?.[0];
+  // Cadastrar leva direto ao assistente: o cadastro sozinho não mede nada, e
+  // deixar o operador descobrir isso depois é como a configuração ficava pela
+  // metade.
+  await page.waitForURL('**/configurar**');
+  await expect(page.locator('h1')).toHaveText(nomeSite);
+
+  // ─── 4. Escolher o que acompanhar e pegar o identificador ─────────────────
+  await page.goto(`${new URL(page.url()).pathname}?etapa=recursos`);
+  await page.check('input[name="recurso:visitas"]');
+  await page.check('input[name="recurso:whatsapp"]');
+  await page.getByRole('button', { name: 'Salvar seleção' }).click();
+  await expect(page.getByRole('status')).toContainText('recurso(s) selecionado(s)');
+
+  await page.goto(`${new URL(page.url()).pathname}?etapa=instalacao`);
+  const snippet = page.locator('pre').first();
+  await expect(snippet).toContainText('sit_');
+  const publicId = ((await snippet.textContent()) ?? '').match(/sit_[a-f0-9]+/)?.[0];
   expect(publicId, 'o cadastro precisa gerar um identificador público').toBeTruthy();
 
   // O site aparece na listagem, e ainda NÃO está coletando.
+  await page.goto('/sites');
   await expect(page.getByRole('cell', { name: nomeSite })).toBeVisible();
   const linhaSite = page.getByRole('row').filter({ hasText: nomeSite });
   await expect(linhaSite).toContainText(/Aguardando/);
+  // Dois recursos escolhidos e nenhum verificado: a lista mostra a pendência.
+  await expect(linhaSite).toContainText('2 pendência(s)');
 
-  // ─── 4. Abrir a instalação ────────────────────────────────────────────────
-  await linhaSite.getByRole('link', { name: 'Instalação →' }).click();
-  await page.waitForURL('**/rastreamento**');
+  // A ação da linha é continuar a configuração enquanto houver pendência.
+  await linhaSite.getByRole('link', { name: 'Continuar configuração →' }).click();
+  await page.waitForURL('**/configurar**');
+
+  // Cadastrar não instala: a aba de rastreamento continua em espera.
+  const siteId = new URL(page.url()).pathname.split('/')[2]!;
+  await page.goto(`/sites/${siteId}/rastreamento`);
   await expect(page.locator('pre').first()).toContainText(publicId!);
-  // Cadastrar não instala: o estado continua sendo de espera.
   await expect(page.locator('h1')).toHaveText(nomeSite);
   await expect(page.getByText('Aguardando primeiro evento').first()).toBeVisible();
 

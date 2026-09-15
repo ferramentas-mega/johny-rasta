@@ -1,10 +1,23 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { inter, jetbrainsMono } from '@/fonts';
 import '@/styles/theme.css';
 
 export const metadata: Metadata = {
   title: 'Painel de Sites',
   description: 'Análise de desempenho de sites e landing pages',
+  // O manifesto é gerado por `src/app/manifest.ts`. Sem este apontamento o
+  // Chrome não o procura, e a instalação não é oferecida.
+  manifest: '/manifest.webmanifest',
+  applicationName: 'Painel de Sites',
+  appleWebApp: {
+    capable: true,
+    title: 'Painel',
+    // O iOS não lê o `theme_color` do manifesto; a barra dele vem daqui.
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
   // Painel interno: nenhuma página deste aplicativo é feita para busca, nem as
   // públicas. O `noindex` vale para as que um rastreador consegue alcançar —
   // login e página de teste de instalação. As demais estão atrás de sessão, e é
@@ -34,6 +47,24 @@ const PREFERENCIAS = `
   }
 })();
 `;
+
+/**
+ * `viewport` separado do `metadata` porque o Next exige isso desde a 14.
+ *
+ * `viewportFit: 'cover'` deixa a interface ir até as bordas em telas com
+ * recorte; o respiro volta pelas variáveis `env(safe-area-inset-*)` no CSS.
+ * `maximumScale` NÃO é limitado: impedir o zoom é tirar do usuário a única
+ * saída quando a fonte está pequena demais para ele.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#020502' },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

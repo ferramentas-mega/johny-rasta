@@ -105,7 +105,24 @@ export async function criarSite(accountId: string, entrada: SiteEntrada): Promis
   });
 }
 
-export async function atualizarSite(accountId: string, id: string, entrada: SiteEntrada): Promise<boolean> {
+/**
+ * Campos que só o assistente de configuração preenche.
+ *
+ * Opcionais porque a edição rápida na lista de sites não os toca — e passar
+ * `undefined` ali não pode apagar o que o assistente gravou. `coalesce` no SQL
+ * é o que garante isso.
+ */
+export type ExtrasDoSite = {
+  plataforma?: 'wordpress' | 'react_next' | 'html' | 'desconhecida';
+  urlPrincipal?: string | null;
+};
+
+export async function atualizarSite(
+  accountId: string,
+  id: string,
+  entrada: SiteEntrada,
+  extras: ExtrasDoSite = {},
+): Promise<boolean> {
   return withAccount(accountId, async (db) => {
     const cliente = await db.one<{ id: string }>(
       'select id from clients where id = $1 and archived_at is null',
@@ -114,10 +131,20 @@ export async function atualizarSite(accountId: string, id: string, entrada: Site
     if (!cliente) throw new Error('Cliente não encontrado nesta conta.');
 
     const linha = await db.one<{ id: string }>(
-      `update sites set client_id = $2, name = $3, domain = $4, timezone = $5
+      `update sites
+          set client_id = $2, name = $3, domain = $4, timezone = $5,
+              platform    = coalesce($6, platform),
+              primary_url = case when $7::boolean then $8 else primary_url end
         where id = $1 and archived_at is null
     returning id`,
-      [id, entrada.clienteId, entrada.nome, entrada.dominio, entrada.fuso],
+      [
+        id, entrada.clienteId, entrada.nome, entrada.dominio, entrada.fuso,
+        extras.plataforma ?? null,
+        // A URL principal precisa poder ser APAGADA, e `coalesce` não
+        // distingue "não mexa" de "limpe". O booleano faz essa distinção.
+        extras.urlPrincipal !== undefined,
+        extras.urlPrincipal ?? null,
+      ],
     );
     return linha !== null;
   });

@@ -71,22 +71,14 @@ export function MenuLateral({
     .join('');
 
   return (
-    <aside
-      style={{
-        flex: '1 1 240px',
-        minWidth: 240,
-        maxWidth: 300,
-        background: 'var(--side)',
-        borderRight: '1px solid var(--bd)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 18,
-        padding: '20px 14px 24px',
-      }}
-    >
-      <Marca />
+    // Layout em CSS, não inline: no celular a barra lateral vira uma faixa
+    // horizontal no topo, e isso é uma media query — que estilo inline não tem.
+    <aside className="lateral">
+      <div className="lateral-marca">
+        <Marca />
+      </div>
 
-      <nav aria-label="Seções do painel" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <nav aria-label="Seções do painel" className="lateral-nav">
         {ITENS.map((item) => {
           const on = ativo(item);
           const contagem =
@@ -100,23 +92,14 @@ export function MenuLateral({
               key={item.href}
               href={`${item.href}${busca}`}
               aria-current={on ? 'page' : undefined}
+              // O visual (incluindo o realce ao passar o mouse) vive em
+              // `.item-menu`, no CSS: `:hover` não existe em estilo inline, e
+              // era por isso que os itens não reagiam ao ponteiro.
+              className="item-menu"
               // Ponteiro e teclado disparam igual: quem navega sem mouse vê o
               // mesmo efeito, em vez de um enfeite reservado a quem tem mouse.
               onMouseEnter={() => decodificar(item.href)}
               onFocus={() => decodificar(item.href)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '10px 12px',
-                borderRadius: 8,
-                fontWeight: 500,
-                fontSize: 13.5,
-                textDecoration: 'none',
-                color: on ? 'var(--tx)' : 'var(--tx2)',
-                background: on ? 'var(--gold-fill)' : 'transparent',
-                boxShadow: on ? 'inset 2px 0 0 var(--gold)' : 'none',
-              }}
             >
               <Icone nome={item.icone} />
               <TextoMatrix texto={item.label} disparo={disparos[item.href] ?? 0} />
@@ -138,16 +121,7 @@ export function MenuLateral({
         })}
       </nav>
 
-      <div
-        style={{
-          marginTop: 'auto',
-          borderTop: '1px solid var(--bd)',
-          paddingTop: 16,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
+      <div className="lateral-rodape">
         <span
           className="mono"
           aria-hidden="true"

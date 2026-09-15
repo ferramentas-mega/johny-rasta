@@ -5,6 +5,7 @@ import { dataHora } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel } from '@/components/Cartoes';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
+import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { FormularioSite } from './FormularioSite';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,12 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
   // aberto no site certo, e o link é compartilhável.
   const editandoId = typeof busca.editar === 'string' ? busca.editar : null;
   const emEdicao = ctx.sites.find((s) => s.id === editandoId);
+
+  // Uma consulta para todos os sites da tela, não uma por linha.
+  const resumos = await resumoDeConfiguracao(
+    ctx.usuario.accountId,
+    ctx.sites.map((s) => s.id),
+  );
 
   const colunas: Coluna<Site>[] = [
     { chave: 'nome', titulo: 'Site',
@@ -41,13 +48,31 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
           )}
         </span>
       ) },
+    { chave: 'configuracao', titulo: 'Configuração',
+      ajuda: 'Recursos escolhidos e verificados. "Não iniciada" significa que ninguém escolheu o que este site deve medir.',
+      render: (s) => {
+        const r = resumos.get(s.id);
+        if (!r || r.naoIniciado) return <Etiqueta texto="Não iniciada" tom="soft" />;
+        if (r.pendentes > 0) {
+          return <Etiqueta texto={`${r.pendentes} pendência(s)`} tom="warn" />;
+        }
+        return <Etiqueta texto={`${r.verificados} verificado(s)`} tom="ok" />;
+      } },
     { chave: 'acoes', titulo: '', alinhamento: 'direita',
-      render: (s) => (
-        <span style={{ display: 'inline-flex', gap: 12, whiteSpace: 'nowrap' }}>
-          <Link href={`/sites?editar=${s.id}`}>Editar</Link>
-          <Link href={`/sites/${s.id}/rastreamento`}>Instalação →</Link>
-        </span>
-      ) },
+      render: (s) => {
+        const r = resumos.get(s.id);
+        const falta = !r || r.naoIniciado || r.pendentes > 0;
+        return (
+          <span style={{ display: 'inline-flex', gap: 12, whiteSpace: 'nowrap' }}>
+            <Link href={`/sites?editar=${s.id}`}>Editar</Link>
+            {/* Ação clara e única por linha: enquanto houver pendência, o
+                caminho é continuar a configuração. Sem ela, é o painel. */}
+            <Link href={`/sites/${s.id}/configurar`}>
+              {falta ? 'Continuar configuração →' : 'Configuração'}
+            </Link>
+          </span>
+        );
+      } },
   ];
 
   return (

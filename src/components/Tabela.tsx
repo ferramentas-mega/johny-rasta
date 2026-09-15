@@ -104,9 +104,22 @@ export function Tabela<T>({
   );
 }
 
-export function Etiqueta({ texto, tom = 'soft' }: { texto: string; tom?: 'soft' | 'ok' | 'warn' }) {
-  const fundo = tom === 'ok' ? 'var(--ok-bg)' : tom === 'warn' ? 'var(--warn-bg)' : 'var(--soft-bg)';
-  const cor = tom === 'ok' ? 'var(--ok-tx)' : tom === 'warn' ? 'var(--warn-tx)' : 'var(--soft-tx)';
+/**
+ * `neg` entrou com o estado por recurso: "Erro identificado" é diferente de
+ * "aguardando", e pintar os dois de amarelo esconderia justamente o que exige
+ * ação agora.
+ */
+export function Etiqueta({ texto, tom = 'soft' }: { texto: string; tom?: 'soft' | 'ok' | 'warn' | 'neg' }) {
+  const fundo =
+    tom === 'ok' ? 'var(--ok-bg)'
+    : tom === 'warn' ? 'var(--warn-bg)'
+    : tom === 'neg' ? 'rgba(255, 133, 133, 0.14)'
+    : 'var(--soft-bg)';
+  const cor =
+    tom === 'ok' ? 'var(--ok-tx)'
+    : tom === 'warn' ? 'var(--warn-tx)'
+    : tom === 'neg' ? 'var(--neg)'
+    : 'var(--soft-tx)';
   return (
     <span
       style={{

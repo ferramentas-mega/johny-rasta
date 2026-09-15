@@ -12,6 +12,9 @@ const ABAS = [
   { slug: 'comportamento', label: 'Comportamento' },
   { slug: 'qualidade', label: 'Qualidade técnica' },
   { slug: 'rastreamento', label: 'Rastreamento' },
+  // O assistente é uma aba, e não só um destino do cadastro: configuração
+  // incompleta precisa ser retomável de dentro do site, a qualquer momento.
+  { slug: 'configurar', label: 'Configuração' },
 ] as const;
 
 export function Abas({ siteId }: { siteId: string }) {
@@ -32,16 +35,8 @@ export function Abas({ siteId }: { siteId: string }) {
             key={aba.slug}
             href={`${href}${busca ? `?${busca}` : ''}`}
             aria-current={on ? 'page' : undefined}
-            style={{
-              padding: '11px 14px',
-              fontSize: 13.5,
-              textDecoration: 'none',
-              color: on ? 'var(--tx)' : 'var(--tx2)',
-              borderBottom: `2px solid ${on ? 'var(--gold)' : 'transparent'}`,
-              marginBottom: -1,
-              fontWeight: on ? 600 : 400,
-              whiteSpace: 'nowrap',
-            }}
+            // Como no menu lateral: o realce ao passar o mouse precisa de CSS.
+            className="aba-site"
           >
             {aba.label}
           </Link>

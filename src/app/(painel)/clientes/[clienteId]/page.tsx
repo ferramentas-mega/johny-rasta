@@ -5,6 +5,7 @@ import { exigirSessao } from '@/server/contexto';
 import { listarSites } from '@/server/services/sites';
 import { getKpis, resolvePeriod } from '@/server/metrics/queries';
 import { ESTADO_LABEL, ESTADO_TOM } from '@/server/services/sites';
+import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { num, pct } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso } from '@/components/Cartoes';
@@ -53,6 +54,9 @@ export default async function PaginaCliente({
   if (sites.length === 0) notFound();
   const cliente = sites[0]!.clienteNome;
 
+  // Uma consulta para todos os sites do cliente, não uma por linha.
+  const resumos = await resumoDeConfiguracao(usuario.accountId, sites.map((s) => s.id));
+
   const linhas: LinhaSite[] = await withAccount(usuario.accountId, async (db) => {
     const saida: LinhaSite[] = [];
     for (const site of sites) {
@@ -96,6 +100,18 @@ export default async function PaginaCliente({
     },
     { chave: 'estado', titulo: 'Rastreamento',
       render: (l) => <Etiqueta texto={ESTADO_LABEL[l.estado]} tom={ESTADO_TOM[l.estado] === 'ok' ? 'ok' : ESTADO_TOM[l.estado] === 'aguardando' ? 'warn' : 'soft'} /> },
+    { chave: 'configuracao', titulo: 'Configuração',
+      ajuda: 'Recursos escolhidos para este site que ainda não passaram por verificação.',
+      render: (l) => {
+        const r = resumos.get(l.id);
+        if (!r || r.naoIniciado) {
+          return <Link href={`/sites/${l.id}/configurar`}>Configurar →</Link>;
+        }
+        if (r.pendentes > 0) {
+          return <Link href={`/sites/${l.id}/configurar`}>{r.pendentes} pendência(s) →</Link>;
+        }
+        return <Etiqueta texto="Verificada" tom="ok" />;
+      } },
     { chave: 'sessoes', titulo: 'Sessões', alinhamento: 'direita', mono: true,
       render: (l) => (l.sessoes === null ? indisponivel : num(l.sessoes)), total: () => num(sessoes) },
     { chave: 'whatsapp', titulo: 'WhatsApp', alinhamento: 'direita', mono: true,

@@ -98,7 +98,7 @@ dígito e a velocidade:
 |---|---|---|
 | Posição | `absolute`, sobre o cabeçalho | `fixed`, viewport inteira |
 | Dígito | 20px | 28px |
-| Velocidade | 33 ms por linha | 33 ms por linha |
+| Velocidade | 55 ms (celular) · 90 ms (desktop) | idem |
 | Atenuação | máscara lateral, protegendo o título | véu por cima (`.veu-de-fundo`) |
 
 A velocidade é campo da variante, ainda que hoje as duas usem o mesmo valor: mudar uma delas não

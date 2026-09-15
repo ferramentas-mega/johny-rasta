@@ -26,6 +26,12 @@ const SUBTIPOS = ['whatsapp', 'phone', 'email', 'form_open', 'outro'] as const;
 /** Remove caracteres de controle de texto livre vindo da web. */
 const CONTROLES = /[\p{Cc}\p{Cf}]/gu;
 
+/** Token de diagnóstico: só o que o painel gera. */
+const DIAGNOSTICO = z
+  .string()
+  .regex(/^diag_[a-f0-9]{8,64}$/, 'Token de diagnóstico inválido.')
+  .optional();
+
 const textoCurto = (max: number) =>
   z
     .string()
@@ -54,6 +60,12 @@ export const EventoRecebido = z
     botaoPosicao: textoCurto(64),
     dispositivo: z.enum(['Celular', 'Desktop', 'Tablet']).optional(),
     teste: z.boolean().optional(),
+    /**
+     * Token da sessão de diagnóstico, quando o site foi aberto pelo modo de
+     * teste do painel. Formato fechado de propósito: texto livre aqui deixaria
+     * qualquer um carimbar eventos com o que quisesse.
+     */
+    diagnostico: DIAGNOSTICO,
   })
   // cta_click sem subtipo seria um clique que não se sabe classificar — e a
   // tabela por botão não teria como declarar seu escopo.
@@ -166,7 +178,10 @@ export async function registrarEvento(
 
   const pageId = await garantirPagina(db, site, evento.caminho);
   const origem = derivarOrigem(evento);
-  const teste = evento.teste === true;
+  // Evento de diagnóstico é evento de teste, decidido AQUI e não pelo cliente.
+  // O coletor também marca, mas confiar só nele deixaria um diagnóstico virar
+  // número de relatório caso o `teste` se perdesse no caminho.
+  const teste = evento.teste === true || !!evento.diagnostico;
 
   const aberta = await db.one<{ id: string }>(
     `select id from sessions
@@ -202,14 +217,15 @@ export async function registrarEvento(
 
   const inserido = await db.one<{ id: string }>(
     `insert into events (account_id, site_id, session_id, page_id, type, subtype,
-                         button_id, button_text, button_position, occurred_at, event_uid, is_test)
-          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                         button_id, button_text, button_position, occurred_at, event_uid, is_test,
+                         diagnostic_token)
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      on conflict (event_uid) do nothing
        returning id`,
     [
       site.accountId, site.id, sessionId, pageId, evento.tipo, evento.subtipo ?? null,
       evento.botaoId ?? null, evento.botaoTexto ?? null, evento.botaoPosicao ?? null,
-      carimbo, evento.uid, teste,
+      carimbo, evento.uid, teste, evento.diagnostico ?? null,
     ],
   );
 
@@ -230,6 +246,8 @@ export const SubmissaoRecebida = z
     /** Reenviar o mesmo formulário não cria segunda submissão nem lead novo. */
     idempotencia: z.string().uuid(),
     teste: z.boolean().optional(),
+    /** Mesmo token do coletor: liga este envio ao diagnóstico em andamento. */
+    diagnostico: DIAGNOSTICO,
   })
   .refine((s) => !!s.email || !!s.telefone, {
     message: 'Informe e-mail ou telefone para que o contato seja localizável.',
@@ -262,7 +280,9 @@ export async function registrarSubmissao(
   dados: SubmissaoRecebida,
 ): Promise<ResultadoSubmissao> {
   const agora = new Date();
-  const teste = dados.teste === true;
+  // Como nos eventos: envio de diagnóstico é envio de teste, decidido no
+  // servidor. Um lead de teste jamais entra no relatório comercial do cliente.
+  const teste = dados.teste === true || !!dados.diagnostico;
 
   const jaExiste = await db.one<{ id: string; lead_id: string | null }>(
     'select id, lead_id from form_submissions where idempotency_key = $1',
@@ -303,8 +323,9 @@ export async function registrarSubmissao(
 
   const submissao = await db.one<{ id: string }>(
     `insert into form_submissions (account_id, site_id, session_id, page_id, lead_id, form_name,
-                                   status, payload, idempotency_key, is_test, created_at)
-          values ($1, $2, $3, $4, $5, $6, 'confirmada', $7, $8, $9, $10)
+                                   status, payload, idempotency_key, is_test, created_at,
+                                   diagnostic_token)
+          values ($1, $2, $3, $4, $5, $6, 'confirmada', $7, $8, $9, $10, $11)
        returning id`,
     [
       site.accountId, site.id, sessao?.id ?? null, pageId, lead!.id, dados.formulario,
@@ -314,7 +335,7 @@ export async function registrarSubmissao(
         telefone: dados.telefone || null,
         mensagem: dados.mensagem ?? null,
       }),
-      dados.idempotencia, teste, agora,
+      dados.idempotencia, teste, agora, dados.diagnostico ?? null,
     ],
   );
 

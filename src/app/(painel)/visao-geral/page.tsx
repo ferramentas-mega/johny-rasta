@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { withAccount } from '@/server/db';
 import { contextoPainel, type ParametrosBusca } from '@/server/contexto';
 import { getCarteira, totalizarCarteira, type LinhaCarteira } from '@/server/metrics/queries';
+import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { num, pct } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso } from '@/components/Cartoes';
@@ -63,6 +64,21 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
 
   const precisamAtencao = linhas.filter((l) => prioridade(l).tom === 'warn').length;
 
+  // Cobertura de configuração: quantos sites da carteira ainda têm recurso
+  // escolhido e não verificado. Uma consulta só, e o mapa é indexado por site —
+  // a carteira agrega por cliente, então somamos por cliente aqui.
+  const resumos = await resumoDeConfiguracao(
+    ctx.usuario.accountId,
+    ctx.sites.map((s) => s.id),
+  );
+  const pendentesPorCliente = new Map<string, number>();
+  for (const site of ctx.sites) {
+    const r = resumos.get(site.id);
+    const conta = !r || r.naoIniciado ? 1 : r.pendentes > 0 ? 1 : 0;
+    pendentesPorCliente.set(site.clientId, (pendentesPorCliente.get(site.clientId) ?? 0) + conta);
+  }
+  const sitesPendentes = [...pendentesPorCliente.values()].reduce((t, n) => t + n, 0);
+
   const colunas: Coluna<LinhaCarteira>[] = [
     {
       chave: 'cliente', titulo: 'Cliente', total: () => 'Total',
@@ -92,6 +108,17 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
       render: (l) => <Evolucao atual={l.sessoes} anterior={l.sessoesAnterior} />,
     },
     {
+      chave: 'configuracao', titulo: 'Configuração',
+      ajuda: 'Sites deste cliente com configuração não iniciada ou com recurso escolhido ainda sem verificação.',
+      render: (l) => {
+        const pendentes = pendentesPorCliente.get(l.clienteId) ?? 0;
+        return pendentes === 0
+          ? <Etiqueta texto="Sem pendência" tom="ok" />
+          : <Link href={`/clientes/${l.clienteId}?periodo=${ctx.periodoInput.key}`}>{pendentes} site(s) →</Link>;
+      },
+      total: () => (sitesPendentes === 0 ? 'Sem pendência' : `${num(sitesPendentes)} site(s)`),
+    },
+    {
       chave: 'prioridade', titulo: 'Atenção',
       render: (l) => { const p = prioridade(l); return <Etiqueta texto={p.texto} tom={p.tom} />; },
     },
@@ -104,6 +131,7 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
     { rotulo: 'Cliques no WhatsApp', valor: num(totais.cliquesWhatsapp), nota: 'clique não é conversa iniciada' },
     { rotulo: 'Leads', valor: num(totais.leads), nota: 'contatos registrados' },
     { rotulo: 'Precisam de atenção', valor: num(precisamAtencao), nota: 'com motivo declarado na tabela' },
+    { rotulo: 'Configuração pendente', valor: num(sitesPendentes), nota: 'sites com recurso sem verificação' },
   ];
 
   return (

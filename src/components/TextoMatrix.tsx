@@ -20,15 +20,15 @@ import { useEffect, useState } from 'react';
  *    ponteiro, o teclado ou a própria navegação.
  *
  * Respeita `data-fx`: com os efeitos desligados, nada acontece — nem sequer um
- * temporizador é criado.
+ * temporizador é criado. E para quando a aba vai para segundo plano.
  */
 
 /** Quanto tempo cada letra fica embaralhada. */
-const MS_POR_LETRA = 380;
+const MS_POR_LETRA = 300;
 /** Atraso entre o início de uma letra e o da seguinte — é o que cria a cascata. */
-const MS_ENTRE_LETRAS = 45;
+const MS_ENTRE_LETRAS = 38;
 /** De quanto em quanto tempo o dígito sorteado troca, enquanto embaralhado. */
-const MS_POR_SORTEIO = 60;
+const MS_POR_SORTEIO = 70;
 
 /**
  * Dígito derivado de `(posição, semente)`, e não de `Math.random()` na
@@ -42,9 +42,16 @@ function digito(indice: number, semente: number): string {
 }
 
 export function TextoMatrix({ texto, disparo = 0 }: { texto: string; disparo?: number }) {
-  /** Quais posições estão embaralhadas agora. */
-  const [embaralhadas, setEmbaralhadas] = useState<boolean[]>([]);
-  const [semente, setSemente] = useState(0);
+  /**
+   * O tempo decorrido da animação, em passos de `MS_POR_SORTEIO`. `null` = parada.
+   *
+   * Guardar UM número em vez de um array de booleanos por letra é o que fez
+   * esta versão parar de renderizar a cada quadro: a máscara e os dígitos são
+   * derivados dele. A versão anterior mantinha um `setInterval` mais dois
+   * `setTimeout` por letra — treze letras viravam vinte e sete temporizadores
+   * para uma animação de um segundo.
+   */
+  const [passo, setPasso] = useState<number | null>(null);
 
   useEffect(() => {
     // `disparo` começa em 0 e só muda quando alguém pede. Sem isto, o efeito
@@ -52,35 +59,62 @@ export function TextoMatrix({ texto, disparo = 0 }: { texto: string; disparo?: n
     if (disparo === 0) return;
     if (document.documentElement.dataset.fx !== 'on') return;
 
-    const letras = [...texto];
-    const relogios: ReturnType<typeof setTimeout>[] = [];
+    const total = (texto.length - 1) * MS_ENTRE_LETRAS + MS_POR_LETRA;
+    let raf = 0;
+    let inicio = 0;
+    let ultimoPasso = -1;
 
-    letras.forEach((c, i) => {
-      if (c === ' ') return;
-      relogios.push(
-        setTimeout(() => {
-          setEmbaralhadas((p) => marcar(p, letras.length, i, true));
-          relogios.push(
-            setTimeout(() => setEmbaralhadas((p) => marcar(p, letras.length, i, false)), MS_POR_LETRA),
-          );
-        }, i * MS_ENTRE_LETRAS),
-      );
-    });
+    const quadro = (agora: number) => {
+      if (!inicio) inicio = agora;
+      const decorrido = agora - inicio;
 
-    // Um relógio só para todas as letras: um por letra multiplicaria os
-    // temporizadores sem mudar nada do que se vê.
-    const sorteio = setInterval(() => setSemente((s) => s + 1), MS_POR_SORTEIO);
+      if (decorrido >= total) {
+        setPasso(null);
+        return;
+      }
+
+      // Repinta só quando o dígito sorteado muda de verdade. A 60 Hz isso
+      // significa ~14 renderizações por animação, em vez de ~60.
+      const atual = Math.floor(decorrido / MS_POR_SORTEIO);
+      if (atual !== ultimoPasso) {
+        ultimoPasso = atual;
+        setPasso(atual);
+      }
+      raf = requestAnimationFrame(quadro);
+    };
+
+    raf = requestAnimationFrame(quadro);
+
+    // Aba em segundo plano já congela o `requestAnimationFrame` sozinha; o que
+    // falta é não deixar a animação pendurada ao voltar.
+    const aoEsconder = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+        setPasso(null);
+      }
+    };
+    document.addEventListener('visibilitychange', aoEsconder);
 
     return () => {
-      relogios.forEach(clearTimeout);
-      clearInterval(sorteio);
-      // Volta ao texto real. Se a animação for interrompida no meio — trocar de
-      // página, por exemplo —, o que fica é o rótulo, nunca meio rótulo.
-      setEmbaralhadas([]);
+      cancelAnimationFrame(raf);
+      document.removeEventListener('visibilitychange', aoEsconder);
+      // Volta ao texto real. Interromper no meio — trocar de página, por
+      // exemplo — deixa o rótulo, nunca meio rótulo.
+      setPasso(null);
     };
   }, [disparo, texto]);
 
-  const animando = embaralhadas.some(Boolean);
+  const letras = [...texto];
+
+  /** Uma letra está embaralhada enquanto sua janela de tempo está aberta. */
+  const embaralhada = (i: number): boolean => {
+    if (passo === null) return false;
+    const decorrido = passo * MS_POR_SORTEIO;
+    const comeco = i * MS_ENTRE_LETRAS;
+    return decorrido >= comeco && decorrido < comeco + MS_POR_LETRA;
+  };
+
+  const animando = passo !== null;
 
   return (
     // `inline-grid` com as duas camadas na MESMA célula: a largura é sempre a do
@@ -102,26 +136,29 @@ export function TextoMatrix({ texto, disparo = 0 }: { texto: string; disparo?: n
       {animando && (
         <span
           aria-hidden="true"
-          className="mono"
           style={{ gridArea: '1 / 1', color: 'var(--gold)', textShadow: 'var(--glow)' }}
         >
-          {[...texto].map((c, i) =>
-            c === ' ' ? (
-              ' '
-            ) : (
-              <span key={i} style={{ display: 'inline-block', width: '1ch', textAlign: 'center' }}>
-                {embaralhadas[i] ? digito(i, semente) : c}
+          {letras.map((c, i) => {
+            if (c === ' ') return <span key={i}>&nbsp;</span>;
+            const troca = embaralhada(i);
+            return (
+              // Cada letra vira uma célula com a LETRA REAL invisível dentro,
+              // definindo a largura. Sem isso o dígito usava `1ch` da
+              // monoespaçada e o rótulo meio decodificado saía desalinhado do
+              // próprio texto — era isso que fazia o efeito parecer quebrado.
+              <span key={i} style={{ display: 'inline-grid' }}>
+                <span style={{ gridArea: '1 / 1', visibility: 'hidden' }}>{c}</span>
+                <span
+                  className={troca ? 'mono' : undefined}
+                  style={{ gridArea: '1 / 1', justifySelf: 'center' }}
+                >
+                  {troca ? digito(i, passo!) : c}
+                </span>
               </span>
-            ),
-          )}
+            );
+          })}
         </span>
       )}
     </span>
   );
-}
-
-function marcar(atual: boolean[], tamanho: number, indice: number, valor: boolean): boolean[] {
-  const proximo = atual.length === tamanho ? [...atual] : new Array<boolean>(tamanho).fill(false);
-  proximo[indice] = valor;
-  return proximo;
 }
