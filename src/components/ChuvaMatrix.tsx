@@ -28,7 +28,7 @@ const VARIANTES: Record<VarianteChuva, { tamanho: number; estilo: React.CSSPrope
   // o título da tela e o nome da conta. Chuva por trás de texto grande é onde a
   // leitura se perde primeiro.
   cabecalho: {
-    tamanho: 17,
+    tamanho: 20,
     estilo: {
       position: 'absolute',
       inset: 0,
@@ -47,7 +47,7 @@ const VARIANTES: Record<VarianteChuva, { tamanho: number; estilo: React.CSSPrope
   // um formulário é exatamente onde a legibilidade costuma se perder. A máscara
   // apaga o centro, que é onde o texto fica.
   tela: {
-    tamanho: 20,
+    tamanho: 28,
     estilo: {
       position: 'fixed',
       inset: 0,
@@ -131,8 +131,27 @@ export function ChuvaMatrix({
      */
     const MS_POR_LINHA = 33;
 
+    /**
+     * A pilha de fontes do canvas, resolvida em CSS.
+     *
+     * `ctx.font` NÃO aceita `var(--fonte-mono)`: o canvas usa o parser de fonte
+     * do CSS, que não resolve variáveis fora de uma árvore de estilo. Quando a
+     * string é inválida, a atribuição é **ignorada em silêncio** e o contexto
+     * fica com o padrão `10px sans-serif`. Foi exatamente isso que fez os
+     * dígitos continuarem minúsculos por mais que eu aumentasse `tamanho` —
+     * o espaçamento das linhas crescia (ele é calculado em JS) e o glifo não.
+     *
+     * Por isso o valor é lido do elemento e concatenado já resolvido.
+     */
+    const pilhaDeFontes = (() => {
+      const lido = getComputedStyle(document.documentElement)
+        .getPropertyValue('--fonte-mono')
+        .trim();
+      return lido ? `${lido}, ui-monospace, monospace` : 'ui-monospace, monospace';
+    })();
+
     const desenhar = (claro: boolean) => {
-      ctx.font = `${TAMANHO}px var(--fonte-mono), ui-monospace, monospace`;
+      ctx.font = `${TAMANHO}px ${pilhaDeFontes}`;
       // COR ÚNICA para toda a coluna. Uma versão anterior deixava a cabeça mais
       // clara que o rastro; é bonito, mas muda a aparência — a chuva de
       // referência é um campo uniforme de dígitos, onde a profundidade vem só
@@ -170,12 +189,24 @@ export function ChuvaMatrix({
       // O véu de cada passo é o que APAGA o passado: quanto mais fraco, mais
       // longo o rastro. É daqui que vem a cauda desbotada característica. Usa a
       // cor do PRÓPRIO tema — um preto fixo sujaria o tema claro.
-      // 0,1 é o valor do componente de referência: com um passo a cada 33 ms,
-      // um dígito sobrevive ~10 passos, e o rastro fica com ~10 caracteres.
-      // Usa a cor do PRÓPRIO tema — um preto fixo sujaria o tema claro.
-      const claro = root.dataset.tema === 'claro';
-      ctx.fillStyle = claro ? 'rgba(247,251,247,0.1)' : 'rgba(0,0,0,0.1)';
+      // APAGA o quadro anterior, em vez de pintar por cima dele.
+      //
+      // Esta é a diferença que fazia a chuva virar uma parede de dígitos. O
+      // componente de referência pinta `rgba(0,0,0,0.1)` porque o canvas dele
+      // cobre uma página preta: o preto acumulado É o fundo. Aqui o canvas é
+      // TRANSPARENTE, sobreposto ao painel — pintar preto não apaga o dígito,
+      // acumula uma camada opaca por cima do fundo do site e ainda deixa
+      // resíduo verde, porque `source-over` nunca zera o que já está lá.
+      //
+      // `destination-out` reduz o ALFA do que já foi desenhado. O dígito velho
+      // desaparece de verdade, e onde não há chuva o canvas continua
+      // transparente, deixando o fundo do painel aparecer.
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
       ctx.fillRect(0, 0, largura, altura);
+      ctx.globalCompositeOperation = 'source-over';
+
+      const claro = root.dataset.tema === 'claro';
 
       desenhar(claro);
     };

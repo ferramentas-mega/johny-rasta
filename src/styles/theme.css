@@ -190,3 +190,205 @@ select option {
 .grade-cartoes > * {
   min-width: 0;
 }
+
+/* ==========================================================================
+   Tela de login
+   ==========================================================================
+
+   O visual veio de um componente pronto (shadcn + Tailwind + framer-motion +
+   lucide). Nada disso entrou no projeto: instalar Tailwind aqui trocaria o
+   sistema visual inteiro, e framer-motion custaria ~40 kB de JS para animar
+   quatro retângulos que o CSS anima de graça. O que foi adaptado é a
+   APARÊNCIA — cartão de vidro, feixes correndo a borda, brilhos de canto —
+   nos tokens do tema, em verde e não em roxo.
+
+   As animações daqui não precisam de guarda própria: o bloco
+   `prefers-reduced-motion` acima zera a duração de toda animação da página. */
+
+.cartao-login {
+  position: relative;
+  border-radius: 16px;
+  padding: 26px 22px;
+  background: color-mix(in srgb, var(--card) 76%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--bd);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+/* Trama diagonal quase invisível, que tira o "chapado" do fundo do cartão. */
+.cartao-login::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image:
+    linear-gradient(135deg, var(--tx) 0.5px, transparent 0.5px),
+    linear-gradient(45deg, var(--tx) 0.5px, transparent 0.5px);
+  background-size: 30px 30px;
+}
+
+/* Feixes que percorrem a borda. Decorativos: `aria-hidden` no elemento. */
+.feixes {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.feixe {
+  position: absolute;
+  opacity: 0.55;
+  filter: blur(1px);
+}
+
+.feixe-h {
+  height: 2px;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.feixe-v {
+  width: 2px;
+  height: 45%;
+  background: linear-gradient(180deg, transparent, var(--gold), transparent);
+}
+
+.feixe-topo {
+  top: 0;
+  left: -45%;
+  animation: feixe-para-direita 3.6s ease-in-out infinite;
+}
+.feixe-direita {
+  top: -45%;
+  right: 0;
+  animation: feixe-para-baixo 3.6s ease-in-out 0.9s infinite;
+}
+.feixe-base {
+  bottom: 0;
+  right: -45%;
+  animation: feixe-para-esquerda 3.6s ease-in-out 1.8s infinite;
+}
+.feixe-esquerda {
+  bottom: -45%;
+  left: 0;
+  animation: feixe-para-cima 3.6s ease-in-out 2.7s infinite;
+}
+
+@keyframes feixe-para-direita {
+  0% {
+    left: -45%;
+  }
+  70%,
+  100% {
+    left: 100%;
+  }
+}
+@keyframes feixe-para-esquerda {
+  0% {
+    right: -45%;
+  }
+  70%,
+  100% {
+    right: 100%;
+  }
+}
+@keyframes feixe-para-baixo {
+  0% {
+    top: -45%;
+  }
+  70%,
+  100% {
+    top: 100%;
+  }
+}
+@keyframes feixe-para-cima {
+  0% {
+    bottom: -45%;
+  }
+  70%,
+  100% {
+    bottom: 100%;
+  }
+}
+
+/* Campo com ícone à esquerda e, na senha, botão de revelar à direita. */
+.campo-login {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.campo-login > svg {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: var(--tx3);
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.campo-login:focus-within > svg {
+  color: var(--gold);
+}
+
+.campo-login > input {
+  width: 100%;
+  background: var(--elev);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 12px 12px 12px 36px;
+  font-size: 14px;
+  color: var(--tx);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.campo-login > input:focus {
+  border-color: var(--bdc);
+  box-shadow: 0 0 0 3px var(--gold-fill);
+}
+
+.campo-login:has(> .revelar-senha) > input {
+  padding-right: 40px;
+}
+
+.revelar-senha {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx3);
+  cursor: pointer;
+}
+
+.revelar-senha:hover {
+  color: var(--tx);
+}
+
+/* Rodela do botão enquanto a Server Action responde. */
+.girando {
+  width: 15px;
+  height: 15px;
+  border: 2px solid color-mix(in srgb, var(--on-gold) 45%, transparent);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: girar 0.7s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
