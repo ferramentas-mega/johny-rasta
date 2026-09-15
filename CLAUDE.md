@@ -69,6 +69,21 @@ HTML: script bloqueado por CSP, consentimento ou bloqueador está lá e não med
 diagnóstico existe para separar o teste do operador do tráfego real — sem o token, "recebemos um
 clique no WhatsApp" pode ser de qualquer pessoa.
 
+**Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
+não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
+eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou
+evento do site real na janela sem o token. Isso existe porque a etapa terminava em "não dá para
+afirmar a causa daqui" com a mesma lista de quatro suspeitas para todo mundo — inclusive para quem
+estava com o rastreamento funcionando e só não abriu o site pelo link do diagnóstico. Nada ali
+carimba recurso: quem verifica continua sendo evento recebido com token.
+
+**O painel NÃO busca a página do cliente.** A tentação é buscar o HTML e procurar a tag. Não faça:
+responde a pergunta errada (script bloqueado por CSP, consentimento ou bloqueador está no HTML e não
+mede nada) e criaria um alvo de SSRF que hoje não existe — as únicas saídas do aplicativo vão para
+dois endereços fixos do Google. A conferência que descobre se a tag está lá e se ela roda é texto
+para o operador colar no console do NAVEGADOR dele (`conferenciaNoConsole`), onde valem as mesmas
+regras, extensões e cache de um visitante de verdade.
+
 **Diagnóstico é teste, decidido no SERVIDOR.** `registrarEvento` e `registrarSubmissao` forçam
 `is_test` quando há token, mesmo que o cliente não tenha marcado. Confiar só no coletor deixaria um
 diagnóstico virar número de relatório se o campo se perdesse no caminho.

@@ -265,7 +265,18 @@ test('visita e clique de diagnóstico verificam a etapa, e ficam fora dos relat�
   // Antes de qualquer gesto: conferir não inventa sucesso, e não confirma por
   // tempo decorrido nem pela presença do snippet.
   await page.getByRole('button', { name: 'Conferir o que chegou' }).click();
-  await expect(page.getByText('Ainda não recebemos nenhum evento deste diagnóstico')).toBeVisible();
+  await expect(page.getByText('Nenhum evento chegou deste site, nunca.')).toBeVisible();
+
+  // E não termina em beco sem saída: a tela diz o que MEDIU, e dá um próximo
+  // passo concreto. A versão anterior parava em "não dá para afirmar a causa
+  // daqui" com a mesma lista de quatro suspeitas para qualquer situação.
+  await expect(page.getByText(/Próximo passo:/)).toBeVisible();
+  await expect(page.getByText(/não há um único evento para este site/i)).toBeVisible();
+
+  // A conferência de console é oferecida, e é só leitura — ela existe porque
+  // "a tag está na página?" só tem resposta no navegador de quem visita.
+  await page.getByText(/Conferir pelo navegador/).click();
+  await expect(page.getByTestId('conferencia-console')).toContainText(publicId);
 
   // O token sobrevive ao recarregamento, porque vem do banco.
   await page.reload();

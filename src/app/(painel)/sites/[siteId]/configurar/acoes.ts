@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { exigirSessao } from '@/server/contexto';
+import { appUrl } from '@/lib/app-url';
+import { conferenciaNoConsole } from '@/lib/snippets';
+import type { Diagnostico as DiagnosticoDeInstalacao } from '@/lib/instalacao';
 import { atualizarSite, criarCliente, ClienteEntrada } from '@/server/services/cadastros';
 import { SiteEntrada } from '@/server/services/cadastros';
 import {
@@ -201,6 +204,16 @@ export type EstadoDiagnostico = {
   eventos?: EventoDiagnostico[];
   verificados?: Recurso[];
   conferidoEm?: string;
+  /** Por que a verificação ainda não passou, derivado do que o banco mediu. */
+  diagnostico?: DiagnosticoDeInstalacao;
+  /**
+   * A conferência para colar no console do navegador do operador.
+   *
+   * Montada no servidor porque depende do endereço público do painel e do
+   * identificador do site — dois valores que a tela não tem, e que errados
+   * fariam a conferência acusar problema onde não há.
+   */
+  consoleTexto?: string;
 };
 
 /** Abre a sessão e devolve a URL que o operador deve abrir no site. */
@@ -255,6 +268,11 @@ export async function conferirDiagnostico(
       erro: undefined,
       eventos: resultado.eventos,
       verificados: resultado.verificados,
+      diagnostico: resultado.diagnostico,
+      consoleTexto:
+        resultado.diagnostico.ofereceConsole && resultado.publicId
+          ? conferenciaNoConsole(appUrl(), resultado.publicId)
+          : undefined,
       conferidoEm: new Date().toISOString(),
     };
   } catch (erro) {

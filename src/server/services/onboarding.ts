@@ -14,6 +14,13 @@ import {
   type SessaoDiagnostico,
   type SiteExistente,
 } from '@/lib/recursos';
+import {
+  CAMINHO_EVENTO_DE_TESTE,
+  PREFIXO_PAGINA_DE_TESTE,
+  diagnosticarInstalacao,
+  type Diagnostico,
+  type FatosDaInstalacao,
+} from '@/lib/instalacao';
 
 /**
  * Leitura e escrita da configuração de mensuração.
@@ -28,6 +35,15 @@ export * from '@/lib/recursos';
 
 export type ResultadoVerificacao = {
   eventos: EventoDiagnostico[];
+  /**
+   * Por que a verificação ainda não passou — ou que ela passou.
+   *
+   * Existe para que a etapa nunca termine em "não dá para afirmar a causa
+   * daqui" com uma lista de suspeitas iguais para todo mundo.
+   */
+  diagnostico: Diagnostico;
+  /** Identificador público do site, para montar a conferência de console. */
+  publicId: string | null;
   /** Recursos que passaram a verificar nesta conferência. */
   verificados: Recurso[];
   /** Envios de formulário gravados nesta sessão de diagnóstico. */
@@ -231,6 +247,12 @@ export async function verificarDiagnostico(
     // alheio no formulário criava linha de `site_features` no site de outro.
     await exigirSiteDaConta(db, siteId);
 
+    const identificacao = await db.one<{ public_id: string }>(
+      'select public_id from sites where id = $1',
+      [siteId],
+    );
+    const publicId = identificacao?.public_id ?? null;
+
     /**
      * A JANELA da sessão, e não só o token.
      *
@@ -248,7 +270,15 @@ export async function verificarDiagnostico(
         where site_id = $1 and token = $2`,
       [siteId, token],
     );
-    if (!janela) return { eventos: [], verificados: [], formularios: 0 };
+    if (!janela) {
+      return {
+        eventos: [],
+        verificados: [],
+        formularios: 0,
+        publicId,
+        diagnostico: diagnosticarInstalacao(await fatosDaInstalacao(db, siteId, token, null, 0)),
+      };
+    }
 
     const eventos = await db.query<EventoDiagnostico>(
       `select e.type as tipo, e.subtype as subtipo, p.path as caminho,
@@ -294,8 +324,79 @@ export async function verificarDiagnostico(
       await marcar('formularios', { envios: envios!.total, origem: 'diagnostico' });
     }
 
-    return { eventos, verificados, formularios: envios?.total ?? 0 };
+    return {
+      eventos,
+      verificados,
+      formularios: envios?.total ?? 0,
+      publicId,
+      diagnostico: diagnosticarInstalacao(
+        await fatosDaInstalacao(db, siteId, token, janela, eventos.length),
+      ),
+    };
   });
+}
+
+/**
+ * Os fatos que separam "nunca instalou" de "instalou e algo barrou".
+ *
+ * Tudo sai de `events`, que o painel já tem. Nada aqui busca a página do
+ * cliente: o HTML não responde a pergunta que importa — script bloqueado está
+ * no HTML e não mede nada — e fazer o servidor buscar uma URL escolhida pelo
+ * usuário criaria um alvo de SSRF que hoje não existe.
+ */
+async function fatosDaInstalacao(
+  db: Queryable,
+  siteId: string,
+  token: string,
+  janela: { aberta_em: Date; expira_em: Date } | null,
+  comToken: number,
+): Promise<FatosDaInstalacao> {
+  // Separa o que veio das páginas do PRÓPRIO painel do que veio do site real.
+  // Um evento da página de teste prova que o servidor recebe, e não prova nada
+  // sobre a instalação no site do cliente — somar os dois esconderia
+  // exatamente a diferença que o operador precisa enxergar.
+  const historico = await db.one<{ do_painel: number; do_site: number }>(
+    `select
+       count(*) filter (where p.path = $2 or p.path like $3)::int as do_painel,
+       count(*) filter (where p.path is null
+                           or (p.path <> $2 and p.path not like $3))::int as do_site
+     from events e
+     left join pages p on p.id = e.page_id
+     where e.site_id = $1`,
+    [siteId, CAMINHO_EVENTO_DE_TESTE, `${PREFIXO_PAGINA_DE_TESTE}%`],
+  );
+
+  // Eventos do site real DENTRO da janela e SEM o token: a tag funciona, faltou
+  // abrir pelo link do diagnóstico. Sem esta contagem, esse caso se disfarça de
+  // "não instalou".
+  const semToken = janela
+    ? await db.one<{ total: number }>(
+        `select count(*)::int as total
+           from events e
+           left join pages p on p.id = e.page_id
+          where e.site_id = $1
+            and (e.diagnostic_token is null or e.diagnostic_token <> $2)
+            and (p.path is null or (p.path <> $5 and p.path not like $6))
+            and e.occurred_at >= $3 and e.occurred_at <= $4`,
+        [
+          siteId,
+          token,
+          janela.aberta_em,
+          janela.expira_em,
+          CAMINHO_EVENTO_DE_TESTE,
+          `${PREFIXO_PAGINA_DE_TESTE}%`,
+        ],
+      )
+    : null;
+
+  return {
+    diagnosticoExiste: janela !== null,
+    diagnosticoVivo: janela !== null && janela.expira_em.getTime() > Date.now(),
+    comToken,
+    semTokenNaJanela: semToken?.total ?? 0,
+    doSiteNoTotal: historico?.do_site ?? 0,
+    doPainelNoTotal: historico?.do_painel ?? 0,
+  };
 }
 
 /**

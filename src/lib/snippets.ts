@@ -216,3 +216,81 @@ export function instrucaoParaClaudeCode(opcoes: {
 
   return linhas.join('\n');
 }
+
+/**
+ * Conferência de instalação, para colar no console do navegador.
+ *
+ * ── Por que no console, e não no servidor ────────────────────────────────────
+ *
+ * A pergunta "a tag está lá?" só tem resposta útil no navegador de quem visita.
+ * Buscar o HTML pelo servidor responderia outra pergunta — se o texto está no
+ * documento — e é justamente a resposta que engana: script bloqueado por CSP,
+ * por consentimento ou por bloqueador está no HTML e não mede nada. Aqui o
+ * teste roda no mesmo lugar onde o coletor rodaria, com as mesmas regras, as
+ * mesmas extensões e o mesmo cache.
+ *
+ * E há a razão de segurança: fazer o servidor buscar uma URL que o usuário
+ * escolhe criaria um alvo de SSRF que hoje não existe — as únicas saídas do
+ * aplicativo vão para dois endereços fixos do Google. Este caminho não abre
+ * nenhum.
+ *
+ * O texto é só leitura: procura a tag, olha a marca que o coletor deixa em
+ * `window`, e tenta carregar o `t.js` para distinguir "bloqueado" de "ausente".
+ * NÃO envia evento nenhum — uma conferência que sujasse o relatório do cliente
+ * seria uma troca ruim.
+ */
+export function conferenciaNoConsole(endpoint: string, publicId: string): string {
+  return `// Cole no console do navegador, com o SITE DO CLIENTE aberto.
+(function () {
+  var esperado = ${JSON.stringify(publicId)};
+  var endpointEsperado = ${JSON.stringify(endpoint)};
+  var tags = Array.prototype.slice.call(
+    document.querySelectorAll('script[src*="/t.js"]')
+  );
+  var rodou = !!window.__painelColetor;
+
+  console.log('%cConferência do Painel de Sites', 'font-weight:bold');
+  console.log('Tags encontradas na página:', tags.length);
+
+  if (tags.length === 0) {
+    console.log('%c✗ A tag NÃO está nesta página.', 'color:#c00');
+    console.log('  Publique o snippet antes de </head> — e confirme que a publicação subiu.');
+    return;
+  }
+  if (tags.length > 1) {
+    console.log('%c! A tag está instalada ' + tags.length + ' vezes.', 'color:#c80');
+    console.log('  Cada cópia dispara a própria visualização: os números dobram.');
+  }
+
+  tags.forEach(function (t, i) {
+    var site = t.getAttribute('data-site');
+    console.log('  [' + i + '] src=' + t.src);
+    console.log('       data-site=' + site + (site === esperado ? ' (confere)' : ' (NÃO é o deste site: esperado ' + esperado + ')'));
+    if (t.src.indexOf(endpointEsperado) !== 0) {
+      console.log('%c       O endereço não é o deste painel. Esperado: ' + endpointEsperado + '/t.js', 'color:#c80');
+    }
+  });
+
+  if (rodou) {
+    console.log('%c✓ O coletor está rodando nesta página.', 'color:#080');
+    console.log('  Se mesmo assim o painel não recebe, o envio é que está sendo barrado:');
+    console.log('  veja a aba Network por uma chamada a /api/collect.');
+    return;
+  }
+
+  console.log('%c✗ A tag está na página, mas o coletor NÃO rodou.', 'color:#c00');
+  console.log('  Quase sempre é uma destas: bloqueador de anúncios, CSP do site, ou o arquivo não carregou.');
+
+  // Distingue "não carregou" de "carregou e foi impedido de rodar".
+  var teste = document.createElement('script');
+  teste.src = tags[0].src.split('?')[0] + '?conferencia=1';
+  teste.onload = function () {
+    console.log('  → O arquivo CARREGA. Então o que barra é a execução ou o envio (CSP/consentimento).');
+  };
+  teste.onerror = function () {
+    console.log('%c  → O arquivo NÃO carrega. É bloqueio de rede, CSP de script-src, ou endereço errado.', 'color:#c00');
+    console.log('     Endereço testado: ' + teste.src);
+  };
+  document.head.appendChild(teste);
+})();`;
+}

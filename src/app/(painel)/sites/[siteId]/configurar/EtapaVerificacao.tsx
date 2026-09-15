@@ -11,6 +11,7 @@ import {
   type Recurso,
   type EventoDiagnostico,
 } from '@/lib/recursos';
+import type { Diagnostico as DiagnosticoDeInstalacao } from '@/lib/instalacao';
 import { iniciarDiagnostico, conferirDiagnostico, type EstadoDiagnostico } from './acoes';
 
 /**
@@ -178,18 +179,11 @@ export function EtapaVerificacao({
           {conferencia.conferidoEm && (
             <div role="status" style={{ fontSize: 13, lineHeight: 1.7 }}>
               {eventos.length === 0 ? (
-                <>
+                conferencia.diagnostico ? (
+                  <Diagnostico diagnostico={conferencia.diagnostico} consoleTexto={conferencia.consoleTexto} />
+                ) : (
                   <strong>Ainda não recebemos nenhum evento deste diagnóstico.</strong>
-                  <p style={{ color: 'var(--tx2)', marginTop: 6 }}>
-                    Não dá para afirmar a causa daqui. Vale conferir, nesta ordem:
-                  </p>
-                  <ul style={{ paddingLeft: 20, color: 'var(--tx2)' }}>
-                    <li>o script foi publicado (abra o site e procure por <span className="mono">t.js</span> no HTML);</li>
-                    <li>o cache do site ou da CDN ainda serve a versão anterior;</li>
-                    <li>o domínio cadastrado é o mesmo de onde você abriu o site;</li>
-                    <li>algum bloqueador ou regra de consentimento está impedindo o envio.</li>
-                  </ul>
-                </>
+                )
               ) : (
                 <>
                   <strong>
@@ -222,6 +216,79 @@ export function EtapaVerificacao({
         Tudo o que chega por este link nasce marcado como teste no servidor e fica fora dos relatórios comerciais —
         inclusive um envio de formulário feito durante o diagnóstico.
       </p>
+    </div>
+  );
+}
+
+/**
+ * O diagnóstico da espera.
+ *
+ * Três blocos, nesta ordem, e a ordem é o ponto: **o que medimos**, depois a
+ * causa provável, depois o que fazer. Começar pela causa seria dar palpite com
+ * cara de certeza; quem lê precisa ver primeiro em cima de qual fato o palpite
+ * foi construído, para poder discordar dele.
+ *
+ * A conferência pelo console só aparece quando ajuda. Oferecê-la no caso "faltou
+ * abrir pelo link" mandaria a pessoa depurar uma instalação que está funcionando.
+ */
+function Diagnostico({
+  diagnostico,
+  consoleTexto,
+}: {
+  diagnostico: DiagnosticoDeInstalacao;
+  consoleTexto?: string;
+}) {
+  const cor =
+    diagnostico.tom === 'ok' ? 'var(--ok-tx)' : diagnostico.tom === 'warn' ? 'var(--tx)' : 'var(--neg)';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <strong style={{ color: cor }}>{diagnostico.titulo}</strong>
+
+      <p style={{ color: 'var(--tx2)', margin: 0 }}>{diagnostico.oQueSabemos}</p>
+
+      {diagnostico.causaProvavel && (
+        <p style={{ color: 'var(--tx2)', margin: 0 }}>
+          <span style={{ color: 'var(--tx3)' }}>Causa mais provável: </span>
+          {diagnostico.causaProvavel}
+        </p>
+      )}
+
+      <p style={{ margin: 0 }}>
+        <span style={{ color: 'var(--tx3)' }}>Próximo passo: </span>
+        {diagnostico.proximaAcao}
+      </p>
+
+      {diagnostico.ofereceConsole && consoleTexto && (
+        <details style={{ marginTop: 2 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--tx2)' }}>
+            Conferir pelo navegador (descobre se a tag está lá e se ela roda)
+          </summary>
+          <p style={{ fontSize: 12, color: 'var(--tx3)', lineHeight: 1.6, marginTop: 8 }}>
+            Abra o site do cliente, pressione F12, vá em <span className="mono">Console</span> e cole o
+            texto abaixo. Ele só lê a página — não envia evento nenhum, então não suja o relatório.
+            Rodar aí é o que distingue &quot;a tag não está na página&quot; de &quot;está e foi
+            bloqueada&quot;, que é uma diferença que nenhuma consulta feita daqui enxerga.
+          </p>
+          <pre
+            className="mono"
+            data-testid="conferencia-console"
+            style={{
+              fontSize: 11.5,
+              lineHeight: 1.5,
+              background: 'var(--elev)',
+              border: '1px solid var(--bd)',
+              borderRadius: 8,
+              padding: 12,
+              overflowX: 'auto',
+              whiteSpace: 'pre',
+              color: 'var(--tx2)',
+            }}
+          >
+            {consoleTexto}
+          </pre>
+        </details>
+      )}
     </div>
   );
 }
