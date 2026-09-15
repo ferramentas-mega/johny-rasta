@@ -1,4 +1,5 @@
 import 'server-only';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Queryable } from '@/server/db';
 
@@ -242,9 +243,23 @@ export const SubmissaoRecebida = z
     telefone: z.string().trim().max(40).optional().or(z.literal('')),
     mensagem: z.string().trim().max(4000).optional(),
     caminho: z.string().trim().min(1).max(512).default('/'),
-    visitante: z.string().min(8).max(64),
-    /** Reenviar o mesmo formulário não cria segunda submissão nem lead novo. */
-    idempotencia: z.string().uuid(),
+    /**
+     * Identificador do navegador, quando existir.
+     *
+     * OPCIONAL de propósito. Ele serve para ligar a submissão à sessão de
+     * analytics — e só. Exigi-lo recusaria o contato de quem bloqueia
+     * rastreamento, negou consentimento ou está com o coletor fora do ar.
+     * Perder um lead legítimo porque o analytics falhou é o pior resultado
+     * possível deste endpoint.
+     */
+    visitante: z.string().min(8).max(64).optional(),
+    /**
+     * Chave de idempotência: reenviar a MESMA submissão não cria um segundo
+     * lead. Também opcional — quando o formulário não a envia, o servidor gera
+     * uma, e o envio é aceito. O que se perde nesse caso é só a deduplicação
+     * de reenvio, e perder isso é melhor que recusar um contato.
+     */
+    idempotencia: z.string().uuid().optional(),
     teste: z.boolean().optional(),
     /** Mesmo token do coletor: liga este envio ao diagnóstico em andamento. */
     diagnostico: DIAGNOSTICO,
@@ -284,9 +299,14 @@ export async function registrarSubmissao(
   // servidor. Um lead de teste jamais entra no relatório comercial do cliente.
   const teste = dados.teste === true || !!dados.diagnostico;
 
+  // Sem chave do cliente, o servidor gera uma: a submissão entra, e o que não
+  // existe é o reconhecimento de reenvio — não dá para saber que duas
+  // requisições eram a mesma intenção sem que o cliente diga.
+  const chaveIdempotencia = dados.idempotencia ?? randomUUID();
+
   const jaExiste = await db.one<{ id: string; lead_id: string | null }>(
     'select id, lead_id from form_submissions where idempotency_key = $1',
-    [dados.idempotencia],
+    [chaveIdempotencia],
   );
   if (jaExiste) {
     return { submissionId: jaExiste.id, leadId: jaExiste.lead_id ?? '', duplicada: true };
@@ -294,16 +314,19 @@ export async function registrarSubmissao(
 
   const pageId = await garantirPagina(db, site, dados.caminho);
 
-  // Anexa à sessão aberta do visitante, se houver. Sem sessão a submissão ainda
-  // é gravada: perder um lead porque o analytics falhou seria pior.
-  const sessao = await db.one<{ id: string }>(
-    `select id from sessions
-      where site_id = $1 and visitor_id = $2 and is_test = $3
-        and last_seen_at > now() - make_interval(mins => $4)
-      order by last_seen_at desc
-      limit 1`,
-    [site.id, dados.visitante, teste, JANELA_SESSAO_MIN],
-  );
+  // Anexa à sessão aberta do visitante, se houver. Sem visitante — ou sem
+  // sessão — a submissão ainda é gravada: perder um lead porque o analytics
+  // falhou seria pior que perder a atribuição de origem.
+  const sessao = dados.visitante
+    ? await db.one<{ id: string }>(
+        `select id from sessions
+          where site_id = $1 and visitor_id = $2 and is_test = $3
+            and last_seen_at > now() - make_interval(mins => $4)
+          order by last_seen_at desc
+          limit 1`,
+        [site.id, dados.visitante, teste, JANELA_SESSAO_MIN],
+      )
+    : null;
 
   const chave = chaveLead(dados.email || undefined, dados.telefone || undefined);
   const lead = await db.one<{ id: string }>(
@@ -335,7 +358,7 @@ export async function registrarSubmissao(
         telefone: dados.telefone || null,
         mensagem: dados.mensagem ?? null,
       }),
-      dados.idempotencia, teste, agora, dados.diagnostico ?? null,
+      chaveIdempotencia, teste, agora, dados.diagnostico ?? null,
     ],
   );
 

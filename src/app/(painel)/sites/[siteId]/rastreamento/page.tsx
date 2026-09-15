@@ -13,6 +13,7 @@ import { Snippet } from './Snippet';
 import { EventoTeste } from './EventoTeste';
 import { registrarSnippetVisto } from '@/server/services/cadastros';
 import { appUrl } from '@/lib/app-url';
+import { snippetColetor, snippetBotao, snippetFormulario } from '@/lib/snippets';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,11 +81,9 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
   const passoAtual =
     site.totalEventos > 0 ? 5 : site.snippetSeenAt ? 4 : 3;
 
-  const snippet = `<script async src="${endpoint}/t.js"\n        data-site="${site.publicId}"></script>`;
-
-  const snippetBotao = `<a href="https://wa.me/5511999999999"\n   data-track-id="cta-whatsapp-hero"\n   data-track-sub="whatsapp"\n   data-track-pos="Hero">Falar no WhatsApp</a>`;
-
-  const snippetFormulario = `<form method="post"\n      action="${endpoint}/api/forms/${site.publicId}">\n  <input name="nome" required>\n  <input name="email" type="email">\n  <input name="telefone">\n  <input type="hidden" name="formulario" value="Fale conosco">\n  <input type="hidden" name="visitante" value="PREENCHER_COM_painel.visitante()">\n  <input type="hidden" name="idempotencia" value="PREENCHER_COM_crypto.randomUUID()">\n  <button type="submit">Enviar</button>\n</form>`;
+  const snippet = snippetColetor(endpoint, site.publicId);
+  const exemploBotao = snippetBotao();
+  const exemploFormulario = snippetFormulario(endpoint, site.publicId);
 
   const colunasEventos: Coluna<LinhaEvento>[] = [
     { chave: 'quando', titulo: 'Quando', mono: true, render: (l) => dataHora(l.quando) },
@@ -190,7 +189,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
           titulo="Marcação de botões"
           subtitulo="Opcional: nomeia o botão nos relatórios em vez de agrupá-lo como automático"
         >
-          <Snippet codigo={snippetBotao} rotulo="Exemplo de CTA marcado" />
+          <Snippet codigo={exemploBotao} rotulo="Exemplo de CTA marcado" />
           <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
             Sem <span className="mono">data-track-id</span>, cliques em WhatsApp, telefone e e-mail ainda são
             contados — aparecem agrupados como <span className="mono">auto:whatsapp</span> e afins. Para abertura de
@@ -203,10 +202,12 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
           titulo="Recebimento de formulários"
           subtitulo="O envio é validado e gravado no servidor antes de qualquer confirmação"
         >
-          <Snippet codigo={snippetFormulario} rotulo="Endpoint de formulários" />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
-            A chave de idempotência precisa ser gerada uma vez por formulário preenchido, não por tentativa de envio:
-            é ela que impede que um reenvio crie um segundo lead.
+          <Snippet codigo={exemploFormulario} rotulo="Endpoint de formulários" />
+          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+            O exemplo funciona como está: gera a chave de idempotência uma vez por formulário preenchido e só a
+            renova depois de um envio confirmado pelo servidor. Visitante e idempotência são opcionais no
+            endpoint — sem eles o contato ainda é aceito, porque recusar um lead legítimo por causa do analytics
+            seria o pior resultado possível.
           </p>
         </Painel>
 

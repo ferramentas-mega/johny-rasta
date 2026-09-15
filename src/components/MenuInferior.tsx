@@ -25,7 +25,25 @@ import { Icone, type IconeNome } from '@/components/icones';
  * Só existe no celular: no desktop a barra lateral cabe e mostra mais.
  */
 
-type Item = { href: string; label: string; icone: IconeNome; prefixos?: string[]; contagem?: number | null };
+type Item = {
+  href: string;
+  label: string;
+  /**
+   * Rótulo curto, só para a barra de rodapé.
+   *
+   * Seis destinos numa tela de 360px dão 60px por item. "Configurações" não
+   * cabe nisso em tamanho legível, e cortar o nome do destino é pior que
+   * encurtá-lo — "Configuraçõ…" não é um rótulo, é um defeito.
+   *
+   * São palavras inteiras, não abreviações com reticências, e o texto visível é
+   * o mesmo que o leitor de tela anuncia. A barra lateral do computador, onde
+   * há espaço, continua com o nome completo.
+   */
+  curto?: string;
+  icone: IconeNome;
+  prefixos?: string[];
+  contagem?: number | null;
+};
 
 export function MenuInferior({ itens, busca }: { itens: Item[]; busca: string }) {
   const pathname = usePathname();
@@ -52,6 +70,11 @@ export function MenuInferior({ itens, busca }: { itens: Item[]; busca: string })
     barra.style.left = `${alvo.offsetLeft + alvo.offsetWidth / 2 - barra.offsetWidth / 2}px`;
     barra.style.opacity = indiceAtivo < 0 ? '0' : '1';
 
+    // Com seis destinos legíveis, a barra rola. O item ativo precisa estar à
+    // vista ao abrir a tela — senão quem está em "Configurações" vê uma barra
+    // que parece não ter o item onde ele está.
+    alvo.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
     if (!pronto) {
       // Um quadro de folga antes de ligar a transição, para a primeira
       // colocação ser instantânea.
@@ -75,14 +98,14 @@ export function MenuInferior({ itens, busca }: { itens: Item[]; busca: string })
             className="item-inferior"
           >
             <span className="item-inferior-icone">
-              <Icone nome={item.icone} tamanho={20} />
+              <Icone nome={item.icone} tamanho={22} />
               {item.contagem != null && item.contagem > 0 && (
                 <span className="mono item-inferior-contagem" aria-hidden="true">
                   {item.contagem > 99 ? '99+' : item.contagem}
                 </span>
               )}
             </span>
-            <span className="item-inferior-rotulo">{item.label}</span>
+            <span className="item-inferior-rotulo">{item.curto ?? item.label}</span>
             {/* A contagem já apareceu como número sobre o ícone, mas ali ela é
                 decorativa. Aqui ela vira texto para quem usa leitor de tela. */}
             {item.contagem != null && item.contagem > 0 && (

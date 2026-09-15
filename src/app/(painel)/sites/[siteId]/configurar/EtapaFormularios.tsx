@@ -5,6 +5,7 @@ import { BotaoSubmeter, Retorno, ESTADO_VAZIO } from '@/components/Formulario';
 import { MODO_FORMULARIO_LABEL, type ModoFormulario } from '@/lib/recursos';
 import { salvarFormulario } from './acoes';
 import { Snippet } from '../rastreamento/Snippet';
+import { snippetFormulario } from '@/lib/snippets';
 
 /**
  * Etapa 5 — formulários.
@@ -36,18 +37,7 @@ export function EtapaFormularios({
 }) {
   const [estado, acao] = useActionState(salvarFormulario, ESTADO_VAZIO);
 
-  const snippet = [
-    `<form method="post" action="${endpoint}/api/forms/${publicId}">`,
-    '  <input name="nome" required>',
-    '  <input name="email" type="email">',
-    '  <input name="telefone">',
-    '  <input type="hidden" name="formulario" value="Fale conosco">',
-    '  <!-- Gere UMA vez por formulário preenchido, não por tentativa de envio: -->',
-    '  <input type="hidden" name="idempotencia" value="PREENCHER_COM_crypto.randomUUID()">',
-    '  <input type="hidden" name="visitante" value="PREENCHER_COM_painel.visitante()">',
-    '  <button type="submit">Enviar</button>',
-    '</form>',
-  ].join('\n');
+  const snippet = snippetFormulario(endpoint, publicId);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -100,8 +90,15 @@ export function EtapaFormularios({
           </p>
           <Snippet codigo={snippet} rotulo="Endpoint de formulários deste site" />
           <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
-            A chave de idempotência é gerada uma vez por formulário preenchido. É ela que faz o reenvio da mesma
-            submissão não criar um segundo lead.
+            O exemplo acima funciona como está — não há campo para preencher à mão. Ele gera a chave de
+            idempotência uma vez por formulário preenchido (é ela que faz um reenvio não virar um segundo lead)
+            e só a renova depois de um envio confirmado pelo servidor. O identificador de visitante vai junto
+            quando o coletor está na página, e vai vazio quando não está: <strong>quem bloqueia analytics
+            precisa conseguir mandar a mensagem do mesmo jeito.</strong>
+          </p>
+          <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
+            Se o formulário do site já envia para um CRM, planilha ou e-mail, <strong>não troque o destino</strong>.
+            O caminho é um envio adicional para este endereço, preservando o que já funciona.
           </p>
         </div>
       )}

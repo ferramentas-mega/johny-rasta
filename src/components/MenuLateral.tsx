@@ -17,15 +17,22 @@ import { MenuInferior } from '@/components/MenuInferior';
  * Desempenho. Aqui isso não tem como acontecer: existe uma fonte só.
  */
 
-type ItemMenu = { href: string; label: string; icone: IconeNome; prefixos?: string[] };
+type ItemMenu = {
+  href: string;
+  label: string;
+  /** Rótulo curto da barra de rodapé do celular. Veja `MenuInferior`. */
+  curto?: string;
+  icone: IconeNome;
+  prefixos?: string[];
+};
 
 const ITENS: ItemMenu[] = [
-  { href: '/visao-geral', label: 'Visão geral', icone: 'grafico' },
+  { href: '/visao-geral', label: 'Visão geral', curto: 'Geral', icone: 'grafico' },
   { href: '/clientes', label: 'Clientes', icone: 'clientes' },
   { href: '/sites', label: 'Sites', icone: 'globo', prefixos: ['/sites'] },
   { href: '/leads', label: 'Leads', icone: 'caixa' },
-  { href: '/otimizacoes', label: 'Otimizações', icone: 'ajustes' },
-  { href: '/configuracoes', label: 'Configurações', icone: 'ajustes' },
+  { href: '/otimizacoes', label: 'Otimizações', curto: 'Otimizar', icone: 'ajustes' },
+  { href: '/configuracoes', label: 'Configurações', curto: 'Ajustes', icone: 'ajustes' },
 ];
 
 export function MenuLateral({

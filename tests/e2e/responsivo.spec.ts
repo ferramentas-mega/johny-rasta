@@ -176,15 +176,24 @@ test('no celular a navegação fica no rodapé, ao alcance do polegar', async ({
   const altura = await rodape.evaluate((el) => el.getBoundingClientRect().height);
   const tela = page.viewportSize()!.height;
   expect(altura, 'a barra não pode comer mais de 12% da altura do celular').toBeLessThan(tela * 0.12);
+  // E precisa ser grande o bastante para o dedo: um alvo menor que 44px é mira.
+  expect(altura, 'e precisa dar um alvo de toque confortável').toBeGreaterThanOrEqual(56);
 
   // Os seis destinos continuam alcançáveis, e nenhum rótulo é cortado.
   const itens = rodape.getByRole('link');
   await expect(itens).toHaveCount(6);
-  const cortado = await rodape.evaluate((barra) => {
-    const b = barra.getBoundingClientRect();
-    return [...barra.querySelectorAll('a')].some((a) => a.getBoundingClientRect().right > b.right + 1);
-  });
-  expect(cortado, 'nenhum item pode ficar cortado na borda').toBe(false);
+
+  const medidas = await rodape.evaluate((barra) => ({
+    // A barra NÃO pode rolar na horizontal: arrastá-la parecia a página
+    // inteira deslizando, que é o gesto errado no lugar errado.
+    rola: barra.scrollWidth > barra.clientWidth + 1,
+    // E nenhum rótulo pode estar cortado: "Configuraçõ…" não é um rótulo.
+    cortados: [...barra.querySelectorAll('.item-inferior-rotulo')]
+      .filter((t) => t.scrollWidth > t.clientWidth + 1)
+      .map((t) => t.textContent),
+  }));
+  expect(medidas.rola, 'a barra de rodapé não pode rolar na horizontal').toBe(false);
+  expect(medidas.cortados, 'nenhum rótulo pode ficar cortado').toEqual([]);
 
   // O conteúdo não termina debaixo da barra fixa.
   const respiro = await page
@@ -224,18 +233,21 @@ test('o facho acompanha o item ativo, e o ativo vem da rota', async ({ page }) =
   // O destaque é derivado do `pathname`, não de um estado próprio do
   // componente — foi um estado paralelo que, no protótipo, deixava "Leads"
   // aceso sobre a tela de Desempenho.
-  await expect(page.locator('.item-inferior[aria-current="page"]')).toContainText('Visão geral');
+  await expect(page.locator('.item-inferior[aria-current="page"]')).toHaveAttribute('href', /^\/visao-geral/);
   await alinha('o facho precisa nascer sobre o item ativo');
 
-  await page.locator('.item-inferior').filter({ hasText: 'Leads' }).click();
+  // Alvo pelo destino, não pelo texto: a barra de rodapé usa rótulo curto
+  // ("Geral", "Ajustes"), e casar por texto amarraria o teste à escolha de
+  // palavra em vez do comportamento.
+  await page.locator('.item-inferior[href^="/leads"]').click();
   await page.waitForURL('**/leads**');
-  await expect(page.locator('.item-inferior[aria-current="page"]')).toContainText('Leads');
+  await expect(page.locator('.item-inferior[aria-current="page"]')).toHaveAttribute('href', /^\/leads/);
   await alinha('e acompanhar a navegação');
 });
 
 test('no celular, sair da conta continua possível — pelas Configurações', async ({ page }) => {
   await entrar(page);
-  await page.locator('.item-inferior').filter({ hasText: 'Configurações' }).click();
+  await page.locator('.item-inferior[href^="/configuracoes"]').click();
   await page.waitForURL('**/configuracoes**');
 
   await page.getByRole('button', { name: 'Sair da conta' }).click();

@@ -674,22 +674,27 @@ select option {
    `viewport-fit=cover` deixa a interface ir até a borda; estas regras devolvem
    o respiro onde ele é necessário. Sem elas, a faixa de navegação fica embaixo
    do relógio do sistema quando o painel roda instalado, em tela cheia. */
-@supports (padding: env(safe-area-inset-left)) {
-  @media (max-width: 860px) {
-    .lateral {
-      padding-top: calc(8px + env(safe-area-inset-top, 0px));
-      padding-left: calc(10px + env(safe-area-inset-left, 0px));
-      padding-right: calc(10px + env(safe-area-inset-right, 0px));
-    }
-    .pagina,
-    .cabecalho,
-    .abas {
-      padding-left: calc(16px + env(safe-area-inset-left, 0px));
-      padding-right: calc(16px + env(safe-area-inset-right, 0px));
-    }
-    .conteudo-painel {
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-    }
+@media (max-width: 860px) {
+  /*
+   * O CABEÇALHO é o primeiro elemento da tela no celular — a barra lateral não
+   * existe mais aqui. Sem este respiro, o título fica debaixo do relógio e da
+   * bateria do sistema, e é pior ainda com o painel instalado como aplicativo,
+   * onde não há barra do navegador empurrando nada para baixo.
+   *
+   * `max()` e não `+`: em aparelho sem recorte o inset é 0, e somar daria um
+   * respiro grande demais. Assim o piso é 18px e o recorte só manda quando é
+   * maior que isso.
+   */
+  .cabecalho {
+    padding-top: max(18px, env(safe-area-inset-top, 0px));
+    padding-bottom: 18px;
+  }
+
+  .pagina,
+  .cabecalho,
+  .abas {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
 }
 
@@ -738,7 +743,7 @@ select option {
   position: absolute;
   top: 0;
   z-index: 1;
-  width: 38px;
+  width: 44px;
   height: 3px;
   border-radius: 999px;
   background: var(--gold);
@@ -760,7 +765,7 @@ select option {
   left: -30%;
   top: 3px;
   width: 160%;
-  height: 46px;
+  height: 54px;
   pointer-events: none;
   clip-path: polygon(5% 100%, 25% 0, 75% 0, 95% 100%);
   background: linear-gradient(to bottom, var(--gold-fill), transparent);
@@ -780,28 +785,33 @@ select option {
     /* O respiro da barra de gestos do celular vem daqui; sem ele o rótulo fica
        debaixo da faixa do sistema. */
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    /* Seis itens numa tela de 360px dão 60px cada — apertado, mas os rótulos
-       cabem. Abaixo disso, rola. */
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .menu-inferior::-webkit-scrollbar {
-    display: none;
+    /*
+     * `hidden`, e não `auto`.
+     *
+     * Com rolagem, arrastar a barra para o lado parecia a página inteira
+     * deslizando — e numa barra fixa de rodapé isso é o gesto errado no lugar
+     * errado. Os seis destinos precisam CABER. Quem garante isso é o
+     * `flex: 1 1 0` com `min-width: 0` nos itens: eles dividem a largura em
+     * partes iguais, e o rótulo é dimensionado para caber na menor delas.
+     */
+    overflow-x: hidden;
   }
 
   .item-inferior {
     position: relative;
     z-index: 2;
-    /* `1 0 auto`: cresce para dividir a largura, mas NUNCA encolhe abaixo do
-       próprio texto. Com uma base fixa, "Configurações" era cortado no sexto
-       item; assim a barra rola quando os seis não cabem, em vez de clipar. */
-    flex: 1 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 9px 4px 8px;
+    gap: 4px;
+    /* Divide a largura em partes iguais e NUNCA estoura: `min-width: 0` é o que
+       permite ao item flexível encolher abaixo do próprio conteúdo. A altura é
+       que dá o alvo de toque confortável, não a largura. */
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 62px;
+    padding: 10px 2px 9px;
     text-decoration: none;
     color: var(--tx3);
     transition: color 0.18s ease;
@@ -822,23 +832,32 @@ select option {
     justify-content: center;
   }
 
+  /*
+   * O rótulo acompanha a largura disponível: `clamp` entre 9px e 11px, com a
+   * referência em `vw`. Numa tela de 430px ele fica em 11px; numa de 360px,
+   * encolhe até caber "Configurações" sem cortar. Cortar o nome do destino é
+   * pior que reduzi-lo.
+   */
   .item-inferior-rotulo {
-    font-size: 9.5px;
-    letter-spacing: -0.01em;
+    font-size: clamp(9px, 2.5vw, 11px);
+    letter-spacing: -0.02em;
     white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .item-inferior-contagem {
     position: absolute;
-    top: -6px;
-    left: 12px;
-    min-width: 14px;
-    padding: 0 3px;
+    top: -7px;
+    left: 13px;
+    min-width: 16px;
+    padding: 0 4px;
     border-radius: 999px;
     background: var(--gold);
     color: var(--on-gold);
-    font-size: 9px;
-    line-height: 14px;
+    font-size: 10px;
+    line-height: 16px;
+    font-weight: 600;
     text-align: center;
   }
 
@@ -850,9 +869,16 @@ select option {
     display: none;
   }
 
+  /* O canvas do cabeçalho é `position: absolute; inset: 0` e, com o respiro do
+     recorte, ele passaria a cobrir a área segura. Fica atrás do conteúdo, o que
+     já é o caso — mas o recorte precisa continuar limpo. */
+  .cabecalho > canvas {
+    top: env(safe-area-inset-top, 0px);
+  }
+
   /* O conteúdo não pode terminar debaixo da barra fixa. */
   .conteudo-painel {
-    padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px));
   }
 }
 
