@@ -128,3 +128,29 @@ describe('privilégios dos endpoints públicos', () => {
     await expect(withIngest((db) => db.query('delete from events'))).rejects.toThrow(/permission denied/i);
   });
 });
+
+describe('e-mail de login é único', () => {
+  it('não aceita dois usuários com o mesmo e-mail, nem trocando a caixa', async () => {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const conta = await admin.query<{ id: string }>('select id from accounts limit 1');
+    const email = `duplicado-${Date.now()}@teste.com`;
+
+    await admin.query(
+      `insert into users (account_id, email, password_hash, name) values ($1, $2, 'scrypt$a$b', 'Um')`,
+      [conta.rows[0]!.id, email],
+    );
+
+    // Mesmo e-mail, caixa diferente: continua sendo a mesma caixa postal, e o
+    // login ficaria ambíguo — é exatamente o que o índice impede.
+    await expect(
+      admin.query(
+        `insert into users (account_id, email, password_hash, name) values ($1, $2, 'scrypt$a$b', 'Dois')`,
+        [conta.rows[0]!.id, email.toUpperCase()],
+      ),
+    ).rejects.toThrow(/users_email_unico|duplicate key/i);
+
+    await admin.query('delete from users where lower(email) = lower($1)', [email]);
+    await admin.end();
+  });
+});
