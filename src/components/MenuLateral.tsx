@@ -31,7 +31,17 @@ const ITENS: ItemMenu[] = [
   { href: '/clientes', label: 'Clientes', icone: 'clientes' },
   { href: '/sites', label: 'Sites', icone: 'globo', prefixos: ['/sites'] },
   { href: '/leads', label: 'Leads', icone: 'caixa' },
-  { href: '/otimizacoes', label: 'Otimizações', curto: 'Otimizar', icone: 'ajustes' },
+  /**
+   * Otimizações usa `tendencia`, e não `ajustes`.
+   *
+   * Os dois destinos vinham com a MESMA engrenagem. Na barra lateral o rótulo
+   * salva a leitura; na barra do celular o ícone é a pista principal, e dois
+   * ícones idênticos lado a lado transformam a escolha em tentativa e erro.
+   *
+   * A seta ascendente também diz melhor o que a tela é: onde atuar para
+   * melhorar resultado, não um painel de preferências.
+   */
+  { href: '/otimizacoes', label: 'Otimizações', curto: 'Otimizar', icone: 'tendencia' },
   { href: '/configuracoes', label: 'Configurações', curto: 'Ajustes', icone: 'ajustes' },
 ];
 

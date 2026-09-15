@@ -34,12 +34,19 @@ const VARIANTES: Record<
   VarianteChuva,
   { tamanho: number; msPorLinha: { celular: number; desktop: number }; estilo: React.CSSProperties }
 > = {
-  // Cabeçalho inteiro.
+  // Cabeçalho inteiro, com o canto esquerdo protegido.
   //
-  // Ocupava só a faixa direita de 42%, e ficava quase invisível. Agora cobre a
-  // largura toda — mas a máscara mantém o canto esquerdo limpo, que é onde vivem
-  // o título da tela e o nome da conta. Chuva por trás de texto grande é onde a
-  // leitura se perde primeiro.
+  // A máscara mede em PIXELS, não em porcentagem, e a diferença aparece no
+  // celular. O texto que ela protege — o rótulo da seção e o nome da conta —
+  // tem largura mais ou menos fixa, de algumas centenas de pixels. Uma máscara
+  // em porcentagem protege uma faixa que ENCOLHE junto com a tela: os 18% que
+  // deixavam o título limpo num monitor viravam 70px num telefone, e a chuva
+  // passava por trás do título e dos botões de período. Era isso que fazia o
+  // topo do celular parecer sujo.
+  //
+  // Com parada em pixel, a área limpa é a mesma em qualquer largura. O efeito
+  // colateral é desejado: numa tela estreita sobra pouco espaço à direita, então
+  // a chuva fica discreta exatamente onde o cabeçalho concentra os controles.
   cabecalho: {
     tamanho: 20,
     msPorLinha: { celular: 55, desktop: 90 },
@@ -50,9 +57,9 @@ const VARIANTES: Record<
       height: '100%',
       opacity: 0.42,
       maskImage:
-        'linear-gradient(90deg, transparent 0%, transparent 18%, rgba(0,0,0,.45) 42%, rgba(0,0,0,.9) 72%, #000 100%)',
+        'linear-gradient(90deg, transparent 0px, transparent 260px, rgba(0,0,0,.4) 420px, rgba(0,0,0,.85) 640px, #000 100%)',
       WebkitMaskImage:
-        'linear-gradient(90deg, transparent 0%, transparent 18%, rgba(0,0,0,.45) 42%, rgba(0,0,0,.9) 72%, #000 100%)',
+        'linear-gradient(90deg, transparent 0px, transparent 260px, rgba(0,0,0,.4) 420px, rgba(0,0,0,.85) 640px, #000 100%)',
     },
   },
   // Tela inteira, atrás do conteúdo.
