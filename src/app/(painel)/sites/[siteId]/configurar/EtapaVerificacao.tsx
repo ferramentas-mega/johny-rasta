@@ -4,7 +4,13 @@ import { useActionState } from 'react';
 import { BotaoSubmeter } from '@/components/Formulario';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { dataHora } from '@/lib/formato';
-import { RECURSO_LABEL, type Recurso, type EventoDiagnostico } from '@/lib/recursos';
+import {
+  RECURSO_LABEL,
+  MINUTOS_DE_DIAGNOSTICO,
+  minutosRestantes,
+  type Recurso,
+  type EventoDiagnostico,
+} from '@/lib/recursos';
 import { iniciarDiagnostico, conferirDiagnostico, type EstadoDiagnostico } from './acoes';
 
 /**
@@ -42,7 +48,7 @@ export function EtapaVerificacao({
    * token, e o operador precisava abrir um diagnóstico novo — descartando os
    * eventos que ele acabou de gerar no site.
    */
-  sessaoAberta: { token: string; url: string } | null;
+  sessaoAberta: { token: string; url: string; expiraEm: string } | null;
 }) {
   const [inicio, acaoIniciar] = useActionState(iniciarDiagnostico, {} as EstadoDiagnostico);
   const [conferencia, acaoConferir] = useActionState(conferirDiagnostico, {} as EstadoDiagnostico);
@@ -52,6 +58,21 @@ export function EtapaVerificacao({
   const token = conferencia.token ?? inicio.token ?? sessaoAberta?.token;
   const url = inicio.url ?? sessaoAberta?.url;
   const eventos = conferencia.eventos ?? [];
+
+  /**
+   * Quanto tempo o diagnóstico ainda vale.
+   *
+   * O prazo existe porque o token viaja na URL do site do cliente, e todo
+   * evento que chega com ele nasce marcado como TESTE. Um link esquecido numa
+   * aba, ou colado num grupo, faria visitas reais sumirem dos relatórios — em
+   * silêncio, até o fechamento do mês.
+   *
+   * Mostrar o prazo não é enfeite: sem ele, o operador que voltasse meia hora
+   * depois clicaria em "Conferir" e veria zero eventos, sem entender por quê.
+   */
+  const expiraEm = inicio.expiraEm ?? sessaoAberta?.expiraEm;
+  const restantes = expiraEm ? minutosRestantes(new Date(expiraEm)) : null;
+  const vencido = restantes !== null && restantes === 0;
 
   const colunas: Coluna<EventoDiagnostico>[] = [
     { chave: 'quando', titulo: 'Recebido em', mono: true, render: (e) => dataHora(e.quando) },
@@ -81,13 +102,23 @@ export function EtapaVerificacao({
         <li>Volte aqui e clique em <strong>Conferir o que chegou</strong>.</li>
       </ol>
 
-      {!url ? (
-        <form action={acaoIniciar}>
+      {!url || vencido ? (
+        <form action={acaoIniciar} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <input type="hidden" name="siteId" value={siteId} />
           <input type="hidden" name="base" value={urlBase} />
-          <BotaoSubmeter ocupado="Abrindo…">Abrir modo de diagnóstico</BotaoSubmeter>
+          {vencido && (
+            <p role="status" style={{ fontSize: 12.5, color: 'var(--warn-tx)', lineHeight: 1.6 }}>
+              O diagnóstico anterior venceu. Abrir outro gera um link novo — e o antigo para de marcar
+              qualquer coisa como teste, que é o motivo de ele ter prazo.
+            </p>
+          )}
+          <div>
+            <BotaoSubmeter ocupado="Abrindo…">
+              {vencido ? 'Abrir um diagnóstico novo' : 'Abrir modo de diagnóstico'}
+            </BotaoSubmeter>
+          </div>
           {inicio.erro && (
-            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)', marginTop: 8 }}>
+            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)' }}>
               {inicio.erro}
             </p>
           )}
@@ -99,10 +130,19 @@ export function EtapaVerificacao({
             background: 'var(--elev)', display: 'flex', flexDirection: 'column', gap: 10,
           }}
         >
-          <span style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
-            Abra este endereço no navegador. O token fica valendo enquanto a aba estiver aberta, então dá para
-            navegar pelo site inteiro sem repetir o link.
+          <span style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.6 }}>
+            Abra este endereço no navegador. O token sobrevive à navegação entre as páginas do site, então dá
+            para percorrer o site inteiro sem repetir o link.
           </span>
+          {restantes !== null && (
+            <span
+              className="mono"
+              data-testid="prazo-diagnostico"
+              style={{ fontSize: 11.5, color: 'var(--warn-tx)' }}
+            >
+              VÁLIDO POR MAIS {restantes} MIN
+            </span>
+          )}
           <a
             className="mono"
             href={url}
@@ -112,10 +152,16 @@ export function EtapaVerificacao({
           >
             {url}
           </a>
+          {/* Dizer o PORQUÊ do prazo evita que ele pareça burocracia. */}
+          <span style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
+            O prazo é de {MINUTOS_DE_DIAGNOSTICO} minutos porque este link marca como teste tudo o que
+            chegar por ele. Sem vencimento, um endereço esquecido numa aba tiraria visitas reais dos
+            relatórios sem ninguém notar.
+          </span>
         </div>
       )}
 
-      {token && (
+      {token && !vencido && (
         <form action={acaoConferir} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <input type="hidden" name="siteId" value={siteId} />
           <input type="hidden" name="token" value={token} />

@@ -56,6 +56,14 @@ verificação ter passado, com evidência; o estado exibido e a etapa em que o a
 calculados em `src/lib/recursos.ts`. Um contador mentiria para quem voltasse e desmarcasse um
 recurso.
 
+**Token de diagnóstico tem prazo, e o prazo vive no coletor.** Todo evento que chega com o token
+nasce `is_test` — o que protege o relatório também é o que o torna perigoso: o token viaja na URL, e
+uma URL colada num grupo faria visitas REAIS sumirem dos relatórios em silêncio. São 30 minutos,
+aplicados no `t.js` (que guarda a hora de validade e para de enviar), na verificação (que só conta
+evento dentro da janela da sessão) e ao abrir um diagnóstico novo (que encerra os anteriores). A
+ingestão NÃO confere o prazo de propósito: `app_ingest` não tem acesso a `diagnostic_sessions`, e dar
+acesso trocaria perda de dado por privilégio a mais no papel mais exposto.
+
 **Verificação é um evento recebido, nunca um tempo decorrido.** E nunca a presença do snippet no
 HTML: script bloqueado por CSP, consentimento ou bloqueador está lá e não mede nada. A sessão de
 diagnóstico existe para separar o teste do operador do tráfego real — sem o token, "recebemos um
@@ -113,11 +121,22 @@ As tabelas de qualidade técnica (`monitored_urls`, `lighthouse_results`, `crux_
 `audit_jobs`, `optimizations`) recebem GRANT **apenas de `app_user`**. Os papéis públicos não têm
 nada ali: nem para ler.
 
-O cron é a segunda exceção, e ela é estreita de propósito. Ele não tem sessão, logo não tem conta, e
-precisa varrer a fila inteira — então usa `withoutAccount`. É exatamente por isso que esse caminho
-exige o `CRON_SECRET`, e por isso o **GET** de `/api/auditorias/processar` recusa a sessão: um GET
-autorizado por cookie seria disparável por qualquer página que o usuário logado abrisse. Sem a
-variável configurada, os dois endpoints respondem 401 a todo mundo.
+O cron é a segunda exceção, e ela é estreita de propósito — **mas ele NÃO roda sem conta.** Rodava,
+com `withoutAccount`, e o resultado é a armadilha registrada abaixo: as tabelas de qualidade estão
+com RLS `FORCE`, então sem `app.account_id` a fila inteira era invisível e os dois endpoints
+agendados eram um no-op que se declarava bem-sucedido.
+
+Hoje ele PERGUNTA em quais contas há trabalho — `app.contas_com_job_pendente` e
+`app.contas_com_auditoria_vencida`, duas funções `SECURITY DEFINER` estreitas que devolvem só
+identificadores de conta — e processa cada uma dentro de `withAccount`, como um usuário logado dali.
+A política vale o tempo todo, e um defeito no cron erra uma conta em vez da base inteira. Dar
+`BYPASSRLS` ao papel do cron seria mais curto e trocaria um endpoint quebrado por um que enxerga
+todas as contas de uma vez.
+
+Esse caminho exige o `CRON_SECRET`, e o **GET** de `/api/auditorias/processar` recusa a sessão: um
+GET autorizado por cookie seria disparável por qualquer página que o usuário logado abrisse. Sem a
+variável configurada, os dois endpoints respondem 401 a todo mundo. O segredo é comparado em tempo
+constante (`segredoConfere`), como o token de diagnóstico sempre foi.
 
 Há testes que provam cada uma dessas restrições, inclusive tentando ler dados de outra conta com o
 id correto em mãos.

@@ -63,6 +63,8 @@ const COLUNAS: readonly (readonly [tabela: string, coluna: string])[] = [
   ['sites', 'recursos_escolhidos_em'],
   ['events', 'diagnostic_token'],
   ['form_submissions', 'diagnostic_token'],
+  // 20260916000011 — o prazo da sessão de diagnóstico
+  ['diagnostic_sessions', 'expira_em'],
 ] as const;
 
 /**

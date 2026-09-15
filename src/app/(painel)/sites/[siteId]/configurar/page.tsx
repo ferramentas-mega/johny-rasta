@@ -14,6 +14,7 @@ import {
   diagnosticoAberto,
   situacaoDasEtapas,
   proximaEtapa,
+  proximaAcao,
   type EtapaSlug,
   type Recurso,
 } from '@/server/services/onboarding';
@@ -32,6 +33,7 @@ import { EtapaVerificacao } from './EtapaVerificacao';
 import { EtapaFormularios } from './EtapaFormularios';
 import { EtapaQualidade } from './EtapaQualidade';
 import { instrucaoDaPlataforma } from './instrucoes';
+import { instrucaoParaClaudeCode } from '@/lib/snippets';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,7 +108,10 @@ export default async function PaginaConfigurar({
     ? (() => {
         const u = new URL(urlBase);
         u.searchParams.set('painel_diag', sessao.token);
-        return { token: sessao.token, url: u.toString() };
+        // A data vai como ISO porque atravessa a fronteira servidor→cliente: um
+        // `Date` seria serializado assim mesmo, e declarar o tipo como string
+        // deixa explícito que do outro lado é preciso reconstruí-lo.
+        return { token: sessao.token, url: u.toString(), expiraEm: sessao.expiraEm.toISOString() };
       })()
     : null;
 
@@ -118,6 +123,7 @@ export default async function PaginaConfigurar({
   );
 
   const titulo = ETAPAS.find((e) => e.slug === etapa)!.titulo;
+  const acao = proximaAcao(config);
 
   return (
     <>
@@ -136,6 +142,60 @@ export default async function PaginaConfigurar({
       </div>
 
       <div className="pagina">
+        {/*
+          O QUE FAZER AGORA, antes da lista de etapas.
+
+          "Etapa 4 de 7" diz a posição e não diz a tarefa. Quem abre esta tela
+          no meio do processo tinha de ler as sete para descobrir onde parou.
+
+          Aparece mesmo quando o operador está navegando por outra etapa: nesse
+          caso ele vê que está fora do caminho e tem um link de volta. Esconder
+          a pendência porque a pessoa foi olhar outra coisa é como o painel
+          esquece de cobrar.
+        */}
+        {/*
+          NÃO é `role="status"`.
+
+          Uma região viva anuncia a si mesma a cada renderização, e este bloco
+          está sempre na tela — o leitor de tela repetiria a próxima ação a cada
+          navegação, competindo com o retorno real dos formulários ("Cliente
+          criado", "1 recurso selecionado"), que É um aviso ao vivo e é o que
+          precisa ser ouvido naquele instante.
+
+          É conteúdo permanente que descreve o estado: uma seção nomeada, lida
+          na ordem do documento.
+        */}
+        <section
+          aria-label="Próxima ação"
+          data-testid="proxima-acao"
+          style={{
+            border: `1px solid ${acao.etapa === 'resumo' ? 'var(--gold)' : 'var(--warn-tx)'}`,
+            borderRadius: 12,
+            background: acao.etapa === 'resumo' ? 'var(--ok-bg)' : 'var(--warn-bg)',
+            padding: '14px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          <span
+            className="mono"
+            style={{ fontSize: 10.5, letterSpacing: '.12em', color: 'var(--tx3)' }}
+          >
+            {acao.etapa === 'resumo' ? 'CONFIGURAÇÃO VERIFICADA' : 'PRÓXIMA AÇÃO'}
+          </span>
+          <strong style={{ fontSize: 14.5, lineHeight: 1.5 }}>{acao.frase}</strong>
+          <span style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.6 }}>{acao.motivo}</span>
+          {acao.etapa !== etapa && (
+            <Link
+              href={`/sites/${site.id}/configurar?etapa=${acao.etapa}`}
+              style={{ fontSize: 13, marginTop: 2 }}
+            >
+              Ir para {ETAPAS.find((e) => e.slug === acao.etapa)!.titulo.toLowerCase()} →
+            </Link>
+          )}
+        </section>
+
         <Passos siteId={site.id} atual={etapa} situacao={situacao} />
 
         <Painel
@@ -190,6 +250,51 @@ export default async function PaginaConfigurar({
                 Copiar confirma a cópia, e só isso. A instalação é confirmada na etapa seguinte, por um evento que
                 chegue ao servidor.
               </p>
+
+              {/*
+                Instalação assistida (§5).
+                Não é "conectar o GitHub": não há OAuth aqui, e fingir que há
+                seria pior que não oferecer nada. O que existe é o caminho que
+                de fato funciona hoje — levar a instrução para onde o
+                repositório está aberto.
+
+                O texto leva APENAS dado público: domínio, identificador e
+                endereço do coletor. Nenhum token. Isso é requisito, não zelo:
+                ele nasce para ser colado num chat, e chat é colado no lugar
+                errado com frequência.
+              */}
+              <details
+                style={{
+                  border: '1px solid var(--bd)',
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  background: 'var(--card)',
+                }}
+              >
+                <summary style={{ cursor: 'pointer', fontSize: 13.5, color: 'var(--tx)' }}>
+                  Prefere que outra pessoa — ou o Claude Code — instale para você?
+                </summary>
+                <p style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.7, margin: '10px 0' }}>
+                  Copie o texto abaixo e cole numa sessão aberta no repositório do site. Ele manda
+                  <strong> inspecionar antes de editar</strong>, não instalar duas vezes, preservar o banner de
+                  consentimento e — se houver formulário — <strong>não substituir</strong> o destino atual.
+                </p>
+                <Snippet
+                  codigo={instrucaoParaClaudeCode({
+                    endpoint,
+                    publicId: site.publicId,
+                    dominio: site.domain,
+                    plataforma: PLATAFORMA_LABEL[config.plataforma],
+                    comFormulario: recurso('formularios').selecionado,
+                  })}
+                  rotulo="Instrução para colar no repositório do site"
+                />
+                <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6, marginTop: 10 }}>
+                  Só dado público vai neste texto: domínio, identificador do site e endereço do coletor. Nenhum
+                  token, nenhuma senha. E instalar por este caminho também não conclui a etapa — quem conclui é a
+                  verificação, na etapa seguinte.
+                </p>
+              </details>
 
               {instrucao.observacao && (
                 <p style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.7 }}>{instrucao.observacao}</p>

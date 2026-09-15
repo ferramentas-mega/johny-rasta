@@ -196,6 +196,8 @@ export type EstadoDiagnostico = {
   erro?: string;
   token?: string;
   url?: string;
+  /** ISO. Quando o token para de valer — a tela conta os minutos a partir daqui. */
+  expiraEm?: string;
   eventos?: EventoDiagnostico[];
   verificados?: Recurso[];
   conferidoEm?: string;
@@ -221,7 +223,7 @@ export async function iniciarDiagnostico(
     const url = new URL(base);
     url.searchParams.set('painel_diag', sessao.token);
     revalidar(siteId);
-    return { token: sessao.token, url: url.toString() };
+    return { token: sessao.token, url: url.toString(), expiraEm: sessao.expiraEm.toISOString() };
   } catch (erro) {
     if (ehForaDaConta(erro)) return { erro: FORA_DA_CONTA };
     console.error('[onboarding] falha ao abrir diagnóstico', erro);

@@ -231,21 +231,42 @@ export async function verificarDiagnostico(
     // alheio no formulário criava linha de `site_features` no site de outro.
     await exigirSiteDaConta(db, siteId);
 
+    /**
+     * A JANELA da sessão, e não só o token.
+     *
+     * Um token vencido não verifica instalação nenhuma. Sem este recorte, um
+     * link de diagnóstico esquecido numa aba continuaria carimbando eventos
+     * dias depois — e esses eventos confirmariam uma instalação que talvez já
+     * tenha sido desfeita. Verificação é um fato datado: funcionou DURANTE o
+     * teste, não "funcionou alguma vez, um dia".
+     *
+     * Sessão inexistente devolve janela vazia, e o resto da função lida com
+     * isso naturalmente: nenhum evento casa, nada é carimbado.
+     */
+    const janela = await db.one<{ aberta_em: Date; expira_em: Date }>(
+      `select aberta_em, expira_em from diagnostic_sessions
+        where site_id = $1 and token = $2`,
+      [siteId, token],
+    );
+    if (!janela) return { eventos: [], verificados: [], formularios: 0 };
+
     const eventos = await db.query<EventoDiagnostico>(
       `select e.type as tipo, e.subtype as subtipo, p.path as caminho,
               e.occurred_at as quando, e.button_id as botao
          from events e
          left join pages p on p.id = e.page_id
         where e.site_id = $1 and e.diagnostic_token = $2
+          and e.occurred_at >= $3 and e.occurred_at <= $4
         order by e.occurred_at desc
         limit 50`,
-      [siteId, token],
+      [siteId, token, janela.aberta_em, janela.expira_em],
     );
 
     const envios = await db.one<{ total: number }>(
       `select count(*)::int as total from form_submissions
-        where site_id = $1 and diagnostic_token = $2 and status = 'confirmada'`,
-      [siteId, token],
+        where site_id = $1 and diagnostic_token = $2 and status = 'confirmada'
+          and created_at >= $3 and created_at <= $4`,
+      [siteId, token, janela.aberta_em, janela.expira_em],
     );
 
     const verificados: Recurso[] = [];
@@ -315,26 +336,52 @@ export async function abrirDiagnostico(accountId: string, siteId: string): Promi
   return withAccount(accountId, async (db) => {
     await exigirSiteDaConta(db, siteId);
     const token = `diag_${randomBytes(9).toString('hex')}`;
-    const linha = await db.one<{ id: string; aberta_em: Date }>(
+
+    // Encerra as sessões anteriores deste site. Sem isto, abrir o diagnóstico
+    // duas vezes deixa dois tokens vivos, e o primeiro continua marcando como
+    // teste tudo que chegar por um link que ninguém lembra mais de ter mandado.
+    await db.query(
+      `update diagnostic_sessions set encerrada_em = now()
+        where site_id = $1 and encerrada_em is null`,
+      [siteId],
+    );
+
+    const linha = await db.one<{ id: string; aberta_em: Date; expira_em: Date }>(
       `insert into diagnostic_sessions (account_id, site_id, token)
             values (app.current_account_id(), $1, $2)
-         returning id, aberta_em`,
+         returning id, aberta_em, expira_em`,
       [siteId, token],
     );
-    return { id: linha!.id, token, abertaEm: linha!.aberta_em };
+    return { id: linha!.id, token, abertaEm: linha!.aberta_em, expiraEm: linha!.expira_em };
   });
 }
 
-/** A sessão aberta mais recente, se houver. Permite retomar sem abrir outra. */
+/**
+ * A sessão não encerrada mais recente, VENCIDA OU NÃO.
+ *
+ * Devolve a vencida de propósito, e isso é decisão de produto. Filtrar pelo
+ * prazo aqui faria a tela perder a informação de que existiu um diagnóstico:
+ * o operador que volta meia hora depois veria um botão genérico de "abrir",
+ * idêntico ao de quem nunca testou, e não entenderia por que o link que ele
+ * tinha na mão parou de funcionar. Com a sessão em mãos, a tela diz "o anterior
+ * venceu" e oferece abrir outro.
+ *
+ * Quem aplica o prazo é `verificarDiagnostico`, que recorta os eventos pela
+ * janela da sessão — então devolver uma sessão vencida daqui não verifica nada
+ * por acidente. `encerrada_em` continua sendo o corte definitivo: abrir um
+ * diagnóstico novo encerra os anteriores, e encerrado não volta.
+ */
 export async function diagnosticoAberto(accountId: string, siteId: string): Promise<SessaoDiagnostico | null> {
   return withAccount(accountId, async (db) => {
-    const linha = await db.one<{ id: string; token: string; aberta_em: Date }>(
-      `select id, token, aberta_em from diagnostic_sessions
+    const linha = await db.one<{ id: string; token: string; aberta_em: Date; expira_em: Date }>(
+      `select id, token, aberta_em, expira_em from diagnostic_sessions
         where site_id = $1 and encerrada_em is null
         order by aberta_em desc limit 1`,
       [siteId],
     );
-    return linha ? { id: linha.id, token: linha.token, abertaEm: linha.aberta_em } : null;
+    return linha
+      ? { id: linha.id, token: linha.token, abertaEm: linha.aberta_em, expiraEm: linha.expira_em }
+      : null;
   });
 }
 

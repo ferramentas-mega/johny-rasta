@@ -253,6 +253,58 @@ export function proximaEtapa(config: ConfiguracaoDoSite): EtapaSlug {
   return ETAPAS.find((e) => situacao[e.slug] === 'pendente')?.slug ?? 'resumo';
 }
 
+/**
+ * O que fazer AGORA, em uma frase — e por quê.
+ *
+ * O assistente tem sete etapas, e quem abre a tela no meio do processo precisa
+ * ler todas para descobrir onde parou. "Etapa 4 de 7" diz a posição e não diz a
+ * tarefa; o número sozinho não move ninguém.
+ *
+ * As frases são imperativas e falam do gesto concreto, não do nome da etapa —
+ * "abra o site com o diagnóstico ligado" em vez de "conclua a verificação".
+ *
+ * `motivo` existe para a frase não virar ordem sem explicação. É a resposta a
+ * "por que isso agora?", que é a pergunta que faz alguém confiar no assistente
+ * em vez de tratá-lo como formulário.
+ */
+export type ProximaAcao = { etapa: EtapaSlug; frase: string; motivo: string };
+
+const ACAO_DA_ETAPA: Record<EtapaSlug, { frase: string; motivo: string }> = {
+  identificacao: {
+    frase: 'Confirme o domínio e o fuso horário do site.',
+    motivo: 'O domínio define de qual origem os eventos são aceitos, e o fuso define onde começa o dia nos relatórios.',
+  },
+  recursos: {
+    frase: 'Escolha o que você quer acompanhar neste site.',
+    motivo: 'Só o que for escolhido vira pendência. O que não se aplica some da lista em vez de cobrar para sempre.',
+  },
+  instalacao: {
+    frase: 'Publique o script de coleta no site.',
+    motivo: 'Sem ele no ar, nada chega — nem visita, nem clique, nem formulário.',
+  },
+  verificacao: {
+    frase: 'Abra o site pelo link de diagnóstico e faça o gesto que quer medir.',
+    motivo: 'A instalação só é dada como certa por um evento que chegue ao servidor. Script no HTML não é medição.',
+  },
+  formularios: {
+    frase: 'Diga como o formulário deste site funciona.',
+    motivo: 'É o que separa "alguém clicou em enviar" de "o servidor gravou um lead".',
+  },
+  qualidade: {
+    frase: 'Cadastre a URL que será analisada pelo PageSpeed.',
+    motivo: 'Este caminho é independente do rastreamento: funciona sem instalar nada no site.',
+  },
+  resumo: {
+    frase: 'Tudo o que você selecionou está verificado.',
+    motivo: 'Nada aqui foi marcado por tempo decorrido — cada item tem um evento real como prova.',
+  },
+};
+
+export function proximaAcao(config: ConfiguracaoDoSite): ProximaAcao {
+  const etapa = proximaEtapa(config);
+  return { etapa, ...ACAO_DA_ETAPA[etapa] };
+}
+
 /** `true` só quando todo recurso escolhido está verificado. */
 export function configuracaoCompleta(config: ConfiguracaoDoSite): boolean {
   return situacaoDasEtapas(config).resumo === 'concluida';
@@ -331,6 +383,27 @@ export function estadoDaConfiguracao(r: ResumoDeConfiguracao | undefined): Estad
   return 'completa';
 }
 
-export type SessaoDiagnostico = { id: string; token: string; abertaEm: Date };
+export type SessaoDiagnostico = {
+  id: string;
+  token: string;
+  abertaEm: Date;
+  /**
+   * Quando o token deixa de valer.
+   *
+   * Existe porque o token viaja na URL do site do cliente, e URL se espalha.
+   * Todo evento que chega com ele nasce marcado como teste — então um link
+   * esquecido numa aba, ou colado num grupo, faria **visitas reais sumirem dos
+   * relatórios** sem ninguém perceber até o fechamento do mês.
+   */
+  expiraEm: Date;
+};
+
+/** Quanto tempo uma sessão de diagnóstico vale. Espelha o padrão da coluna. */
+export const MINUTOS_DE_DIAGNOSTICO = 30;
+
+/** Minutos restantes de uma sessão, ou 0 se já venceu. Para a tela dizer. */
+export function minutosRestantes(expiraEm: Date, agora = new Date()): number {
+  return Math.max(0, Math.ceil((expiraEm.getTime() - agora.getTime()) / 60_000));
+}
 
 export type SiteExistente = { id: string; name: string; domain: string; clienteNome: string };

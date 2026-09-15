@@ -12,9 +12,9 @@ Quem continuar: leia isto antes do `CLAUDE.md`.
 | 1 | Autonomia e escopo | — |
 | 2 | Inspeção antes de modificar | **feito** — tabela de rotas abaixo |
 | 3 | Evidências da captura | **feito** — os quatro pontos prioritários resolvidos |
-| 4 | Onboarding orientado à conclusão | **feito** (etapas A–E), falta a etapa C "Conectar GitHub" |
-| 5 | Integração assistida (Claude Code / GitHub) | parcial — instrução para Claude Code pronta; conexão com GitHub não |
-| 6 | Validação real e modos de teste | parcial — falta expiração da sessão de diagnóstico |
+| 4 | Onboarding orientado à conclusão | **feito** — sete etapas, cabeçalho de próxima ação, instalação assistida |
+| 5 | Integração assistida (Claude Code / GitHub) | **feito pelo que existe** — instrução assistida na tela; OAuth do GitHub segue fora |
+| 6 | Validação real e modos de teste | **feito** — diagnóstico com prazo de 30 min, nos dois lados |
 | 7 | Formulários sem substituição destrutiva | **feito** — exemplo executável, contato sem analytics |
 | 8 | Inventário de tags e botões | não iniciado |
 | 9 | Automação de otimização | não iniciado |
@@ -72,6 +72,7 @@ Estado atual, conferido contra o banco de produção em 15/09/2026:
 |---|---|
 | `20260916000009_limites_de_requisicao.sql` | **aplicada** |
 | `20260916000010_cron_enxerga_a_fila.sql` | **aplicada** |
+| `20260916000011_diagnostico_expira.sql` | **aplicada** |
 
 Conferência feita objeto a objeto (`to_regclass` / `to_regprocedure`), incluindo
 o privilégio que importa: `app_ingest` executa `app.consumir_limite` e **não**
@@ -133,6 +134,15 @@ lista o que o código publicado EXIGE do banco — tabelas, colunas acrescentada
 posteriores, e funções com a assinatura exata — e o endpoint nomeia o que falta. Há teste que
 derruba uma tabela, uma coluna e uma função de verdade e confere que cada uma é apontada.
 
+**O token de diagnóstico não vencia nunca.** `encerrada_em` existia desde o começo e nada a
+preenchia. Como todo evento que chega com o token nasce `is_test`, um link colado num grupo ou
+esquecido numa aba faria **visitas reais sumirem dos relatórios** — em silêncio, até o fechamento do
+mês. Agora são 30 minutos, aplicados em três lugares: o coletor guarda o token com hora de validade
+e para de enviá-lo (é o que de fato protege o visitante, porque age antes de o evento sair do
+navegador), a verificação só conta evento dentro da janela da sessão, e abrir um diagnóstico novo
+encerra os anteriores. A ingestão continua sem acesso à tabela de sessões — resolver isso ali
+trocaria perda de dado por privilégio a mais no papel mais exposto.
+
 **Job preso em `executando` era reivindicado para sempre.** `MAX_TENTATIVAS` só
 era consultado em `registrarFalha`, que não roda quando o processo morre. Uma URL
 pesada consumiria a única vaga diária do plano Hobby, indefinidamente.
@@ -146,14 +156,12 @@ e `snippetFormulario` interpolando dentro de atributo HTML sem escapar.
 
 ## Defeitos encontrados e ainda abertos
 
-1. **Token de diagnóstico não expira** e fica no `sessionStorage` — §6 pede sessão
-   curta e que a marca de teste não permaneça ativa para visitante real.
-2. **Sessão não é revogável antes de expirar** — JWT sem estado. Ver
+1. **Sessão de login não é revogável antes de expirar** — JWT sem estado. Ver
    `docs/seguranca.md`.
-3. **`app_forms` enxerga `leads` de todas as contas** — políticas `using (true)`.
+2. **`app_forms` enxerga `leads` de todas as contas** — políticas `using (true)`.
    Sem vazamento em aberto (as consultas filtram por site), mas é a única parte
    onde a defesa é o código e não a política.
-4. **SSRF: posse do domínio não é verificada** e o validador não resolve DNS.
+3. **SSRF: posse do domínio não é verificada** e o validador não resolve DNS.
 
 ---
 

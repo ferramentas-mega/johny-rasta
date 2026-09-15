@@ -223,3 +223,79 @@ Para **visitas, cliques e formulários**, nada além do que o painel já precisa
 Para a **qualidade técnica**, `PAGESPEED_API_KEY` (com as duas APIs do Google habilitadas) e
 `CRON_SECRET`. Sem elas, a análise fica desligada e a tela diz isso — nunca exibe nota inventada. Os
 nomes e o passo a passo estão em [`deploy-vercel.md`](deploy-vercel.md) e no `.env.example`.
+
+
+---
+
+## O prazo do diagnóstico
+
+O link de diagnóstico vale **30 minutos**. Passado isso, a etapa de verificação deixa de mostrá-lo e
+oferece abrir um novo.
+
+Não é burocracia, e a razão importa: **tudo que chega por esse link nasce marcado como teste**, no
+servidor. É o que garante que o clique do operador não entre no relatório do cliente. O outro lado
+dessa garantia é o perigo — o token viaja na URL, e URL se espalha. Basta colar o link num grupo,
+ou deixar a aba aberta para outra pessoa usar, e **visitas reais passam a ser marcadas como teste**:
+somem dos relatórios sem erro nenhum, e ninguém percebe até o fechamento do mês.
+
+O prazo é aplicado em três lugares, e cada um resolve uma parte:
+
+| Onde | O que faz |
+|---|---|
+| Coletor (`t.js`) | Guarda o token com a hora de validade e para de enviá-lo quando vence. É o que de fato protege o visitante, porque age **antes** de o evento sair do navegador. |
+| Verificação | Só conta evento recebido dentro da janela da sessão. Token velho não verifica instalação nenhuma. |
+| Abrir um novo | Encerra os anteriores. Dois tokens vivos ao mesmo tempo significariam um link esquecido ainda funcionando. |
+
+O endpoint de coleta **não** confere o prazo, e isso é decisão de segurança: o papel `app_ingest` não
+tem acesso à tabela de sessões, e dar acesso para resolver uma janela de tempo trocaria perda de
+dado por privilégio a mais no papel mais exposto do sistema.
+
+Se o diagnóstico vencer no meio do teste, nada se perde: os eventos que chegaram dentro da janela
+continuam valendo, e a verificação já feita não é desfeita. Abrir um novo link continua de onde
+parou.
+
+---
+
+## Instalação assistida
+
+Na etapa 3, abaixo do código, há um bloco recolhido: **"Prefere que outra pessoa — ou o Claude Code
+— instale para você?"**.
+
+Ele gera um texto para colar numa sessão aberta no repositório do site. O texto manda:
+
+- **inspecionar antes de editar** — descobrir onde fica o HTML compartilhado por todas as páginas;
+- **não instalar duas vezes** — procurar por `t.js` e pelo identificador do site antes de mexer;
+- **preservar o banner de consentimento**, se houver;
+- e, quando o site tem formulário, **não substituir o destino atual** — se hoje ele envia para um CRM
+  ou uma planilha, isso precisa continuar funcionando. O caminho é um envio adicional.
+
+O texto carrega **apenas dado público**: domínio, identificador do site e endereço do coletor. Nenhum
+token, nenhuma senha. É requisito, não zelo — ele nasce para ser colado num chat, e chat é colado no
+lugar errado com frequência.
+
+**Não é uma conexão com o GitHub.** Não há OAuth neste projeto, e apresentar isso como integração
+seria prometer o que não existe. O que existe é o caminho que funciona hoje: levar a instrução até
+onde o repositório está aberto.
+
+Instalar por esse caminho também **não conclui a etapa**. Quem conclui é a verificação.
+
+---
+
+## O cabeçalho de próxima ação
+
+No topo do assistente, antes da lista de etapas, há um bloco dizendo **o que fazer agora** e **por
+quê**.
+
+Existe porque "Etapa 4 de 7" informa a posição e não informa a tarefa. Quem abre a tela no meio do
+processo — dois dias depois, noutro computador — precisava ler as sete etapas para descobrir onde
+tinha parado.
+
+A frase é imperativa e fala do gesto concreto ("abra o site pelo link de diagnóstico e faça o gesto
+que quer medir"), não do nome da etapa. O motivo ao lado responde "por que isso agora?", que é a
+pergunta que faz alguém confiar no assistente em vez de tratá-lo como formulário.
+
+O bloco continua aparecendo quando o operador navega para outra etapa — nesse caso com um link de
+volta. Esconder a pendência porque a pessoa foi olhar outra coisa é como um painel esquece de cobrar.
+
+Quando tudo o que foi selecionado está verificado, ele troca de cor e passa a confirmar em vez de
+cobrar.

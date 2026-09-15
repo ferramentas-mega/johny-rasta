@@ -4,10 +4,14 @@ import {
   derivarEstado,
   situacaoDasEtapas,
   proximaEtapa,
+  proximaAcao,
   configuracaoCompleta,
+  minutosRestantes,
+  ETAPAS,
   type ConfiguracaoDoSite,
   type Recurso,
   type EstadoRecurso,
+  type EtapaSlug,
 } from '@/lib/recursos';
 
 /**
@@ -184,5 +188,114 @@ describe('etapas do assistente', () => {
     const c = comEstados(config({ plataforma: 'desconhecida', urlPrincipal: null }));
     expect(situacaoDasEtapas(c).identificacao).toBe('pendente');
     expect(proximaEtapa(c)).toBe('identificacao');
+  });
+});
+
+describe('a próxima ação diz a TAREFA, não a posição', () => {
+  it('cada etapa tem frase e motivo próprios, sem repetição', () => {
+    // "Etapa 4 de 7" diz onde a pessoa está e não diz o que fazer. O número
+    // sozinho não move ninguém.
+    //
+    // Os cenários abaixo forçam cada etapa a ser a primeira pendente. É a única
+    // forma de exercitar a tabela inteira por `proximaAcao`, que é a função
+    // pública — checar o objeto interno provaria que o objeto existe, não que
+    // a função o usa.
+    const cenarios: Record<EtapaSlug, ConfiguracaoDoSite> = {
+      identificacao: config({ plataforma: 'desconhecida', urlPrincipal: null }),
+      recursos: config({ recursosEscolhidosEm: null }),
+      instalacao: config({ recursos: { visitas: { selecionado: true } } }),
+      // Instalação concluída (algo do coletor verificado) e ainda falta verificar
+      // o WhatsApp.
+      verificacao: config({
+        recursos: { visitas: { selecionado: true, verificado: true }, whatsapp: { selecionado: true } },
+      }),
+      // `formularios` é recurso do coletor: selecioná-lo sozinho deixa a
+      // INSTALAÇÃO pendente antes. Para chegar na etapa de formulários é
+      // preciso ter algo do coletor já verificado.
+      formularios: config({
+        recursos: {
+          visitas: { selecionado: true, verificado: true },
+          formularios: { selecionado: true },
+        },
+      }),
+      qualidade: config({
+        recursos: { qualidade: { selecionado: true } },
+        pagespeedConfigurado: true,
+        urlsMonitoradas: 1,
+      }),
+      resumo: config({ recursos: { visitas: { selecionado: true, verificado: true } } }),
+    };
+
+    const vistas = new Set<string>();
+    for (const etapa of ETAPAS) {
+      const acao = proximaAcao(comEstados(cenarios[etapa.slug]));
+      expect(acao.etapa, `cenário de "${etapa.slug}" caiu em "${acao.etapa}"`).toBe(etapa.slug);
+
+      // Frase curta demais não é instrução; frase repetida entre etapas faz o
+      // cabeçalho parecer estático e o operador para de lê-lo.
+      expect(acao.frase.length).toBeGreaterThan(20);
+      expect(acao.motivo.length).toBeGreaterThan(30);
+      expect(vistas.has(acao.frase), `frase repetida em "${etapa.slug}"`).toBe(false);
+      vistas.add(acao.frase);
+    }
+    expect(vistas.size).toBe(ETAPAS.length);
+  });
+
+  it('não começou: manda escolher o que acompanhar, e diz por quê', () => {
+    const acao = proximaAcao(comEstados(config({ recursosEscolhidosEm: null })));
+    expect(acao.etapa).toBe('recursos');
+    expect(acao.frase).toMatch(/escolha/i);
+    // O motivo é o que faz a frase não virar ordem sem explicação.
+    expect(acao.motivo.length).toBeGreaterThan(30);
+  });
+
+  it('com recurso escolhido e nada verificado, manda publicar o script', () => {
+    const acao = proximaAcao(comEstados(config({ recursos: { visitas: { selecionado: true } } })));
+    expect(acao.etapa).toBe('instalacao');
+    expect(acao.frase).toMatch(/script/i);
+  });
+
+  it('tudo verificado: a frase deixa de cobrar e passa a confirmar', () => {
+    const acao = proximaAcao(
+      comEstados(config({ recursos: { visitas: { selecionado: true, verificado: true } } })),
+    );
+    expect(acao.etapa).toBe('resumo');
+    expect(acao.frase).toMatch(/verificado/i);
+  });
+
+  it('a frase acompanha a etapa retomada, sempre', () => {
+    // A próxima ação e a etapa de retomada são a MESMA decisão. Duas fontes
+    // discordariam no dia em que uma delas mudasse.
+    for (const c of [
+      config({ recursosEscolhidosEm: null }),
+      config({ recursos: { visitas: { selecionado: true } } }),
+      config({ recursos: { qualidade: { selecionado: true } }, pagespeedConfigurado: true, urlsMonitoradas: 1 }),
+      config({ recursos: { visitas: { selecionado: true, verificado: true } } }),
+    ]) {
+      const comEstado = comEstados(c);
+      expect(proximaAcao(comEstado).etapa).toBe(proximaEtapa(comEstado));
+    }
+  });
+});
+
+describe('prazo da sessão de diagnóstico', () => {
+  const agora = new Date('2026-09-15T12:00:00Z');
+
+  it('conta os minutos que faltam, arredondando para cima', () => {
+    expect(minutosRestantes(new Date('2026-09-15T12:30:00Z'), agora)).toBe(30);
+    // 90 segundos ainda são "2 min" na tela: arredondar para baixo mostraria
+    // "1 min" para quem tem mais de um minuto e meio.
+    expect(minutosRestantes(new Date('2026-09-15T12:01:30Z'), agora)).toBe(2);
+  });
+
+  it('vencido é zero, nunca negativo', () => {
+    // A tela usa `=== 0` para decidir se oferece reabrir. Um número negativo
+    // passaria por essa checagem e deixaria o botão errado na tela.
+    expect(minutosRestantes(new Date('2026-09-15T11:30:00Z'), agora)).toBe(0);
+    expect(minutosRestantes(new Date('2026-09-14T12:00:00Z'), agora)).toBe(0);
+  });
+
+  it('o instante exato do vencimento já conta como vencido', () => {
+    expect(minutosRestantes(agora, agora)).toBe(0);
   });
 });

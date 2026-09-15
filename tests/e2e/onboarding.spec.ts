@@ -1,5 +1,32 @@
 import { expect, test, type Page } from '@playwright/test';
+import { Client } from 'pg';
 import { entrar } from './apoio';
+
+/**
+ * Envelhece uma sessão de diagnóstico até depois do prazo.
+ *
+ * Mexe no banco em vez de esperar o relógio: trinta minutos de espera tornaria
+ * a suíte inviável, e encurtar o prazo só para o teste verificaria uma
+ * configuração que não é a de produção.
+ *
+ * Move `aberta_em` junto com `expira_em` para que a janela continue coerente —
+ * a verificação recorta os eventos ENTRE as duas datas, e deixar a abertura no
+ * presente criaria uma janela invertida, que passaria pelo teste por acidente.
+ */
+async function envelhecerDiagnostico(token: string) {
+  const url = new URL(process.env.DATABASE_URL_ADMIN!);
+  url.pathname = `/${process.env.TEST_DATABASE_NAME ?? 'painel_matrix_test'}`;
+  const cliente = new Client({ connectionString: url.toString() });
+  await cliente.connect();
+  await cliente.query(
+    `update diagnostic_sessions
+        set aberta_em = now() - interval '2 hours',
+            expira_em = now() - interval '90 minutes'
+      where token = $1`,
+    [token],
+  );
+  await cliente.end();
+}
 
 /**
  * Configuração de mensuração, do cadastro à primeira medição verificada.
@@ -270,6 +297,62 @@ test('visita e clique de diagnóstico verificam a etapa, e ficam fora dos relat�
   // sessões contabilizadas no painel do cliente.
   await page.goto(`/sites/${siteId}/desempenho`);
   await expect(page.getByText(/Indisponível|Sem coleta|0/).first()).toBeVisible();
+});
+
+test('o diagnóstico vence, e a tela para de contar eventos dele', async ({ page, context }) => {
+  test.setTimeout(120_000);
+
+  /**
+   * O prazo existe porque o token viaja na URL do site do cliente, e todo
+   * evento que chega com ele nasce marcado como TESTE. Um link esquecido numa
+   * aba, ou colado num grupo, faria visitas REAIS sumirem dos relatórios — em
+   * silêncio, até o fechamento do mês.
+   *
+   * Este teste não espera trinta minutos: ele envelhece a sessão pelo banco,
+   * que é o mesmo estado que o relógio produziria. Esperar de verdade tornaria
+   * a suíte inviável, e um `waitForTimeout` curto com prazo curto testaria uma
+   * configuração que não é a de produção.
+   */
+  await entrar(page);
+  const { siteId } = await cadastrarSite(page, 'prazo');
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=recursos`);
+  await page.check('input[name="recurso:visitas"]');
+  await page.getByRole('button', { name: 'Salvar seleção' }).click();
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=instalacao`);
+  const publicId = ((await page.locator('pre').first().textContent()) ?? '').match(/sit_[a-f0-9]+/)![0];
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=verificacao`);
+  await page.getByRole('button', { name: 'Abrir modo de diagnóstico' }).click();
+
+  const link = page.locator('a[href*="painel_diag="]');
+  await expect(link).toBeVisible();
+  const token = new URL((await link.getAttribute('href'))!).searchParams.get('painel_diag')!;
+
+  // Enquanto vale, a tela diz por quanto tempo ainda vale.
+  await expect(page.getByTestId('prazo-diagnostico')).toContainText(/VÁLIDO POR MAIS \d+ MIN/);
+
+  // Envelhece a sessão: mesmo estado que meia hora de relógio produziria.
+  await envelhecerDiagnostico(token);
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=verificacao`);
+  // Vencido: o link some, e o que aparece é a oferta de abrir outro. Deixar o
+  // link vencido na tela faria o operador testar com um token que não conta.
+  await expect(page.getByTestId('prazo-diagnostico')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Abrir um diagnóstico novo' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Conferir o que chegou' })).toHaveCount(0);
+
+  // E o token velho não verifica mais nada: um evento que chegue com ele fica
+  // fora da janela da sessão.
+  const site = await context.newPage();
+  await site.goto(`/teste/${publicId}?painel_diag=${token}`);
+  await site.waitForTimeout(1200);
+  await site.close();
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=resumo`);
+  const passos = page.getByRole('navigation', { name: 'Etapas da configuração' });
+  await expect(passos.getByRole('link', { name: /Verificar visitas e cliques/ })).toContainText('pendente');
 });
 
 test('a configuração de outro cliente não é acessível pela URL', async ({ page }) => {
