@@ -223,6 +223,7 @@ este deploy caiu:
 | `README.md` | A lista de documentação complementar não incluía `deploy-vercel.md` |
 | `deploy-vercel.md`, `pos-deploy.yml`, `producao.ts` | A instrução de promover o deployment apontava para **o menu errado** (`⋯` da linha da lista, quando o botão fica no `⋯` do canto superior direito **dentro** do deployment) e para **a tela errada** (`Settings › Domains › Edit`, quando é `Settings › Environments › Production › Branch Tracking › Auto-assign Custom Production Domains`). Conferido na documentação da Vercel |
 | `deploy-vercel.md` | O passo do domínio próprio mandava dar **Redeploy**, que não publica num projeto com auto-assign desligado |
+| `.env.example`, `deploy-supabase.md`, `deploy-vercel.md` | Host do pooler (`aws-1-us-east-1…`) apresentado como valor **verificado** deste projeto. A medição de DNS provava que ele existe e tem IPv4 — não que é o cluster deste projeto. A documentação do Supabase diz que o número é um índice de cluster e **não se deduz da região**. Trocado por marcador explícito |
 
 Documento que descreve o sistema errado erra igual a código errado — só demora mais para aparecer.
 E instrução que aponta para o botão errado é pior: o leitor faz o que está escrito, não funciona, e
@@ -252,7 +253,8 @@ Não conferido: **a aplicação abrindo uma conexão até lá.** O container ond
 tem egress apenas HTTPS — TCP em 5432 e 6543 é bloqueado. Também foi medido por DNS que o host da
 conexão direta (`db.<ref>.supabase.co`) publica **somente** registro AAAA, e os hosts do pooler
 (`aws-0`/`aws-1-us-east-1.pooler.supabase.com`) somente registro A. Isso explica o `ENOTFOUND` visto
-em produção e é o motivo de o pooler ser obrigatório na Vercel.
+em produção e é o motivo de o pooler ser obrigatório na Vercel. **O que a medição não diz** é qual
+dos dois clusters é o deste projeto: isso só o diálogo *Connect* do painel responde.
 
 Todo o desenvolvimento e os testes rodaram contra o PostgreSQL local, com schema idêntico.
 **A conexão em si, confirme na primeira execução fora deste ambiente.**

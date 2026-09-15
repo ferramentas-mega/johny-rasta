@@ -55,7 +55,7 @@ const COMO_RESOLVER: Record<CausaDeFalha, string> = {
   senha_incorreta:
     'Usuário ou senha não conferem. Num pooler gerenciado o usuário precisa do sufixo do projeto: app_user.SEU_PROJECT_REF, e não apenas app_user.',
   usuario_sem_sufixo_do_projeto:
-    'O pooler não reconheceu o usuário. Falta o sufixo do projeto no nome do papel: app_user.SEU_PROJECT_REF',
+    'O pooler não reconheceu a combinação de host e usuário. O papel precisa do sufixo do projeto (app_user.SEU_PROJECT_REF) e o host precisa ser o do SEU projeto — copie-o em Connect › Transaction pooler, não monte a partir da região. Este erro NÃO é senha errada.',
   papel_expirado:
     "O papel tem prazo de validade vencido. Rode no SQL do provedor: alter role app_user valid until 'infinity';",
   tls_recusado:

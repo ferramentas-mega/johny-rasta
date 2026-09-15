@@ -112,9 +112,9 @@ select id, 'ferramentas@megaads.com.br', 'COLE_O_HASH_AQUI', 'Equipe de marketin
 No ambiente de produção (Vercel, ou onde a aplicação rodar):
 
 ```bash
-DATABASE_URL=postgres://app_user.cihsheaiqinrmftjwexu:SENHA@aws-1-us-east-1.pooler.supabase.com:6543/postgres
-DATABASE_URL_INGEST=postgres://app_ingest.cihsheaiqinrmftjwexu:SENHA@aws-1-us-east-1.pooler.supabase.com:6543/postgres
-DATABASE_URL_FORMS=postgres://app_forms.cihsheaiqinrmftjwexu:SENHA@aws-1-us-east-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgres://app_user.cihsheaiqinrmftjwexu:SENHA@HOST-COPIADO-DO-CONNECT:6543/postgres
+DATABASE_URL_INGEST=postgres://app_ingest.cihsheaiqinrmftjwexu:SENHA@HOST-COPIADO-DO-CONNECT:6543/postgres
+DATABASE_URL_FORMS=postgres://app_forms.cihsheaiqinrmftjwexu:SENHA@HOST-COPIADO-DO-CONNECT:6543/postgres
 SESSION_SECRET=<32 bytes aleatórios>
 APP_URL=https://seu-painel.com.br
 ```
@@ -137,7 +137,12 @@ O Supabase oferece duas formas de conexão:
   maioria das hospedagens. O modo transação (`:6543`) funciona com este projeto, porque `SET LOCAL`
   vale dentro da transação, que é justamente a unidade que o pooler preserva.
 
-O host exato está em Project Settings › Database › Connection string, aba **Transaction pooler**.
+**O host do pooler não se deduz — tem de ser copiado.** Clique no botão verde **Connect**, no topo
+do painel do projeto, e abra a aba **Transaction pooler**. O número em `aws-<N>-<regiao>` é um
+índice de cluster, não parte do nome da região, e uma região pode ter mais de um. A própria
+documentação do Supabase avisa que **`aws-0` não é padrão seguro** e que não dá para derivar o host
+a partir da região. É por isso que os exemplos deste documento trazem `HOST-COPIADO-DO-CONNECT` em
+vez de um valor: um host plausível e errado custa mais caro que um espaço em branco.
 
 #### Isto é medido, não recomendado
 
@@ -154,9 +159,10 @@ o mesmo erro de um host inexistente, e é por isso que a mensagem engana: manda 
 digitação que não existe. O `/api/diagnostico` distingue os dois casos e devolve
 `host_direto_do_supabase` quando reconhece este formato.
 
-Existem **dois** poolers em `us-east-1`, `aws-0` e `aws-1`, e a atribuição é por projeto. O deste
-está em **Connect › Transaction pooler**. Pegar o número errado responde `Tenant or user not found`
-— que o diagnóstico também nomeia.
+O que esta medição prova, e o que **não** prova: prova que o host direto não serve num runtime
+IPv4, e que ambos os clusters de `us-east-1` existem com IPv4. **Não** prova qual dos dois é o deste
+projeto — isso só o **Connect** responde. Pegar o número errado devolve `Tenant or user not found`,
+que o diagnóstico nomeia, e que é erro de host ou de usuário, nunca de senha.
 
 ### O sufixo do projeto no nome do papel
 

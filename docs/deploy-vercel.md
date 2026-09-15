@@ -53,7 +53,7 @@ git branch -u origin/main main
 5. Copie o texto. Ele tem este formato:
 
 ```
-postgresql://postgres.cihsheaiqinrmftjwexu:[YOUR-PASSWORD]@aws-1-us-east-1.pooler.supabase.com:6543/postgres
+postgresql://postgres.cihsheaiqinrmftjwexu:[YOUR-PASSWORD]@HOST-COPIADO-DO-CONNECT:6543/postgres
 ```
 
 **Importante:** use o *pooler*, não a **Direct connection**. A conexão direta só existe em IPv6, e
@@ -80,7 +80,7 @@ descobre para qual projeto encaminhar a conexão.
 Cada uma fica assim:
 
 ```
-postgresql://app_user.cihsheaiqinrmftjwexu:SENHA_DO_APP_USER@aws-1-us-east-1.pooler.supabase.com:6543/postgres
+postgresql://app_user.cihsheaiqinrmftjwexu:SENHA_DO_APP_USER@HOST-COPIADO-DO-CONNECT:6543/postgres
 ```
 
 Gere também o segredo de sessão, num terminal qualquer:
