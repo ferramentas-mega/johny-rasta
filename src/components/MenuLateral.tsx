@@ -21,6 +21,7 @@ const ITENS: ItemMenu[] = [
   { href: '/clientes', label: 'Clientes', icone: 'clientes' },
   { href: '/sites', label: 'Sites', icone: 'globo', prefixos: ['/sites'] },
   { href: '/leads', label: 'Leads', icone: 'caixa' },
+  { href: '/otimizacoes', label: 'Otimizações', icone: 'ajustes' },
   { href: '/configuracoes', label: 'Configurações', icone: 'ajustes' },
 ];
 
