@@ -317,7 +317,7 @@ Quando não está, cada problema vem com a causa e o que fazer:
   "problemas": [
     { "variavel": "DATABASE_URL",
       "causa": "usuario_sem_sufixo_do_projeto",
-      "oQueFazer": "Falta o sufixo do projeto no nome do papel: app_user.SEU_PROJECT_REF" } ] }
+      "oQueFazer": "Falta o sufixo do projeto no nome do papel: app_user.cihsheaiqinrmftjwexu" } ] }
 ```
 
 O endereço é público por necessidade — quando o banco não conecta, ninguém consegue entrar para ver

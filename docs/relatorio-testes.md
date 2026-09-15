@@ -233,13 +233,29 @@ certo desde o começo, e o caminho do clique é que não.
 
 ## O que NÃO foi testado
 
-**Conexão da aplicação com o Supabase.** O schema está aplicado no projeto e foi conferido por
-consulta (11 tabelas, 21 políticas, RLS forçada em todas, `app_ingest` limitado a
-`events, pages, sessions, sites`). Mas o container onde o projeto foi construído só tem egress
-HTTPS: conexões TCP em 5432/6543 são bloqueadas, e o host direto do Supabase resolve apenas em
-IPv6. A aplicação rodando aqui não consegue falar com aquele Postgres. Todo o desenvolvimento e os
-testes rodaram contra o PostgreSQL local, com schema idêntico. **Confirme na primeira execução fora
-deste ambiente.**
+**Conexão TCP da aplicação com o Supabase.** Este é o único item do Supabase que segue sem teste, e
+convém separá-lo do que **foi** verificado.
+
+Conferido, por consulta SQL real através da API de gerenciamento (que passa por HTTPS):
+
+| Item | Resultado |
+|---|---|
+| Tabelas | 11 |
+| Políticas de RLS | 21 |
+| RLS **forçada** | nas 11 tabelas |
+| Papéis `app_user`, `app_ingest`, `app_forms` | existem, validade **infinita** |
+| Privilégios de `app_ingest` | só `events, pages, sessions, sites` — **não** enxerga leads |
+| Usuários do painel | 2 |
+| Projeto | `ACTIVE_HEALTHY`, `us-east-1`, PostgreSQL 17 |
+
+Não conferido: **a aplicação abrindo uma conexão até lá.** O container onde o projeto foi construído
+tem egress apenas HTTPS — TCP em 5432 e 6543 é bloqueado. Também foi medido por DNS que o host da
+conexão direta (`db.<ref>.supabase.co`) publica **somente** registro AAAA, e os hosts do pooler
+(`aws-0`/`aws-1-us-east-1.pooler.supabase.com`) somente registro A. Isso explica o `ENOTFOUND` visto
+em produção e é o motivo de o pooler ser obrigatório na Vercel.
+
+Todo o desenvolvimento e os testes rodaram contra o PostgreSQL local, com schema idêntico.
+**A conexão em si, confirme na primeira execução fora deste ambiente.**
 
 **Integrações externas.** Nenhuma foi implementada nesta rodada, então não há o que testar.
 

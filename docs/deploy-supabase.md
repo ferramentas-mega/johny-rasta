@@ -54,7 +54,7 @@ node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
 Com a CLI do Supabase:
 
 ```bash
-supabase link --project-ref SEU_PROJECT_REF
+supabase link --project-ref cihsheaiqinrmftjwexu
 supabase db push
 ```
 
@@ -112,9 +112,9 @@ select id, 'ferramentas@megaads.com.br', 'COLE_O_HASH_AQUI', 'Equipe de marketin
 No ambiente de produção (Vercel, ou onde a aplicação rodar):
 
 ```bash
-DATABASE_URL=postgres://app_user.SEU_PROJECT_REF:SENHA@aws-N-REGIAO.pooler.supabase.com:6543/postgres
-DATABASE_URL_INGEST=postgres://app_ingest.SEU_PROJECT_REF:SENHA@aws-N-REGIAO.pooler.supabase.com:6543/postgres
-DATABASE_URL_FORMS=postgres://app_forms.SEU_PROJECT_REF:SENHA@aws-N-REGIAO.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgres://app_user.cihsheaiqinrmftjwexu:SENHA@aws-1-us-east-1.pooler.supabase.com:6543/postgres
+DATABASE_URL_INGEST=postgres://app_ingest.cihsheaiqinrmftjwexu:SENHA@aws-1-us-east-1.pooler.supabase.com:6543/postgres
+DATABASE_URL_FORMS=postgres://app_forms.cihsheaiqinrmftjwexu:SENHA@aws-1-us-east-1.pooler.supabase.com:6543/postgres
 SESSION_SECRET=<32 bytes aleatórios>
 APP_URL=https://seu-painel.com.br
 ```
@@ -131,16 +131,36 @@ código da aplicação nunca a importa.
 O Supabase oferece duas formas de conexão:
 
 - **Direta** (`db.<ref>.supabase.co:5432`) — só resolve em IPv6. Use se o seu ambiente de execução
-  tiver IPv6. A Vercel **não** tem, e o sintoma é `ETIMEDOUT` sem mensagem melhor.
+  tiver IPv6. A Vercel **não** tem, e o sintoma é `ENOTFOUND`, que se parece com host digitado
+  errado.
 - **Pooler** (`aws-*.pooler.supabase.com:5432` ou `:6543`) — tem IPv4. É a opção certa para a
   maioria das hospedagens. O modo transação (`:6543`) funciona com este projeto, porque `SET LOCAL`
   vale dentro da transação, que é justamente a unidade que o pooler preserva.
 
 O host exato está em Project Settings › Database › Connection string, aba **Transaction pooler**.
 
+#### Isto é medido, não recomendado
+
+Consulta de DNS feita neste projeto:
+
+```
+db.cihsheaiqinrmftjwexu.supabase.co    IPv4: —              IPv6: 2600:1f18:144f:6d03:…
+aws-1-us-east-1.pooler.supabase.com    IPv4: 18.213.155.45  IPv6: —
+aws-0-us-east-1.pooler.supabase.com    IPv4: 44.216.29.125  IPv6: —
+```
+
+O host direto **não publica registro A**. Num runtime sem IPv6 a resolução falha com `ENOTFOUND` —
+o mesmo erro de um host inexistente, e é por isso que a mensagem engana: manda procurar um erro de
+digitação que não existe. O `/api/diagnostico` distingue os dois casos e devolve
+`host_direto_do_supabase` quando reconhece este formato.
+
+Existem **dois** poolers em `us-east-1`, `aws-0` e `aws-1`, e a atribuição é por projeto. O deste
+está em **Connect › Transaction pooler**. Pegar o número errado responde `Tenant or user not found`
+— que o diagnóstico também nomeia.
+
 ### O sufixo do projeto no nome do papel
 
-No pooler, o usuário **não** é `app_user`, e sim `app_user.SEU_PROJECT_REF` — é assim que o
+No pooler, o usuário **não** é `app_user`, e sim `app_user.cihsheaiqinrmftjwexu` — é assim que o
 Supavisor descobre para qual projeto encaminhar a conexão. Vale para os três papéis.
 
 Sem o sufixo, o erro é `Tenant or user not found`, que não se parece nada com "faltou um sufixo".
