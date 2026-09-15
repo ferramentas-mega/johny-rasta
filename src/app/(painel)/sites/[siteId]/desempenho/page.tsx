@@ -106,7 +106,7 @@ export default async function PaginaDesempenho({
         titulo={site.name}
         estado={{
           tipo: site.estado,
-          detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento)}` : undefined,
+          detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento, site.timezone)}` : undefined,
         }}
         meta={`Fuso do site: ${site.timezone} · datas armazenadas em UTC`}
         filtros={

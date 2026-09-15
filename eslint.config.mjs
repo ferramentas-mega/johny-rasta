@@ -13,9 +13,11 @@ const config = [
       'test-results/**',
       // Gerado pelo Next a cada build.
       'next-env.d.ts',
-      // O coletor é JavaScript de navegador antigo, servido cru para os sites
-      // dos clientes. Não segue as regras do projeto de propósito.
+      // Os coletores são JavaScript de navegador antigo, servidos crus para os
+      // sites dos clientes. Não seguem as regras do projeto de propósito — e o
+      // `catch (e)` sem uso é ES5 obrigatório, não descuido.
       'public/t.js',
+      'public/f.js',
     ],
   },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),

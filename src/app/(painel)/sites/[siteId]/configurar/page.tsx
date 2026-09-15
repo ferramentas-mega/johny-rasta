@@ -132,7 +132,7 @@ export default async function PaginaConfigurar({
         titulo={site.name}
         estado={{
           tipo: site.estado,
-          detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento)}` : undefined,
+          detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento, site.timezone)}` : undefined,
         }}
         meta={`${site.domain} · ${PLATAFORMA_LABEL[config.plataforma]}`}
       />
@@ -316,6 +316,7 @@ export default async function PaginaConfigurar({
           {etapa === 'verificacao' && (
             <EtapaVerificacao
               siteId={site.id}
+              fuso={site.timezone}
               urlBase={urlBase}
               selecionados={selecionadosDoColetor}
               jaVerificados={verificadosDoColetor}
@@ -354,6 +355,7 @@ export default async function PaginaConfigurar({
           {etapa === 'resumo' && (
             <Resumo
               siteId={site.id}
+              fuso={site.timezone}
               completo={situacao.resumo === 'concluida'}
               linhas={config.features.map((f) => ({
                 recurso: f.recurso,
@@ -382,9 +384,12 @@ function Resumo({
   siteId,
   completo,
   linhas,
+  fuso,
 }: {
   siteId: string;
   completo: boolean;
+  /** Fuso do site: a data de verificação pertence a ele, não ao servidor. */
+  fuso: string;
   linhas: {
     recurso: Recurso;
     estado: keyof typeof ESTADO_RECURSO_LABEL;
@@ -405,7 +410,7 @@ function Resumo({
               <Etiqueta texto={ESTADO_RECURSO_LABEL[l.estado]} tom={ESTADO_RECURSO_TOM[l.estado]} />
               {l.verificadoEm && (
                 <span style={{ fontSize: 10.5, color: 'var(--tx3)' }}>
-                  verificado em {dataHora(l.verificadoEm)}
+                  verificado em {dataHora(l.verificadoEm, fuso)}
                 </span>
               )}
               {l.erro && <span style={{ fontSize: 11, color: 'var(--neg)', maxWidth: 380 }}>{l.erro}</span>}

@@ -5,7 +5,7 @@ import { BotaoSubmeter, Retorno, ESTADO_VAZIO } from '@/components/Formulario';
 import { MODO_FORMULARIO_LABEL, type ModoFormulario } from '@/lib/recursos';
 import { salvarFormulario, iniciarDiagnostico, conferirDiagnostico, type EstadoDiagnostico } from './acoes';
 import { Snippet } from '../rastreamento/Snippet';
-import { snippetFormulario } from '@/lib/snippets';
+import { snippetFormulario, snippetFormularioAutomatico } from '@/lib/snippets';
 
 /**
  * Etapa 5 — formulários.
@@ -42,6 +42,7 @@ export function EtapaFormularios({
   const [estado, acao] = useActionState(salvarFormulario, ESTADO_VAZIO);
 
   const snippet = snippetFormulario(endpoint, publicId);
+  const automatico = snippetFormularioAutomatico(endpoint, publicId);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -88,11 +89,31 @@ export function EtapaFormularios({
       {modo === 'proprio' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <p style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.6 }}>
-            Aponte o <span className="mono">action</span> do formulário para o endpoint do painel. O servidor valida
-            os campos, grava a submissão, cria ou associa o lead e só então confirma. Se a gravação falhar, a resposta
-            é erro — nunca uma confirmação sem lead correspondente.
+            <strong>Cole esta linha e pronto.</strong> Ela escuta o formulário que o site já tem e manda
+            uma cópia dos campos de contato para o painel. Não renomeia campo, não troca o{' '}
+            <span className="mono">action</span> e não cancela o envio — o que já funciona continua
+            funcionando, inclusive se este script falhar. Serve para formulário em popup e para
+            formulário que só aparece depois de um clique.
           </p>
-          <Snippet codigo={snippet} rotulo="Endpoint de formulários deste site" />
+          <Snippet codigo={automatico} rotulo="Coletor de formulários deste site" />
+          <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
+            Só saem daqui <strong>nome, e-mail, telefone e mensagem</strong>, reconhecidos pelo tipo e pelo
+            nome do campo — nenhum campo desconhecido é enviado. Formulário que tenha campo de senha é
+            ignorado por inteiro: login não é contato. Para excluir um formulário específico, ponha{' '}
+            <span className="mono">data-painel-ignorar</span> nele.
+          </p>
+
+          <details style={{ marginTop: 6 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--tx2)' }}>
+              Não tenho formulário neste site — me dê um pronto
+            </summary>
+            <p style={{ fontSize: 12, color: 'var(--tx3)', lineHeight: 1.6, marginTop: 8 }}>
+              Este é um formulário completo, que já envia direto para o painel. Use só se a página ainda
+              não tiver um: se já tiver, prefira a linha acima e <strong>não troque o destino</strong> do
+              que existe.
+            </p>
+            <Snippet codigo={snippet} rotulo="Formulário completo, pronto para colar" />
+          </details>
           <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
             O exemplo acima funciona como está — não há campo para preencher à mão. Ele gera a chave de
             idempotência uma vez por formulário preenchido (é ela que faz um reenvio não virar um segundo lead)

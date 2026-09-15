@@ -63,7 +63,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
     { chave: 'seo', titulo: 'SEO', alinhamento: 'direita', mono: true, render: (a) => <Nota valor={a.seo} /> },
     { chave: 'lcp', titulo: 'LCP', alinhamento: 'direita', mono: true, render: (a) => ms(a.lcp_ms) },
     { chave: 'tbt', titulo: 'TBT', alinhamento: 'direita', mono: true, render: (a) => ms(a.tbt_ms) },
-    { chave: 'quando', titulo: 'Medido em', render: (a) => <span style={{ fontSize: 12, color: 'var(--tx2)' }}>{dataHora(a.medido_em)}</span> },
+    { chave: 'quando', titulo: 'Medido em', render: (a) => <span style={{ fontSize: 12, color: 'var(--tx2)' }}>{dataHora(a.medido_em, site.timezone)}</span> },
   ];
 
   const colunasCampo: Coluna<SnapshotCrux>[] = [
@@ -99,7 +99,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
         />
       ) },
     { chave: 'erro', titulo: 'Detalhe', render: (j) => <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{j.erro ?? '—'}</span> },
-    { chave: 'quando', titulo: 'Pedida em', render: (j) => <span style={{ fontSize: 12, color: 'var(--tx2)' }}>{dataHora(j.criado_em)}</span> },
+    { chave: 'quando', titulo: 'Pedida em', render: (j) => <span style={{ fontSize: 12, color: 'var(--tx2)' }}>{dataHora(j.criado_em, site.timezone)}</span> },
   ];
 
   return (

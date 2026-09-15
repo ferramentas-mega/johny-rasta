@@ -98,7 +98,7 @@ export default async function PaginaComportamento({
         titulo={site.name}
         estado={{
           tipo: site.estado,
-          detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento)}` : undefined,
+          detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento, site.timezone)}` : undefined,
         }}
         meta={`Horários no fuso do site: ${site.timezone}`}
         filtros={

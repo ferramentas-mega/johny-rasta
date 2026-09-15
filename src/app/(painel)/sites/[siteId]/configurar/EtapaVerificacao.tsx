@@ -32,12 +32,15 @@ import { iniciarDiagnostico, conferirDiagnostico, type EstadoDiagnostico } from 
  */
 export function EtapaVerificacao({
   siteId,
+  fuso,
   urlBase,
   selecionados,
   jaVerificados,
   sessaoAberta,
 }: {
   siteId: string;
+  /** Fuso do site: o evento aconteceu na hora DELE, não na do servidor. */
+  fuso: string;
   urlBase: string;
   /** Recursos do coletor escolhidos na etapa 2. */
   selecionados: Recurso[];
@@ -76,7 +79,7 @@ export function EtapaVerificacao({
   const vencido = restantes !== null && restantes === 0;
 
   const colunas: Coluna<EventoDiagnostico>[] = [
-    { chave: 'quando', titulo: 'Recebido em', mono: true, render: (e) => dataHora(e.quando) },
+    { chave: 'quando', titulo: 'Recebido em', mono: true, render: (e) => dataHora(e.quando, fuso) },
     {
       chave: 'evento', titulo: 'Evento', mono: true,
       render: (e) => (e.subtipo ? `${e.tipo} · ${e.subtipo}` : e.tipo),

@@ -11,6 +11,25 @@
  * ele resolve sozinho.
  */
 
+/**
+ * A tag do coletor de FORMULÁRIOS. Uma linha, e acabou.
+ *
+ * Existe porque o modelo pronto (`snippetFormulario`) não colava em site
+ * nenhum: quem já tem formulário precisava renomear campos para
+ * `nome`/`email`/`telefone`, acrescentar três `input hidden`, trocar o `action`
+ * e colar um script que procurava `#painel-form`. Adaptação manual em cada
+ * site — e mexendo no formulário que já funciona, que é justamente o que o
+ * produto manda não fazer.
+ *
+ * O `f.js` faz o contrário: escuta o envio do formulário que já existe e manda
+ * uma CÓPIA dos campos de contato. Não renomeia nada, não troca destino, não
+ * cancela o envio. Funciona em popup e em formulário montado depois, porque
+ * escuta no documento.
+ */
+export function snippetFormularioAutomatico(endpoint: string, publicId: string): string {
+  return `<script async src="${endpoint}/f.js"\n        data-site="${publicId}"></script>`;
+}
+
 /** A tag do coletor. Uma linha, antes de `</head>`, em todas as páginas. */
 export function snippetColetor(endpoint: string, publicId: string): string {
   return `<script async src="${endpoint}/t.js"\n        data-site="${publicId}"></script>`;

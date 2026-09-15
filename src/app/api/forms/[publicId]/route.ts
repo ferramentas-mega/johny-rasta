@@ -45,6 +45,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ pub
     const tipo = request.headers.get('content-type') ?? '';
     if (tipo.includes('application/json')) {
       corpo = await request.json();
+    } else if (tipo.includes('text/plain')) {
+      /*
+       * JSON declarado como texto puro, do `f.js`.
+       *
+       * Não é desleixo: `sendBeacon` é o único transporte que sobrevive à
+       * navegação que o próprio formulário do site provoca, e ele não faz
+       * preflight. Com `application/json` o navegador exigiria um OPTIONS que
+       * o beacon não sabe mandar, e o envio sumiria em silêncio — justamente
+       * no caminho em que o lead já foi digitado. `/api/collect` usa o mesmo
+       * artifício pelo mesmo motivo.
+       */
+      corpo = JSON.parse(await request.text());
     } else {
       // Aceita envio de <form> tradicional, para funcionar sem JavaScript.
       corpo = Object.fromEntries(await request.formData());

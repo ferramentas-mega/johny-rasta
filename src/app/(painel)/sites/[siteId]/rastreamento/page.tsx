@@ -153,7 +153,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
     },
     {
       chave: 'visto', titulo: 'Último clique', mono: true,
-      render: (b) => dataHora(b.ultimoEm),
+      render: (b) => dataHora(b.ultimoEm, site.timezone),
     },
     {
       chave: 'estado', titulo: 'Situação',
@@ -175,7 +175,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
   ];
 
   const colunasEventos: Coluna<LinhaEvento>[] = [
-    { chave: 'quando', titulo: 'Quando', mono: true, render: (l) => dataHora(l.quando) },
+    { chave: 'quando', titulo: 'Quando', mono: true, render: (l) => dataHora(l.quando, site.timezone) },
     { chave: 'tipo', titulo: 'Evento', mono: true,
       render: (l) => (l.subtipo ? `${l.tipo} · ${l.subtipo}` : l.tipo) },
     { chave: 'caminho', titulo: 'Página', mono: true, render: (l) => l.caminho ?? '—' },
@@ -193,7 +193,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
         titulo={site.name}
         estado={{
           tipo: site.estado,
-          detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento)}` : undefined,
+          detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento, site.timezone)}` : undefined,
         }}
         meta={`${num(site.totalEventos)} evento(s) recebido(s) desde o cadastro`}
         filtros={<SeletorSiteRota sites={sites} atual={site.id} aba="rastreamento" />}
