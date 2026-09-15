@@ -157,14 +157,42 @@ e `snippetFormulario` interpolando dentro de atributo HTML sem escapar.
 
 ---
 
+## Fechado nesta rodada
+
+**Os papéis públicos enxergavam todos os sites.** `app_ingest` e `app_forms`
+tinham `using (true)` em `pages`, `sessions`, `events`, `leads` e
+`form_submissions` — o papel do endpoint de formulários podia ler os leads de
+qualquer conta. Sem vazamento em curso (as consultas sempre filtraram por site),
+mas era a única parte do sistema onde quem protegia era o código e não a
+política. Hoje `resolverSite` ajusta `app.site_id` e as políticas casam por
+`site_id = app.current_site_id()`. Migração `20260916000012`, aplicada em
+produção **depois** do código — migração que restringe política tem a ordem
+inversa da aditiva, e isso está registrado no `CLAUDE.md`.
+
+**A régua do gráfico mentia sobre o próprio espaçamento.** Linhas igualmente
+espaçadas, rotuladas com `topo × [0, .25, .5, .75, 1]` sobre topos não
+divisíveis por quatro: máximo 1 virava `0, 0, 1, 1, 1`. Ver o commit da revisão
+de componentes — inclusive o que a prova de navegador deixou de decidir, e onde
+a cobertura real passou a morar.
+
+---
+
 ## Defeitos encontrados e ainda abertos
 
 1. **Sessão de login não é revogável antes de expirar** — JWT sem estado. Ver
    `docs/seguranca.md`.
-2. **`app_forms` enxerga `leads` de todas as contas** — políticas `using (true)`.
-   Sem vazamento em aberto (as consultas filtram por site), mas é a única parte
-   onde a defesa é o código e não a política.
-3. **SSRF: posse do domínio não é verificada** e o validador não resolve DNS.
+2. **`users.role` não é verificado em lugar nenhum** — a coluna existe e sugere
+   um nível de acesso que nenhum código consulta.
+3. **Posse do domínio não é verificada** na análise técnica. Não é SSRF: as
+   únicas saídas do aplicativo vão para dois endereços fixos do Google, com a
+   URL do usuário como parâmetro. O custo real é de quota, não de rede — e por
+   isso resolver DNS no validador seria teatro. Ver `docs/seguranca.md`.
+4. **Sem justiça entre contas na fila de auditoria** — FIFO global, uma execução
+   por dia no plano Hobby.
+5. **A massa de navegador não exercita o segundo eixo do gráfico.** Máximos 5 e
+   2 caem no mesmo topo, e ali a implementação certa e a normalizada desenham a
+   mesma curva. Quem decide hoje é `tests/unit/eixo.spec.ts`; fechar de vez pede
+   um site de massa com ordens de grandeza separadas.
 
 ---
 
