@@ -25,10 +25,16 @@ export default function PaginaEntrar() {
       <ChuvaMatrix variante="tela" />
 
       {/*
-        `position: relative` + `zIndex: 1` põem o cartão ACIMA do canvas. Sem
-        isso o canvas em tela cheia ficaria por cima do formulário — e como ele
-        tem `pointerEvents: none`, o clique até passaria, mas o texto ficaria
-        atrás da animação.
+        Véu entre a chuva e o formulário. Decorativo e transparente ao ponteiro:
+        nunca pode virar uma camada que intercepta o clique no campo de e-mail.
+      */}
+      <div className="veu-login" aria-hidden="true" />
+
+      {/*
+        `position: relative` + `zIndex: 1` põem o cartão ACIMA do canvas e do
+        véu. Sem isso o canvas em tela cheia ficaria por cima do formulário — e
+        como ele tem `pointerEvents: none`, o clique até passaria, mas o texto
+        ficaria atrás da animação.
       */}
       <div style={{ width: '100%', maxWidth: 380, position: 'relative', zIndex: 1 }}>
         <Marca />

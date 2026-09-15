@@ -19,8 +19,18 @@ import { useEffect, useRef } from 'react';
 
 export type VarianteChuva = 'cabecalho' | 'tela';
 
-/** Cada variante define onde a chuva mora e o quanto ela aparece. */
-const VARIANTES: Record<VarianteChuva, { tamanho: number; estilo: React.CSSProperties }> = {
+/**
+ * Cada variante define onde a chuva mora, o tamanho do dígito e a velocidade.
+ *
+ * `msPorLinha` é o intervalo entre passos: quanto MAIOR, mais devagar a queda.
+ * A tela de login cai mais devagar que o cabeçalho de propósito — ela ocupa o
+ * campo de visão inteiro, e no mesmo ritmo do cabeçalho o movimento disputa
+ * atenção com o formulário.
+ */
+const VARIANTES: Record<
+  VarianteChuva,
+  { tamanho: number; msPorLinha: number; estilo: React.CSSProperties }
+> = {
   // Cabeçalho inteiro.
   //
   // Ocupava só a faixa direita de 42%, e ficava quase invisível. Agora cobre a
@@ -29,6 +39,7 @@ const VARIANTES: Record<VarianteChuva, { tamanho: number; estilo: React.CSSPrope
   // leitura se perde primeiro.
   cabecalho: {
     tamanho: 20,
+    msPorLinha: 60,
     estilo: {
       position: 'absolute',
       inset: 0,
@@ -42,12 +53,9 @@ const VARIANTES: Record<VarianteChuva, { tamanho: number; estilo: React.CSSPrope
     },
   },
   // Tela inteira, atrás do conteúdo.
-  //
-  // A opacidade baixa e a máscara radial não são enfeite: fundo animado atrás de
-  // um formulário é exatamente onde a legibilidade costuma se perder. A máscara
-  // apaga o centro, que é onde o texto fica.
   tela: {
     tamanho: 28,
+    msPorLinha: 95,
     estilo: {
       position: 'fixed',
       inset: 0,
@@ -58,6 +66,11 @@ const VARIANTES: Record<VarianteChuva, { tamanho: number; estilo: React.CSSPrope
       // tem fundo sólido próprio — é ele que garante a leitura do formulário,
       // não o apagamento do fundo. Versões anteriores usavam máscara radial
       // apagando o centro, e o efeito sumia justamente onde se olha.
+      // Sem atenuação no canvas: quem atenua é o véu que a tela de login põe
+      // POR CIMA (`.veu-login`), e não a opacidade daqui. A diferença importa —
+      // baixar a opacidade do canvas apaga o dígito inteiro, rastro incluído,
+      // e o efeito some; o véu escurece o conjunto mantendo o contraste entre
+      // a cabeça brilhante e a cauda.
       opacity: 1,
     },
   },
@@ -80,7 +93,7 @@ export function ChuvaMatrix({
   caracteres?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const { tamanho: TAMANHO, estilo } = VARIANTES[variante];
+  const { tamanho: TAMANHO, msPorLinha: MS_POR_LINHA, estilo } = VARIANTES[variante];
 
   useEffect(() => {
     const canvas = ref.current;
@@ -116,8 +129,9 @@ export function ChuvaMatrix({
       ctx.clearRect(0, 0, largura, altura);
     };
 
-    /**
-     * Intervalo entre passos, em ms. Cada passo desce EXATAMENTE uma linha.
+    /*
+     * Cada passo desce EXATAMENTE uma linha, e `MS_POR_LINHA` (da variante) diz
+     * de quanto em quanto tempo isso acontece.
      *
      * Antes a coluna avançava 0,32 de linha por quadro, e o caractere era
      * desenhado na posição fracionária resultante. O efeito ficava esticado e
@@ -128,8 +142,11 @@ export function ChuvaMatrix({
      * exatamente sob o anterior — que é a aparência da chuva do Matrix. O
      * acumulador desacopla isso da taxa de quadros: numa tela de 120 Hz a
      * queda tem a mesma velocidade que numa de 60.
+     *
+     * Como o véu que apaga o passado é aplicado uma vez por PASSO (e não por
+     * segundo), mudar a velocidade não muda o comprimento do rastro: ele
+     * continua com a mesma quantidade de dígitos, caindo mais devagar.
      */
-    const MS_POR_LINHA = 33;
 
     /**
      * A pilha de fontes do canvas, resolvida em CSS.
@@ -219,7 +236,7 @@ export function ChuvaMatrix({
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', redimensionar);
     };
-  }, [TAMANHO, caracteres]);
+  }, [TAMANHO, MS_POR_LINHA, caracteres]);
 
   return (
     <canvas

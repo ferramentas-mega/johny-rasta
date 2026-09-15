@@ -205,6 +205,33 @@ select option {
    As animações daqui não precisam de guarda própria: o bloco
    `prefers-reduced-motion` acima zera a duração de toda animação da página. */
 
+/*
+ * Véu entre a chuva e o formulário.
+ *
+ * Escurecer o FUNDO é diferente de apagar a chuva: baixar a opacidade do canvas
+ * apagaria o dígito inteiro, rastro incluído, e o efeito sumiria. O véu deixa o
+ * contraste interno da chuva intacto e só reduz o quanto ela compete com o
+ * texto — mais forte no centro, que é onde o cartão fica.
+ *
+ * No tema claro o véu é BRANCO, não preto. A intenção é a mesma (afastar o
+ * fundo do primeiro plano); preto sobre uma tela clara faria o contrário.
+ */
+.veu-login {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 50% 50%, rgba(0, 0, 0, 0.88), transparent 100%),
+    rgba(0, 0, 0, 0.62);
+}
+
+[data-tema='claro'] .veu-login {
+  background:
+    radial-gradient(60% 55% at 50% 50%, rgba(255, 255, 255, 0.9), transparent 100%),
+    rgba(255, 255, 255, 0.7);
+}
+
 .cartao-login {
   position: relative;
   border-radius: 16px;

@@ -34,6 +34,17 @@ test('o botão de revelar alterna a senha sem perder o que foi digitado', async 
   await expect(senha).toHaveValue('teste123456');
 });
 
+test('o véu escurece a chuva sem virar uma camada que bloqueia o clique', async ({ page }) => {
+  await page.goto('/entrar');
+
+  const veu = page.locator('.veu-login');
+  await expect(veu).toBeAttached();
+  await expect(veu).toHaveAttribute('aria-hidden', 'true');
+  // Uma camada `position: fixed; inset: 0` por cima do formulário é o jeito
+  // clássico de tornar uma tela inutilizável sem nenhum erro aparecer.
+  expect(await veu.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+});
+
 test('credencial errada mostra o erro e não entra', async ({ page }) => {
   await page.goto('/entrar');
 
