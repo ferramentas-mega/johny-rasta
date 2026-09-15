@@ -180,7 +180,9 @@ inteiro — aplicação, pooler, banco, RLS — está funcionando.
    validação.
 4. Depois que o domínio estiver ativo, vá em **Settings** → **Environment Variables**, adicione
    `APP_URL` com o valor `https://painel.megaads.com.br` e clique em **Save**.
-5. Vá em **Deployments**, nos três pontinhos do deploy mais recente, e clique em **Redeploy**.
+5. Publique de novo para a variável valer: um push novo, ou **Deployments** → abra o deploy mais
+   recente → **`⋯`** no canto superior direito → **Promote to Production**. (Redeploy só funciona no
+   deployment mais recente, e reconstrói em vez de publicar o que já está pronto.)
 
 O passo 4 importa: o `APP_URL` é o endereço que aparece no snippet que seus clientes colam no site
 deles. Se ficar apontando para o domínio antigo da Vercel e você um dia desativá-lo, a coleta
@@ -223,23 +225,47 @@ A partir daí **todo** build novo nasce staged e se acumula, enquanto o domínio
 
 ### Passo 2 — Publicar o build que já existe
 
-1. Em **Deployments**, na linha do deployment verde mais recente, clique nos **três pontinhos**
-   (⋯), à direita.
-2. Clique em **Promote to Production**.
-3. Confirme. Em segundos o domínio passa a servir esse build.
+O botão fica **dentro** do deployment, não na lista. É esse o detalhe que faz perder tempo:
 
-**Não use o Redeploy.** Ele reconstrói, o que é outra coisa, e a Vercel só aceita reconstruir o
-deployment mais recente — em qualquer outro aparece *"A more recent Production Deployment has been
-created, so the one you are looking at cannot be redeployed anymore"*. Para pôr no ar um build que
-já está pronto, o botão é **Promote**.
+1. Em **Deployments**, **clique no deployment** verde mais recente, para abrir a página dele.
+2. No **canto superior direito**, ao lado do botão **Visit**, clique no **`⋯`**.
+3. **Promote to Production** → confirme.
+
+Em segundos o domínio passa a servir esse build. Promover **não reconstrói**: só reatribui os
+domínios, e por isso é rápido.
+
+> **Não use o Redeploy.** Ele reconstrói, que é outra coisa, e a Vercel só aceita reconstruir o
+> deployment *mais recente*. Em qualquer outro aparece *"A more recent Production Deployment has
+> been created, so the one you are looking at cannot be redeployed anymore"* — e não há o que fazer
+> nessa caixa. Feche-a e procure o **Promote**.
+
+Confira também que você está no deployment certo: a página mostra o commit logo abaixo da URL.
+Promover um build antigo põe o código antigo no ar.
+
+### Se o menu não trouxer a opção: pela linha de comando
+
+Não depende do painel:
+
+```bash
+npm i -g vercel
+vercel login
+vercel link                    # escolha a conta e o projeto
+vercel promote <url-do-deployment>
+vercel promote status
+```
+
+A URL de cada deployment aparece na lista de **Deployments**. Em produção staged, o `promote`
+atribui os domínios sem reconstruir — igual ao botão.
 
 ### Desligar a pegadinha de vez
 
-Promover resolve uma vez. Para os próximos builds subirem sozinhos, religue a atribuição
-automática: **Settings** → **Domains** → no domínio de produção, **Edit** → que ele siga a **branch
-de produção**, e não um deployment fixo.
+Promover resolve uma vez. Para os próximos builds subirem sozinhos:
 
-Enquanto isso estiver desligado, cada push exige um **Promote** manual.
+**Settings** → **Environments** → **Production** → **Branch Tracking** →
+**Auto-assign Custom Production Domains** → **ligue**.
+
+É essa opção, desligada, que faz cada build de produção nascer *staged*. Enquanto ficar assim, todo
+push exige um **Promote** manual.
 
 ### Passo 3 — Por que ele saiu como Preview
 

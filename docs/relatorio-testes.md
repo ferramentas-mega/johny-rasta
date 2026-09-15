@@ -215,8 +215,13 @@ este deploy caiu:
 | `docs/deploy-vercel.md` | Apresentava as quatro variáveis como obrigatórias; o painel sobe com duas |
 | `README.md` | Afirmava que o pool serverless abre **uma** conexão por instância; o código faz `max: serverless ? 3 : 10` |
 | `README.md` | A lista de documentação complementar não incluía `deploy-vercel.md` |
+| `deploy-vercel.md`, `pos-deploy.yml`, `producao.ts` | A instrução de promover o deployment apontava para **o menu errado** (`⋯` da linha da lista, quando o botão fica no `⋯` do canto superior direito **dentro** do deployment) e para **a tela errada** (`Settings › Domains › Edit`, quando é `Settings › Environments › Production › Branch Tracking › Auto-assign Custom Production Domains`). Conferido na documentação da Vercel |
+| `deploy-vercel.md` | O passo do domínio próprio mandava dar **Redeploy**, que não publica num projeto com auto-assign desligado |
 
 Documento que descreve o sistema errado erra igual a código errado — só demora mais para aparecer.
+E instrução que aponta para o botão errado é pior: o leitor faz o que está escrito, não funciona, e
+a conclusão natural é que o diagnóstico estava errado. Foi o que aconteceu — o diagnóstico estava
+certo desde o começo, e o caminho do clique é que não.
 
 ---
 

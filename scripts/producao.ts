@@ -46,8 +46,15 @@ async function main() {
     console.error('404 — o build no ar NÃO tem a rota /api/diagnostico.');
     console.error('');
     console.error('Isso não é falta de variável de ambiente: é um build antigo.');
-    console.error('Na Vercel: Deployments › no mais recente, ⋯ › Promote to Production.');
-    console.error('(Redeploy não serve: ela só reconstrói o deployment mais recente.)');
+    console.error('');
+    console.error('O botão de publicar fica DENTRO do deployment, não na lista:');
+    console.error('  Deployments › clique no mais recente › ⋯ (canto superior direito,');
+    console.error('  ao lado de Visit) › Promote to Production');
+    console.error('  ou, pelo terminal:  vercel promote <url-do-deployment>');
+    console.error('');
+    console.error('Redeploy não serve: reconstrói, e só aceita o deployment mais recente.');
+    console.error('Para não repetir: Settings › Environments › Production › Branch Tracking');
+    console.error('› Auto-assign Custom Production Domains.');
     process.exit(1);
   }
 
