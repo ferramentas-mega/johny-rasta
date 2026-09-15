@@ -1,0 +1,201 @@
+{
+  "lighthouseResult": {
+    "requestedUrl": "https://johny-rasta.vercel.app/entrar",
+    "finalUrl": "https://johny-rasta.vercel.app/entrar",
+    "lighthouseVersion": "13.4.1",
+    "categories": {
+      "performance": {
+        "score": 0.98,
+        "title": "Performance"
+      },
+      "accessibility": {
+        "score": 1,
+        "title": "Accessibility"
+      },
+      "best-practices": {
+        "score": 1,
+        "title": "Best Practices"
+      },
+      "seo": {
+        "score": 1,
+        "title": "SEO"
+      }
+    },
+    "audits": {
+      "crawlable-anchors": {
+        "id": "crawlable-anchors",
+        "title": "Links are crawlable",
+        "score": 1,
+        "scoreDisplayMode": "binary"
+      },
+      "network-rtt": {
+        "id": "network-rtt",
+        "title": "Network Round Trip Times",
+        "score": 1,
+        "scoreDisplayMode": "informative",
+        "numericValue": 3.0290099999999995,
+        "displayValue": "0 ms"
+      },
+      "link-name": {
+        "id": "link-name",
+        "title": "Links have a discernible name",
+        "score": null,
+        "scoreDisplayMode": "notApplicable"
+      },
+      "accesskeys": {
+        "id": "accesskeys",
+        "title": "`[accesskey]` values are unique",
+        "score": null,
+        "scoreDisplayMode": "notApplicable"
+      },
+      "aria-required-children": {
+        "id": "aria-required-children",
+        "title": "Elements with an ARIA `[role]` that require children to contain a specific `[role]` have all required children.",
+        "score": null,
+        "scoreDisplayMode": "notApplicable"
+      },
+      "main-thread-tasks": {
+        "id": "main-thread-tasks",
+        "title": "Tasks",
+        "score": 1,
+        "scoreDisplayMode": "informative"
+      },
+      "speed-index": {
+        "id": "speed-index",
+        "title": "Speed Index",
+        "score": 0.95,
+        "scoreDisplayMode": "numeric",
+        "numericValue": 2880.5781527377767,
+        "numericUnit": "millisecond",
+        "displayValue": "2.9 s"
+      },
+      "trusted-types-xss": {
+        "id": "trusted-types-xss",
+        "title": "Mitigate DOM-based XSS with Trusted Types",
+        "score": 1,
+        "scoreDisplayMode": "informative"
+      },
+      "total-byte-weight": {
+        "id": "total-byte-weight",
+        "title": "Avoids enormous network payloads",
+        "score": 1,
+        "scoreDisplayMode": "metricSavings",
+        "numericValue": 295799,
+        "displayValue": "Total size was 289 KiB"
+      },
+      "doctype": {
+        "id": "doctype",
+        "title": "Page has the HTML doctype",
+        "score": 1,
+        "scoreDisplayMode": "binary"
+      },
+      "managed-focus": {
+        "id": "managed-focus",
+        "title": "The user's focus is directed to new content added to the page",
+        "score": null,
+        "scoreDisplayMode": "manual"
+      },
+      "geolocation-on-start": {
+        "id": "geolocation-on-start",
+        "title": "Avoids requesting the geolocation permission on page load",
+        "score": 1,
+        "scoreDisplayMode": "binary"
+      },
+      "unminified-css": {
+        "id": "unminified-css",
+        "title": "Minify CSS",
+        "score": 1,
+        "scoreDisplayMode": "metricSavings",
+        "numericValue": 0,
+        "details": {
+          "overallSavingsMs": 0,
+          "type": "opportunity"
+        }
+      },
+      "cache-insight": {
+        "id": "cache-insight",
+        "title": "Use efficient cache lifetimes",
+        "score": 1,
+        "scoreDisplayMode": "metricSavings"
+      },
+      "visual-order-follows-dom": {
+        "id": "visual-order-follows-dom",
+        "title": "Visual order on the page follows DOM order",
+        "score": null,
+        "scoreDisplayMode": "manual"
+      },
+      "offscreen-content-hidden": {
+        "id": "offscreen-content-hidden",
+        "title": "Offscreen content is hidden from assistive technology",
+        "score": null,
+        "scoreDisplayMode": "manual"
+      },
+      "total-blocking-time": {
+        "id": "total-blocking-time",
+        "title": "Total Blocking Time",
+        "score": 1,
+        "scoreDisplayMode": "numeric",
+        "numericValue": 3.5,
+        "numericUnit": "millisecond",
+        "displayValue": "0 ms"
+      },
+      "forced-reflow-insight": {
+        "id": "forced-reflow-insight",
+        "title": "Forced reflow",
+        "score": 1,
+        "scoreDisplayMode": "numeric"
+      },
+      "max-potential-fid": {
+        "id": "max-potential-fid",
+        "title": "Max Potential First Input Delay",
+        "score": 1,
+        "scoreDisplayMode": "numeric",
+        "numericValue": 57,
+        "displayValue": "60 ms"
+      },
+      "third-parties-insight": {
+        "id": "third-parties-insight",
+        "title": "3rd parties",
+        "score": 1,
+        "scoreDisplayMode": "numeric"
+      },
+      "interactive": {
+        "id": "interactive",
+        "title": "Time to Interactive",
+        "score": 0.99,
+        "scoreDisplayMode": "numeric",
+        "numericValue": 2314.6000000000004,
+        "numericUnit": "millisecond",
+        "displayValue": "2.3 s"
+      },
+      "largest-contentful-paint": {
+        "id": "largest-contentful-paint",
+        "title": "Largest Contentful Paint",
+        "score": 0.93,
+        "scoreDisplayMode": "numeric",
+        "numericValue": 2308,
+        "numericUnit": "millisecond",
+        "displayValue": "2.3 s"
+      },
+      "first-contentful-paint": {
+        "id": "first-contentful-paint",
+        "title": "First Contentful Paint",
+        "score": 1,
+        "scoreDisplayMode": "numeric",
+        "numericValue": 1055,
+        "numericUnit": "millisecond",
+        "displayValue": "1.1 s"
+      },
+      "cumulative-layout-shift": {
+        "id": "cumulative-layout-shift",
+        "title": "Cumulative Layout Shift",
+        "score": 1,
+        "scoreDisplayMode": "numeric",
+        "numericValue": 0,
+        "numericUnit": "unitless",
+        "displayValue": "0"
+      }
+    },
+    "runWarnings": []
+  }
+}
