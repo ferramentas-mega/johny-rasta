@@ -223,7 +223,11 @@ este deploy caiu:
 | `README.md` | A lista de documentação complementar não incluía `deploy-vercel.md` |
 | `deploy-vercel.md`, `pos-deploy.yml`, `producao.ts` | A instrução de promover o deployment apontava para **o menu errado** (`⋯` da linha da lista, quando o botão fica no `⋯` do canto superior direito **dentro** do deployment) e para **a tela errada** (`Settings › Domains › Edit`, quando é `Settings › Environments › Production › Branch Tracking › Auto-assign Custom Production Domains`). Conferido na documentação da Vercel |
 | `deploy-vercel.md` | O passo do domínio próprio mandava dar **Redeploy**, que não publica num projeto com auto-assign desligado |
-| `.env.example`, `deploy-supabase.md`, `deploy-vercel.md` | Host do pooler (`aws-1-us-east-1…`) apresentado como valor **verificado** deste projeto. A medição de DNS provava que ele existe e tem IPv4 — não que é o cluster deste projeto. A documentação do Supabase diz que o número é um índice de cluster e **não se deduz da região**. Trocado por marcador explícito |
+| `.env.example`, `deploy-supabase.md`, `deploy-vercel.md` | Host do pooler (`aws-1-us-east-1…`) apresentado como valor **verificado** deste projeto. A medição de DNS provava que ele existe e tem IPv4 — não que é o cluster deste projeto. A documentação do Supabase diz que o número é um índice de cluster e **não se deduz da região**. Trocado por marcador explícito — e o valor real, copiado depois do diálogo Connect, é **`aws-0`**: a suposição estava errada |
+
+Uma suposição plausível é o pior tipo de erro de documentação: `aws-1` existia, resolvia, tinha
+IPv4, e mesmo assim era o host errado. Teria produzido `Tenant or user not found`, que parece falha
+de senha — mandando corrigir o que não estava quebrado. Foi desfeita antes de chegar ao usuário.
 
 Documento que descreve o sistema errado erra igual a código errado — só demora mais para aparecer.
 E instrução que aponta para o botão errado é pior: o leitor faz o que está escrito, não funciona, e

@@ -53,7 +53,7 @@ git branch -u origin/main main
 5. Copie o texto. Ele tem este formato:
 
 ```
-postgresql://postgres.cihsheaiqinrmftjwexu:[YOUR-PASSWORD]@HOST-COPIADO-DO-CONNECT:6543/postgres
+postgresql://postgres.cihsheaiqinrmftjwexu:[YOUR-PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres
 ```
 
 **Importante:** use o *pooler*, não a **Direct connection**. A conexão direta só existe em IPv6, e
@@ -65,7 +65,10 @@ as funções da Vercel não alcançam.
 > publicável colocaria a separação de privilégios de lado e exigiria reescrever as políticas de RLS.
 > Do painel, você só precisa da connection string.
 
-Guarde o **host** (a parte `aws-...pooler.supabase.com`) — o seu pode ter um número diferente.
+Guarde o **host**. Neste projeto ele é **`aws-0-us-east-1.pooler.supabase.com`**, conferido no
+diálogo Connect. O número (`aws-0`) é um índice de cluster, **não** parte do nome da região: uma
+região pode ter mais de um, e não dá para deduzi-lo. Num projeto novo, copie de novo — supor custou
+uma rodada aqui, quando `aws-1` pareceu plausível e o certo era `aws-0`.
 Você vai montar três connection strings a partir dele, trocando o usuário e a senha:
 
 | Variável | Usuário | Senha |
@@ -80,7 +83,7 @@ descobre para qual projeto encaminhar a conexão.
 Cada uma fica assim:
 
 ```
-postgresql://app_user.cihsheaiqinrmftjwexu:SENHA_DO_APP_USER@HOST-COPIADO-DO-CONNECT:6543/postgres
+postgresql://app_user.cihsheaiqinrmftjwexu:SENHA_DO_APP_USER@aws-0-us-east-1.pooler.supabase.com:6543/postgres
 ```
 
 Gere também o segredo de sessão, num terminal qualquer:

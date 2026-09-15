@@ -164,6 +164,10 @@ IPv4, e que ambos os clusters de `us-east-1` existem com IPv4. **Não** prova qu
 projeto — isso só o **Connect** responde. Pegar o número errado devolve `Tenant or user not found`,
 que o diagnóstico nomeia, e que é erro de host ou de usuário, nunca de senha.
 
+Para o registro: neste projeto o valor conferido no Connect é **`aws-0`**. Eu havia suposto `aws-1`,
+que também existe e também tem IPv4 — plausível e errado. É exatamente por isso que o exemplo acima
+traz um marcador em vez de um host.
+
 ### O sufixo do projeto no nome do papel
 
 No pooler, o usuário **não** é `app_user`, e sim `app_user.cihsheaiqinrmftjwexu` — é assim que o
