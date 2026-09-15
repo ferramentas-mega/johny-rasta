@@ -1,7 +1,8 @@
 'use client';
 
 import { useActionState, useState, useTransition } from 'react';
-import { cadastrarUrl, solicitarAnalise, type EstadoAnalise } from './acoes';
+import { useRouter } from 'next/navigation';
+import { cadastrarUrl, solicitarAnalise, removerUrl, type EstadoAnalise } from './acoes';
 import { Painel } from '@/components/Cartoes';
 
 const VAZIO: EstadoAnalise = {};
@@ -27,6 +28,8 @@ export function PainelDeAnalise({
 }) {
   const [estadoCadastro, acaoCadastro, cadastrando] = useActionState(cadastrarUrl, VAZIO);
   const [estadoAnalise, acaoAnalise, enfileirando] = useActionState(solicitarAnalise, VAZIO);
+  const [estadoRemocao, acaoRemocao] = useActionState(removerUrl, VAZIO);
+  const router = useRouter();
   const [processando, iniciarProcessamento] = useTransition();
   const [resultado, setResultado] = useState<string | null>(null);
 
@@ -40,11 +43,17 @@ export function PainelDeAnalise({
       try {
         const r = await fetch('/api/auditorias/processar', { method: 'POST' });
         const corpo = await r.json();
-        setResultado(
-          corpo.processado
-            ? `Análise concluída: ${corpo.url} (${corpo.strategy === 'mobile' ? 'celular' : 'computador'}). Recarregue para ver.`
-            : corpo.erro ?? corpo.motivo ?? 'Nada a processar.',
-        );
+        if (corpo.processado) {
+          setResultado(
+            `Análise concluída: ${corpo.url} (${corpo.strategy === 'mobile' ? 'celular' : 'computador'}).`,
+          );
+          // Antes a mensagem terminava em "Recarregue para ver" — o painel
+          // admitindo que não sabia se atualizar, com a nota recém-medida já no
+          // banco e a tabela ao lado mostrando a anterior.
+          router.refresh();
+        } else {
+          setResultado(corpo.erro ?? corpo.motivo ?? 'Nada a processar.');
+        }
       } catch {
         setResultado('Não foi possível falar com o servidor.');
       }
@@ -93,6 +102,20 @@ export function PainelDeAnalise({
             borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
             <span className="mono" style={{ fontSize: 12, flex: '1 1 220px', wordBreak: 'break-all' }}>{u.url}</span>
             {u.prioritaria && <span style={{ fontSize: 10.5, color: 'var(--gold)' }}>PRIORITÁRIA</span>}
+            <form action={acaoRemocao} style={{ display: 'inline' }}>
+              <input type="hidden" name="siteId" value={siteId} />
+              <input type="hidden" name="url" value={u.url} />
+              <button
+                type="submit"
+                title="Deixar de monitorar esta URL"
+                style={{
+                  background: 'none', border: 'none', padding: '6px 4px', cursor: 'pointer',
+                  fontSize: 12, color: 'var(--tx3)', textDecoration: 'underline',
+                }}
+              >
+                Remover
+              </button>
+            </form>
             {(['mobile', 'desktop'] as const).map((s) => (
               <form key={s} action={acaoAnalise} style={{ display: 'inline' }}>
                 <input type="hidden" name="siteId" value={siteId} />
@@ -108,6 +131,8 @@ export function PainelDeAnalise({
       </ul>
 
       {estadoAnalise.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)', marginTop: 10 }}>{estadoAnalise.erro}</p>}
+      {estadoRemocao.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)', marginTop: 10 }}>{estadoRemocao.erro}</p>}
+      {estadoRemocao.ok && <p role="status" style={{ fontSize: 12.5, color: 'var(--pos)', marginTop: 10 }}>{estadoRemocao.ok}</p>}
 
       {/*
         O botão aparece nos DOIS casos: tarefa criada agora, e tarefa que já

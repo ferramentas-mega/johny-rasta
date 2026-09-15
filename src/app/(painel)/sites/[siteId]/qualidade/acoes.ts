@@ -86,3 +86,47 @@ export async function solicitarAnalise(_anterior: EstadoAnalise, dados: FormData
     return { erro: 'Não foi possível enfileirar a análise.' };
   }
 }
+
+/**
+ * Deixa de monitorar uma URL.
+ *
+ * Faltava, e o custo não era estético. URL prioritária é reanalisada a cada
+ * sete dias, e o plano Hobby dá **uma execução automática por dia**: um
+ * endereço digitado errado entrava na rotação e consumia a vaga diária para
+ * sempre, sem nenhuma forma de desfazer pela interface. Cadastrar sem
+ * descadastrar é uma porta que só abre.
+ *
+ * Remove a URL e as tarefas que ainda não rodaram. O que já foi MEDIDO fica:
+ * `lighthouse_results` e `crux_snapshots` são histórico, e apagar medição
+ * porque alguém parou de acompanhar a página reescreveria o passado.
+ */
+export async function removerUrl(_anterior: EstadoAnalise, dados: FormData): Promise<EstadoAnalise> {
+  const usuario = await exigirSessao();
+  const siteId = String(dados.get('siteId') ?? '');
+  const url = String(dados.get('url') ?? '');
+  if (!siteId || !url) return { erro: 'URL inválida.' };
+
+  try {
+    const resultado = await withAccount(usuario.accountId, async (db) => {
+      const linha = await db.one<{ id: string }>(
+        'delete from monitored_urls where site_id = $1 and url = $2 returning id',
+        [siteId, url],
+      );
+      if (!linha) return { erro: 'Esta URL não está sendo monitorada.' };
+
+      // Só as que ainda não rodaram. Uma análise em execução termina e grava:
+      // interromper no meio deixaria a fila com um registro sem desfecho.
+      await db.query(
+        `delete from audit_jobs where site_id = $1 and url = $2 and status = 'pendente'`,
+        [siteId, url],
+      );
+      return { ok: 'URL removida do monitoramento. As medições já feitas continuam no histórico.' };
+    });
+
+    revalidatePath(`/sites/${siteId}/qualidade`);
+    return resultado;
+  } catch (erro) {
+    console.error('[qualidade] falha ao remover URL', erro);
+    return { erro: 'Não foi possível remover a URL.' };
+  }
+}

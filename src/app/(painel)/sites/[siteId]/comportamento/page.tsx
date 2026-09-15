@@ -86,7 +86,10 @@ export default async function PaginaComportamento({
   });
 
   const { periodo, comportamento } = dados;
-  const totalSessoes = comportamento.dispositivos.reduce((t, d) => t + d.sessoes, 0);
+  // Vem da consulta, e não de somar os dispositivos na tela: o numerador das
+  // porcentagens já vinha de lá, e reconstruir o denominador aqui era manter
+  // duas contas que ninguém garante que continuam iguais.
+  const totalSessoes = comportamento.sessoes;
 
   return (
     <>

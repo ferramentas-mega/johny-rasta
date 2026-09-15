@@ -7,6 +7,7 @@ import {
   getByPage,
   getByButton,
   getBySource,
+  getBehavior,
   resolvePeriod,
 } from '@/server/metrics/queries';
 import { prepararBancoDeTeste, MASSA, ESPERADO_ALFA_7D, CONTAS } from '../../scripts/test-db';
@@ -224,5 +225,49 @@ describe('filtros de período e de site', () => {
     expect(beta.atual.sessoes).toBe(3);
     expect(beta.atual.formularios).toBe(2);
     expect(beta.atual.sessoes).not.toBe(ESPERADO_ALFA_7D.sessoes);
+  });
+});
+
+
+describe('comportamento', () => {
+  /*
+   * `getBehavior` não tinha teste nenhum, e a tela dependia de uma invariante
+   * dele sem ninguém garantir: o total de sessões era reconstruído somando os
+   * dispositivos, enquanto o numerador das porcentagens vinha do resumo. As
+   * duas contas batem porque saem do mesmo ELIGIBLE — um filtro a mais numa
+   * delas quebraria a porcentagem sem erro nenhum aparecer.
+   */
+  const medir = () =>
+    withAccount(accountId, async (db) => {
+      const p = await resolvePeriod(db, site.timezone, { key: '7d' });
+      return getBehavior(db, site, { ...p, label: '' });
+    });
+
+  it('o total exposto é o mesmo que a soma dos dispositivos', async () => {
+    const c = await medir();
+    const somado = c.dispositivos.reduce((t, d) => t + d.sessoes, 0);
+    expect(c.sessoes).toBe(somado);
+  });
+
+  it('e é o mesmo que a soma da profundidade — toda sessão cai em uma faixa', async () => {
+    const c = await medir();
+    expect(c.profundidade.reduce((t, d) => t + d.sessoes, 0)).toBe(c.sessoes);
+  });
+
+  it('bate com o indicador de sessões do mesmo período', async () => {
+    // Duas telas, o mesmo número. É a disciplina que o projeto inteiro assume.
+    const [c, kpis] = await Promise.all([
+      medir(),
+      withAccount(accountId, async (db) => {
+        const p = await resolvePeriod(db, site.timezone, { key: '7d' });
+        return getKpis(db, site, { ...p, label: '' });
+      }),
+    ]);
+    expect(c.sessoes).toBe(kpis.atual.sessoes);
+  });
+
+  it('sessões de uma página nunca passam do total', async () => {
+    const c = await medir();
+    expect(c.sessoesDeUmaPagina).toBeLessThanOrEqual(c.sessoes);
   });
 });

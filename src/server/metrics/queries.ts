@@ -316,6 +316,17 @@ export async function getBySource(db: Queryable, site: SiteContext, period: Reso
 export type ComportamentoRow = { rotulo: string; sessoes: number };
 
 export type Comportamento = {
+  /**
+   * Sessões elegíveis no período.
+   *
+   * Exposto porque a tela precisava dele como DENOMINADOR e o reconstruía
+   * somando `dispositivos`. Hoje as duas contas batem — as duas saem do mesmo
+   * `ELIGIBLE` —, mas o numerador (`sessoesDeUmaPagina`) vem daqui e o
+   * denominador vinha de outro lugar: bastaria um filtro a mais numa das
+   * consultas para a porcentagem passar a dividir por uma base diferente, sem
+   * erro nenhum aparecer. É a regra da casa: quem calcula número é a consulta.
+   */
+  sessoes: number;
   /** Média de páginas vistas por sessão. `null` quando não há sessões. */
   paginasPorSessao: number | null;
   /** Sessões que viram uma única página e não clicaram em nada. */
@@ -399,6 +410,7 @@ export async function getBehavior(
   );
 
   return {
+    sessoes: resumo?.sessoes ?? 0,
     paginasPorSessao: resumo && resumo.paginas !== null ? Number(resumo.paginas) : null,
     sessoesDeUmaPagina: resumo?.umaPagina ?? 0,
     dispositivos,
