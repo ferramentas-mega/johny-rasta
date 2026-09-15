@@ -98,6 +98,10 @@ export async function GET(request: Request) {
     // de fora, se o domínio está servindo o build que acabou de subir. Sem ele,
     // um deployment que ficou para trás é indistinguível de um atualizado.
     commit: build.commit,
+    // Muda a cada build. Duas publicações do mesmo commit — uma antes e outra
+    // depois de salvar uma variável — têm o mesmo commit e comportamentos
+    // diferentes; só este campo as separa.
+    deployment: build.deployment,
     ambiente: build.ambiente,
     // O que realmente responde "consigo entrar?".
     painelFunciona,
