@@ -103,6 +103,9 @@ async function consultar(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...corpo, formFactor }),
     signal,
+    // POST não é cacheado pelo Next, mas deixar explícito evita que uma
+    // mudança futura reintroduza o problema que o PageSpeed teve.
+    cache: 'no-store',
   });
 
   // 404 NÃO é falha: significa que o Chrome não tem amostra suficiente para

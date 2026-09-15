@@ -182,6 +182,13 @@ export async function analisar(
   const resposta = await fetch(`${ENDERECO}?${params}`, {
     signal: opcoes.signal,
     headers: { accept: 'application/json' },
+    // OBRIGATÓRIO. O `fetch` do Next.js guarda respostas de GET em cache, e a
+    // URL desta chamada é sempre a mesma para a mesma página e dispositivo.
+    // Sem isto, a PRIMEIRA resposta fica valendo para todas as seguintes:
+    // uma falha intermitente vira permanente, e uma medição velha passa por
+    // nova. Foi exatamente o que aconteceu — a mesma URL falhava sempre pelo
+    // aplicativo e respondia 200 pelo curl.
+    cache: 'no-store',
   });
 
   if (!resposta.ok) {
@@ -197,5 +204,21 @@ export async function analisar(
     throw new FalhaNaAnalise(detalhe, resposta.status);
   }
 
-  return interpretar(await resposta.json(), estrategia);
+  const corpo = await resposta.json();
+
+  // A API devolve 200 mesmo quando o Lighthouse não conseguiu carregar a
+  // página: o motivo vem em `lighthouseResult.runtimeError`. Sem esta
+  // verificação, esse caso viraria uma "análise" com as quatro notas nulas
+  // gravada no histórico — pior que um erro, porque parece medição.
+  //
+  // FAILED_DOCUMENT_REQUEST é comprovadamente intermitente: a mesma URL que
+  // falhou respondeu 200 com notas reais na chamada seguinte. Por isso o job
+  // volta para a fila em vez de ser descartado.
+  const runtime = (corpo as { lighthouseResult?: { runtimeError?: { code?: string; message?: string } } })
+    ?.lighthouseResult?.runtimeError;
+  if (runtime?.code && runtime.code !== 'NO_ERROR') {
+    throw new FalhaNaAnalise(runtime.message ?? runtime.code, resposta.status);
+  }
+
+  return interpretar(corpo, estrategia);
 }

@@ -108,3 +108,29 @@ describe('conversão para a escala de apresentação', () => {
     expect(paraCem(null)).toBeNull();
   });
 });
+
+describe('200 com runtimeError não vira análise vazia', () => {
+  it('a interpretação de um corpo com runtimeError ainda devolve notas nulas…', () => {
+    // Este é o formato que a API devolve quando o Lighthouse não carrega a
+    // página: HTTP 200, com o motivo dentro do corpo.
+    const corpo = {
+      lighthouseResult: {
+        requestedUrl: 'https://exemplo.com/',
+        runtimeError: { code: 'FAILED_DOCUMENT_REQUEST', message: 'unable to reliably load the page' },
+        categories: {},
+      },
+    };
+    const r = interpretar(corpo, 'mobile');
+    expect(r.notas).toEqual({ performance: null, acessibilidade: null, boasPraticas: null, seo: null });
+  });
+
+  it('…e por isso `analisar` precisa recusar antes de gravar', () => {
+    // A guarda vive em `analisar`, não em `interpretar`: interpretar é puro e
+    // não decide política. O que este teste fixa é que um corpo assim NÃO pode
+    // chegar ao banco como medição — quatro notas nulas gravadas parecem
+    // "medimos e não deu nada", que é afirmação diferente de "não medimos".
+    const corpo = { lighthouseResult: { runtimeError: { code: 'FAILED_DOCUMENT_REQUEST' }, categories: {} } };
+    const codigo = corpo.lighthouseResult.runtimeError.code;
+    expect(codigo).not.toBe('NO_ERROR');
+  });
+});

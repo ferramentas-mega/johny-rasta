@@ -10,6 +10,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 const ABAS = [
   { slug: 'desempenho', label: 'Desempenho' },
   { slug: 'comportamento', label: 'Comportamento' },
+  { slug: 'qualidade', label: 'Qualidade técnica' },
   { slug: 'rastreamento', label: 'Rastreamento' },
 ] as const;
 
