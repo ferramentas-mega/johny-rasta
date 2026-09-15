@@ -91,6 +91,38 @@ então site de outra conta e site inexistente dão a mesma resposta — distingu
 confirmaria a existência de um registro alheio a quem só tem o id. As Actions
 devolvem a mensagem em vez de confirmar uma gravação que não aconteceu.
 
+### Os papéis públicos enxergavam todos os sites
+
+`app_ingest` e `app_forms` tinham políticas `using (true)` em `pages`,
+`sessions`, `events`, `leads` e `form_submissions`. Traduzindo: o papel do
+endpoint público de formulários podia ler os leads de **todas as contas**.
+
+Não houve vazamento. As consultas dos dois endpoints sempre filtraram por site, e
+são parametrizadas. Mas essa era a única parte do sistema onde quem protegia era
+o código, e não a política — em todo o resto, um erro de consulta devolve vazio;
+ali, devolveria a base inteira.
+
+**Correção:** o mesmo mecanismo do painel, um nível abaixo.
+`resolverSite` — o ponto por onde os dois endpoints obrigatoriamente passam,
+porque é assim que descobrem de que site é a requisição — faz
+`set_config('app.site_id', …, true)`, e as políticas casam por `site_id =
+app.current_site_id()`. Sem o ajuste, a função devolve `NULL`, `site_id = NULL` é
+`NULL`, nenhuma política casa: **o padrão continua sendo negar**.
+
+`sites` é a exceção necessária, e é estreita: é lendo `sites` que o endpoint
+descobre qual é o site. Ela só concede SELECT, e a política continua sendo "não
+arquivado".
+
+O que isto **não** resolve: o identificador público continua público, e quem o
+tem envia eventos daquele site. Isso é da natureza de um coletor que roda no
+navegador — quem limita o abuso é o rate limit por site. O que muda é o alcance
+de um ERRO: antes, um defeito de consulta podia expor a base; agora, no máximo um
+site.
+
+`tests/unit/escopo-publico.spec.ts` tenta a leitura cruzada com o id certo em
+mãos, tenta as duas escritas cruzadas, e traz um caso de CONTROLE — sem ele, uma
+política que negasse tudo, inclusive ao endpoint legítimo, passaria no teste.
+
 ### Lead perdido por uma coluna `NOT NULL`
 
 Regressão introduzida ao tornar `idempotencia` opcional no endpoint de
@@ -220,13 +252,6 @@ inexistente é um 404 fantasiado de funcionalidade.
 **`users.role` não é verificado em lugar nenhum.** A coluna existe e sugere um
 nível de acesso que nenhum código consulta. Todo usuário da conta pode tudo
 dentro dela.
-
-**`app_forms` enxerga `leads` e `form_submissions` de todas as contas.** As
-políticas desse papel são `using (true)`: ele não tem contexto de conta. As
-consultas do endpoint são parametrizadas e sempre filtram por site, então não há
-vazamento em aberto — mas é a única parte do sistema onde a defesa é o código, e
-não a política. Fechar pede um `app.site_id` por transação, no mesmo molde do
-`app.account_id`.
 
 **`Origin` ausente é aceito em `/api/collect`.** É deliberado: `sendBeacon` de
 mesma origem e navegadores antigos não mandam o cabeçalho, e recusar perderia

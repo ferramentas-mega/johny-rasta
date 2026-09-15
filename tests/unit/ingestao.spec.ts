@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { withIngest, withForms, withAccount } from '@/server/db';
+import { withIngest, withForms, withAccount, type Queryable } from '@/server/db';
 import {
   resolverSite,
   registrarEvento,
@@ -45,6 +45,30 @@ async function gravar(evento: Record<string, unknown>) {
   });
 }
 
+/**
+ * Conferência pelos MESMOS papéis públicos que gravaram.
+ *
+ * O `resolverSite` não é enfeite aqui: desde que as políticas de `app_ingest` e
+ * `app_forms` casam por `app.current_site_id()`, uma transação que não resolveu
+ * o site enxerga zero linhas — corretamente. Conferir o que foi gravado exige
+ * repetir o que o endpoint real faz, e não desviar por um papel privilegiado:
+ * ler como superusuário provaria que a linha existe, não que o papel público
+ * consegue alcançá-la.
+ */
+function lerComoIngest<T>(fn: (db: Queryable) => Promise<T>): Promise<T> {
+  return withIngest(async (db) => {
+    await resolverSite(db, MASSA.siteSemColeta);
+    return fn(db);
+  });
+}
+
+function lerComoForms<T>(fn: (db: Queryable) => Promise<T>): Promise<T> {
+  return withForms(async (db) => {
+    await resolverSite(db, MASSA.siteSemColeta);
+    return fn(db);
+  });
+}
+
 describe('normalização de caminhos', () => {
   it('trata variações da mesma página como uma só', () => {
     expect(normalizarCaminho('/planos')).toBe('/planos');
@@ -85,7 +109,7 @@ describe('idempotência de eventos', () => {
     expect(segundo.duplicado).toBe(true);
     expect(terceiro.duplicado).toBe(true);
 
-    const linhas = await withIngest((db) => db.query('select id from events where event_uid = $1', [uid]));
+    const linhas = await lerComoIngest((db) => db.query('select id from events where event_uid = $1', [uid]));
     expect(linhas).toHaveLength(1);
   });
 
@@ -94,7 +118,7 @@ describe('idempotência de eventos', () => {
     await gravar(eventoBase({ visitante, tipo: 'cta_click', subtipo: 'whatsapp', botaoId: 'b1' }));
     await gravar(eventoBase({ visitante, tipo: 'cta_click', subtipo: 'whatsapp', botaoId: 'b1' }));
 
-    const linhas = await withIngest((db) =>
+    const linhas = await lerComoIngest((db) =>
       db.query('select id from events where session_id in (select id from sessions where visitor_id = $1)', [visitante]),
     );
     expect(linhas).toHaveLength(2);
@@ -145,7 +169,7 @@ describe('validação de eventos', () => {
     const visitante = randomUUID();
     await gravar(eventoBase({ visitante, ocorridoEm: futuro.toISOString() }));
 
-    const linha = await withIngest((db) =>
+    const linha = await lerComoIngest((db) =>
       db.query<{ occurred_at: Date }>(
         'select occurred_at from events where session_id in (select id from sessions where visitor_id = $1)',
         [visitante],
@@ -212,7 +236,7 @@ describe('submissões de formulário', () => {
     expect(r.duplicada).toBe(false);
     expect(r.leadId).toBeTruthy();
 
-    const lead = await withForms((db) => db.one('select email from leads where id = $1', [r.leadId]));
+    const lead = await lerComoForms((db) => db.one('select email from leads where id = $1', [r.leadId]));
     expect(lead).toBeTruthy();
   });
 
@@ -226,7 +250,7 @@ describe('submissões de formulário', () => {
     expect(segundo.duplicada).toBe(true);
     expect(segundo.submissionId).toBe(primeiro.submissionId);
 
-    const linhas = await withForms((db) =>
+    const linhas = await lerComoForms((db) =>
       db.query('select id from form_submissions where idempotency_key = $1', [dados.idempotencia]),
     );
     expect(linhas).toHaveLength(1);
@@ -248,7 +272,7 @@ describe('submissões de formulário', () => {
     const idem = randomUUID();
     await enviar(submissaoBase({ visitante, idempotencia: idem, email: `privado-${randomUUID()}@teste.com`, mensagem: 'segredo comercial' }));
 
-    const evento = await withForms((db) =>
+    const evento = await lerComoForms((db) =>
       db.one<Record<string, unknown>>('select * from events where event_uid = $1', [idem]),
     );
 

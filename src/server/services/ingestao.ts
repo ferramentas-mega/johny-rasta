@@ -88,13 +88,35 @@ export type SitePublico = {
 
 /** Resolve o identificador público. Ele endereça o site; não é credencial. */
 export async function resolverSite(db: Queryable, publicId: string): Promise<SitePublico | null> {
-  return db.one<SitePublico>(
+  const site = await db.one<SitePublico>(
     `select id, account_id as "accountId", client_id as "clientId", domain, timezone,
             public_id as "publicId"
        from sites
       where public_id = $1 and archived_at is null`,
     [publicId],
   );
+  if (!site) return null;
+
+  /**
+   * FIXA O ESCOPO da transação neste site.
+   *
+   * A partir daqui, as políticas de `app_ingest` e `app_forms` só enxergam
+   * linhas deste `site_id`. Antes elas eram `using (true)` — o papel do endpoint
+   * público de formulários podia ler os leads de TODAS as contas. Não havia
+   * vazamento em curso, porque as consultas sempre filtram por site; mas era a
+   * única parte do sistema onde quem protegia era o código, e não a política.
+   *
+   * É feito AQUI, e não em `withForms`/`withIngest`, por um motivo de ordem: o
+   * site não é conhecido quando a transação abre — ele é descoberto pelo
+   * identificador público, lendo `sites`. Este é o primeiro instante em que
+   * existe um id para fixar, e é o único ponto pelo qual os dois endpoints
+   * passam.
+   *
+   * `is_local = true`: vale até o fim desta transação e não vaza para a próxima
+   * requisição que pegar a mesma conexão do pool.
+   */
+  await db.query("select set_config('app.site_id', $1, true)", [site.id]);
+  return site;
 }
 
 /**

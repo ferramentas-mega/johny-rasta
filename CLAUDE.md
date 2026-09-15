@@ -106,6 +106,13 @@ Três papéis do Postgres, com privilégios diferentes:
 | `app_ingest` | `/api/collect` | Ler leads, usuários, clientes, integrações — **sem GRANT algum** |
 | `app_forms` | `/api/forms/[id]` | Ler usuários e contas; alterar submissões gravadas |
 
+Os dois papéis públicos enxergam **um site, não todos**. `resolverSite` faz
+`set_config('app.site_id', …, true)` e as políticas casam por `site_id =
+app.current_site_id()`. Não é decoração: sem isso, um `where` esquecido no
+endpoint de formulários devolveria os leads da base inteira em vez de nada.
+`sites` é a exceção, e é estreita — é lendo `sites` que o endpoint descobre de
+que site é a requisição, e ali só há SELECT.
+
 A conta da requisição entra por `set_config('app.account_id', …, true)` a cada transação. Sem ela,
 `app.current_account_id()` devolve `NULL`, nenhuma política casa e o resultado é vazio: **o padrão é
 negar**.
@@ -216,6 +223,16 @@ correção é trocar o eixo numa media query, não encolher o menu.
 **Fila: deduplicação por índice, não por `select` antes do `insert`.** Entre um e outro cabe outra
 requisição. O índice único parcial de `audit_jobs` cobre só `pendente` e `executando`, para que uma
 análise concluída não impeça a próxima.
+
+**Política que aperta escopo sobe DEPOIS do código, não antes.** A migração
+`20260916000012` trocou `using (true)` por `site_id = app.current_site_id()` nos
+papéis públicos. Aplicada contra o código antigo — que não ajusta `app.site_id` —
+a coleta e os formulários parariam de gravar em produção, sem erro visível para
+quem preenche. A ordem certa é a inversa da de uma migração aditiva: **publique o
+código primeiro** (ajustar um parâmetro que nenhuma política lê é inofensivo),
+confirme que o commit está no ar, e só então aplique a migração. Toda migração
+que RESTRINGE uma política tem essa assimetria; toda migração que só acrescenta
+objeto tem a oposta.
 
 **`withoutAccount` + RLS `FORCE` = zero linhas, sem erro nenhum.** O cron rodava assim contra
 `audit_jobs` e `monitored_urls`. Sem `app.account_id`, `app.current_account_id()` é `NULL`,
