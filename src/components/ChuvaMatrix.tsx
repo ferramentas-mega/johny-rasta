@@ -21,18 +21,24 @@ export type VarianteChuva = 'cabecalho' | 'tela';
 
 /** Cada variante define onde a chuva mora e o quanto ela aparece. */
 const VARIANTES: Record<VarianteChuva, { tamanho: number; estilo: React.CSSProperties }> = {
-  // Faixa à direita do cabeçalho, sumindo sob uma máscara lateral.
+  // Cabeçalho inteiro.
+  //
+  // Ocupava só a faixa direita de 42%, e ficava quase invisível. Agora cobre a
+  // largura toda — mas a máscara mantém o canto esquerdo limpo, que é onde vivem
+  // o título da tela e o nome da conta. Chuva por trás de texto grande é onde a
+  // leitura se perde primeiro.
   cabecalho: {
     tamanho: 14,
     estilo: {
       position: 'absolute',
-      top: 0,
-      right: 0,
+      inset: 0,
+      width: '100%',
       height: '100%',
-      width: '42%',
-      opacity: 0.5,
-      maskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,.55) 45%, rgba(0,0,0,1) 100%)',
-      WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,.55) 45%, rgba(0,0,0,1) 100%)',
+      opacity: 0.42,
+      maskImage:
+        'linear-gradient(90deg, transparent 0%, transparent 18%, rgba(0,0,0,.45) 42%, rgba(0,0,0,.9) 72%, #000 100%)',
+      WebkitMaskImage:
+        'linear-gradient(90deg, transparent 0%, transparent 18%, rgba(0,0,0,.45) 42%, rgba(0,0,0,.9) 72%, #000 100%)',
     },
   },
   // Tela inteira, atrás do conteúdo.
@@ -41,21 +47,40 @@ const VARIANTES: Record<VarianteChuva, { tamanho: number; estilo: React.CSSPrope
   // um formulário é exatamente onde a legibilidade costuma se perder. A máscara
   // apaga o centro, que é onde o texto fica.
   tela: {
-    tamanho: 16,
+    tamanho: 18,
     estilo: {
       position: 'fixed',
       inset: 0,
       width: '100%',
       height: '100%',
       zIndex: 0,
-      opacity: 0.3,
-      maskImage: 'radial-gradient(ellipse 60% 55% at 50% 45%, transparent 10%, rgba(0,0,0,.85) 70%, #000 100%)',
-      WebkitMaskImage: 'radial-gradient(ellipse 60% 55% at 50% 45%, transparent 10%, rgba(0,0,0,.85) 70%, #000 100%)',
+      // Bem mais presente que antes: com 0,3 e máscara apagando o centro, a
+      // chuva praticamente sumia. Aqui ela cobre a tela inteira, e a máscara
+      // apenas ATENUA a região do cartão de login em vez de apagá-la — o
+      // suficiente para o texto continuar legível sem matar o efeito.
+      opacity: 0.85,
+      maskImage: 'radial-gradient(ellipse 46% 42% at 50% 46%, rgba(0,0,0,.28) 0%, rgba(0,0,0,.72) 55%, #000 100%)',
+      WebkitMaskImage: 'radial-gradient(ellipse 46% 42% at 50% 46%, rgba(0,0,0,.28) 0%, rgba(0,0,0,.72) 55%, #000 100%)',
     },
   },
 };
 
-export function ChuvaMatrix({ variante = 'cabecalho' }: { variante?: VarianteChuva }) {
+/**
+ * Só `0` e `1`, como no Matrix.
+ *
+ * Antes havia símbolos e letras no conjunto, e o resultado lia como ruído de
+ * terminal em vez de binário. É prop para quem quiser outro alfabeto, mas o
+ * padrão é este de propósito.
+ */
+const ALFABETO_PADRAO = '01';
+
+export function ChuvaMatrix({
+  variante = 'cabecalho',
+  caracteres = ALFABETO_PADRAO,
+}: {
+  variante?: VarianteChuva;
+  caracteres?: string;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   const { tamanho: TAMANHO, estilo } = VARIANTES[variante];
 
@@ -64,7 +89,7 @@ export function ChuvaMatrix({ variante = 'cabecalho' }: { variante?: VarianteChu
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
-    const CHARS = '01<>/[]{}#$%&*+=?ABCDEF'.split('');
+    const CHARS = (caracteres || ALFABETO_PADRAO).split('');
     let colunas: number[] = [];
     let largura = 0;
     let altura = 0;
@@ -93,16 +118,29 @@ export function ChuvaMatrix({ variante = 'cabecalho' }: { variante?: VarianteChu
       // O esmaecimento usa a cor do PRÓPRIO tema. Um preto fixo pintaria por
       // cima do tema claro e sujaria a tela.
       const claro = root.dataset.tema === 'claro';
-      ctx.fillStyle = claro ? 'rgba(247,251,247,0.07)' : 'rgba(5,8,5,0.055)';
+
+      // O véu de cada quadro é o que APAGA o passado: quanto mais fraco, mais
+      // longo o rastro. É daqui que vem a cauda desbotada característica.
+      ctx.fillStyle = claro ? 'rgba(247,251,247,0.055)' : 'rgba(5,8,5,0.045)';
       ctx.fillRect(0, 0, largura, altura);
       ctx.font = `${TAMANHO}px var(--fonte-mono), ui-monospace, monospace`;
-      ctx.fillStyle = claro ? '#1F8F43' : '#70FF8B';
+
+      const corpo = claro ? '#1F8F43' : '#3FBF63';
+      const cabeca = claro ? '#0C5C28' : '#C8FFD6';
 
       for (let i = 0; i < colunas.length; i += 1) {
         const y = colunas[i]! * TAMANHO;
-        ctx.fillText(CHARS[(i * 7 + Math.floor(colunas[i]!)) % CHARS.length]!, i * TAMANHO, y);
+        const char = CHARS[(i * 7 + Math.floor(colunas[i]!)) % CHARS.length]!;
+
+        // A cabeça da coluna é mais clara que o rastro. Sem esse contraste a
+        // chuva lê como um borrão uniforme em vez de gotas caindo.
+        ctx.fillStyle = cabeca;
+        ctx.fillText(char, i * TAMANHO, y);
+        ctx.fillStyle = corpo;
+        ctx.fillText(CHARS[(i * 11 + Math.floor(colunas[i]!) + 1) % CHARS.length]!, i * TAMANHO, y - TAMANHO);
+
         if (y > altura && (i * 13 + Math.floor(colunas[i]!)) % 97 === 0) colunas[i] = 0;
-        colunas[i] = colunas[i]! + 0.16;
+        colunas[i] = colunas[i]! + 0.32;
       }
     };
 
@@ -114,7 +152,7 @@ export function ChuvaMatrix({ variante = 'cabecalho' }: { variante?: VarianteChu
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', redimensionar);
     };
-  }, [TAMANHO]);
+  }, [TAMANHO, caracteres]);
 
   return (
     <canvas
