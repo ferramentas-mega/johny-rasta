@@ -14,11 +14,31 @@ import {
   verificarQualidade,
   siteComDominio,
   registrarErroDeRecurso,
+  SiteForaDaConta,
   type Recurso,
   type ModoFormulario,
   type EventoDiagnostico,
 } from '@/server/services/onboarding';
 import type { EstadoFormulario } from '@/components/Formulario';
+
+/**
+ * O `siteId` vem do FORMULÁRIO, não da URL — um campo oculto, que quem manda a
+ * requisição controla. Server Action não é rota: o Next não valida esse valor
+ * contra o `[siteId]` do caminho, e nada impede mandar o id de um site de outra
+ * conta.
+ *
+ * Os serviços agora recusam isso (`SiteForaDaConta`). Esta função é o que faz a
+ * recusa virar mensagem na tela em vez de erro 500 — e, principalmente, o que
+ * impede a ação de responder "salvo" para uma gravação que não aconteceu.
+ *
+ * A mensagem não distingue "não é seu" de "não existe": distinguir confirmaria a
+ * existência de um registro alheio para quem tem só o identificador.
+ */
+const FORA_DA_CONTA = 'Site não encontrado nesta conta.';
+
+function ehForaDaConta(erro: unknown): boolean {
+  return erro instanceof SiteForaDaConta;
+}
 
 /**
  * Ações do assistente de configuração.
@@ -38,14 +58,33 @@ function revalidar(siteId: string) {
 
 // ───────────────────────── etapa 1: identificação ─────────────────────────
 
+/**
+ * Endereço absoluto http(s), ou nada.
+ *
+ * Era só `string().max(512)`. O valor é gravado e depois passado a `new URL()`
+ * no Server Component da tela de configuração — e `new URL('meusite.com')`
+ * **lança**, porque não há esquema. O resultado não era um campo feio: era a
+ * etapa de verificação quebrada de forma permanente, com erro de renderização,
+ * e sem caminho de volta pela própria tela para corrigir o valor que a quebrou.
+ *
+ * `URL.canParse` faz o mesmo teste que o consumidor vai fazer, então não existe
+ * a fresta entre "passou na validação" e "o consumidor aceitou".
+ */
+const URL_PRINCIPAL_INVALIDA =
+  'Informe o endereço completo, começando com https:// — exemplo: https://meucliente.com.br/';
+
+const UrlPrincipal = z
+  .string()
+  .trim()
+  .max(512)
+  .refine(
+    (v) => v === '' || (URL.canParse(v) && /^https?:$/.test(new URL(v).protocol)),
+    URL_PRINCIPAL_INVALIDA,
+  );
+
 const Identificacao = SiteEntrada.extend({
   plataforma: z.enum(['wordpress', 'react_next', 'html', 'desconhecida']),
-  urlPrincipal: z
-    .string()
-    .trim()
-    .max(512)
-    .optional()
-    .or(z.literal('')),
+  urlPrincipal: UrlPrincipal.optional().or(z.literal('')),
 });
 
 export type EstadoIdentificacao = EstadoFormulario & {
@@ -134,7 +173,13 @@ export async function salvarEscolhaDeRecursos(
   const siteId = String(dados.get('siteId') ?? '');
   const escolhidos = RECURSOS.filter((r) => dados.get(`recurso:${r}`) === 'on') as Recurso[];
 
-  await salvarRecursos(usuario.accountId, siteId, escolhidos);
+  try {
+    await salvarRecursos(usuario.accountId, siteId, escolhidos);
+  } catch (erro) {
+    if (ehForaDaConta(erro)) return { erro: FORA_DA_CONTA };
+    throw erro;
+  }
+
   revalidar(siteId);
   return {
     ok: true,
@@ -165,6 +210,12 @@ export async function iniciarDiagnostico(
   const siteId = String(dados.get('siteId') ?? '');
   const base = String(dados.get('base') ?? '');
 
+  // `base` chega por campo oculto. `new URL` sobre texto qualquer lança, e a
+  // Action devolveria 500 em vez de uma mensagem.
+  if (!URL.canParse(base)) {
+    return { erro: 'Endereço de diagnóstico inválido. Confira a URL principal na etapa 1.' };
+  }
+
   try {
     const sessao = await abrirDiagnostico(usuario.accountId, siteId);
     const url = new URL(base);
@@ -172,6 +223,7 @@ export async function iniciarDiagnostico(
     revalidar(siteId);
     return { token: sessao.token, url: url.toString() };
   } catch (erro) {
+    if (ehForaDaConta(erro)) return { erro: FORA_DA_CONTA };
     console.error('[onboarding] falha ao abrir diagnóstico', erro);
     return { erro: 'Não foi possível abrir a sessão de diagnóstico.' };
   }
@@ -204,6 +256,7 @@ export async function conferirDiagnostico(
       conferidoEm: new Date().toISOString(),
     };
   } catch (erro) {
+    if (ehForaDaConta(erro)) return { ...anterior, erro: FORA_DA_CONTA };
     console.error('[onboarding] falha ao conferir diagnóstico', erro);
     return { ...anterior, erro: 'Não foi possível consultar os eventos recebidos.' };
   }
@@ -223,18 +276,23 @@ export async function salvarFormulario(
     return { erro: 'Escolha como o formulário funciona.' };
   }
 
-  await salvarModoFormulario(usuario.accountId, siteId, modo as ModoFormulario);
+  try {
+    await salvarModoFormulario(usuario.accountId, siteId, modo as ModoFormulario);
 
-  // "Plugin ou serviço externo" não tem conector implementado neste projeto.
-  // Dizer isso é melhor que oferecer uma integração que não existe: o registro
-  // de erro faz a etapa aparecer como pendência real, com o motivo à vista.
-  if (modo === 'externo') {
-    await registrarErroDeRecurso(
-      usuario.accountId,
-      siteId,
-      'formularios',
-      'Nenhum conector para serviço externo está implementado. O envio precisa chegar ao endpoint de formulários do painel.',
-    );
+    // "Plugin ou serviço externo" não tem conector implementado neste projeto.
+    // Dizer isso é melhor que oferecer uma integração que não existe: o registro
+    // de erro faz a etapa aparecer como pendência real, com o motivo à vista.
+    if (modo === 'externo') {
+      await registrarErroDeRecurso(
+        usuario.accountId,
+        siteId,
+        'formularios',
+        'Nenhum conector para serviço externo está implementado. O envio precisa chegar ao endpoint de formulários do painel.',
+      );
+    }
+  } catch (erro) {
+    if (ehForaDaConta(erro)) return { erro: FORA_DA_CONTA };
+    throw erro;
   }
 
   revalidar(siteId);
@@ -250,7 +308,14 @@ export async function conferirQualidade(
   const usuario = await exigirSessao();
   const siteId = String(dados.get('siteId') ?? '');
 
-  const ok = await verificarQualidade(usuario.accountId, siteId);
+  let ok: boolean;
+  try {
+    ok = await verificarQualidade(usuario.accountId, siteId);
+  } catch (erro) {
+    if (ehForaDaConta(erro)) return { erro: FORA_DA_CONTA };
+    throw erro;
+  }
+
   revalidar(siteId);
   return ok
     ? { ok: true, mensagem: 'Análise técnica encontrada e registrada como verificada.' }

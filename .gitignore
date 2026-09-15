@@ -9,3 +9,6 @@ next-env.d.ts
 playwright-report/
 test-results/
 coverage/
+
+# Cache do vitest (gerado ao usar --outputFile / --reporter=json).
+.vitest/

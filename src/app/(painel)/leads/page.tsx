@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { withAccount } from '@/server/db';
 import { contextoPainel, type ParametrosBusca } from '@/server/contexto';
+import { getFunilDeLeads } from '@/server/metrics/queries';
 import { num, dataHora, mascararEmail } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso } from '@/components/Cartoes';
+import { Funil, ForaDoFunil } from '@/components/Funil';
 import { Tabela, type Coluna } from '@/components/Tabela';
 import { SeletorPeriodo, SeletorSite } from '@/components/filtros';
 
@@ -47,8 +49,11 @@ export default async function PaginaLeads({ searchParams }: { searchParams: Prom
     );
   }
 
-  const linhas = await withAccount(ctx.usuario.accountId, async (db) =>
-    db.query<LinhaLead>(
+  // Uma transação só, sequencial: as duas consultas compartilham a mesma conexão
+  // e o driver `pg` não aceita duas simultâneas no mesmo client.
+  const { linhas, funil } = await withAccount(ctx.usuario.accountId, async (db) => {
+    const funil = await getFunilDeLeads(db, site, periodo);
+    const linhas = await db.query<LinhaLead>(
       `select l.id,
               l.name  as nome,
               l.email,
@@ -71,8 +76,9 @@ export default async function PaginaLeads({ searchParams }: { searchParams: Prom
         order by l.first_seen_at desc
         limit 200`,
       [site.id, periodo.from, periodo.to],
-    ),
-  );
+    );
+    return { linhas, funil };
+  });
 
   const colunas: Coluna<LinhaLead>[] = [
     { chave: 'quando', titulo: 'Recebido em', mono: true, render: (l) => dataHora(l.primeiroEm),
@@ -116,6 +122,26 @@ export default async function PaginaLeads({ searchParams }: { searchParams: Prom
       />
 
       <div className="pagina">
+        <Painel
+          kicker="QUALIDADE DOS LEADS"
+          titulo="De visita a contato"
+          subtitulo="Cada etapa está contida na anterior, e todas contam SESSÕES — não pessoas, não envios."
+          acoes={
+            <Link href={`/sites/${site.id}/comportamento${ctx.busca}`}>Ver comportamento →</Link>
+          }
+        >
+          <Funil funil={funil} />
+          <ForaDoFunil funil={funil} />
+          {/* A ressalva não é rodapé legal: é o erro de leitura mais provável
+              desta tela. Ver queda entre duas etapas e concluir "o formulário
+              está ruim" é justamente o que o painel não pode afirmar. */}
+          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 14, lineHeight: 1.5 }}>
+            O funil conta quantas sessões chegaram a cada ponto. Ele não diz por que as outras
+            pararam — para isso é preciso olhar as páginas, os botões e a qualidade técnica do site,
+            que ficam em abas próprias.
+          </p>
+        </Painel>
+
         <Painel
           titulo="Contatos recebidos"
           subtitulo={`Derivados das submissões confirmadas de ${site.name}`}

@@ -85,12 +85,58 @@ export const ESPERADO_ALFA_7D = {
   leads: 3,
 } as const;
 
+/**
+ * Funil de qualidade dos leads do site Alfa em 7 dias.
+ *
+ * Confira sessão a sessão em SESSOES_ALFA: das oito, só a quinta (v5, dois dias
+ * atrás) não clica nem envia. As três que enviam (v3, v1 e v6) trazem contatos
+ * que não existiam antes — ana, bruno e carla — e nenhum deles tem telefone.
+ */
+export const ESPERADO_FUNIL_ALFA_7D = {
+  sessoes: 8,
+  /** Sete: todas menos v5, que só viu duas páginas. */
+  interagiram: 7,
+  enviaram: 3,
+  contatoNovo: 3,
+  leadsDistintos: 3,
+  enviosSemSessao: 0,
+  enviosDeContatoConhecido: 0,
+  /** A massa de Alfa só grava e-mail. O caso com os dois está em Beta. */
+  leadsComOsDoisContatos: 0,
+} as const;
+
+/**
+ * Funil do site Beta em 7 dias.
+ *
+ * Existe por causa de b3, que envia sem clicar: aqui `interagiram` (2) só é
+ * maior ou igual a `enviaram` (2) porque a etapa soma cliques E envios. Se
+ * alguém trocar a definição por "clicou em CTA", este teste quebra com 1 < 2 —
+ * um funil que se inverte.
+ */
+export const ESPERADO_FUNIL_BETA_7D = {
+  sessoes: 3,
+  interagiram: 2,
+  enviaram: 2,
+  contatoNovo: 2,
+  leadsDistintos: 2,
+  enviosSemSessao: 0,
+  enviosDeContatoConhecido: 0,
+  /** Só Elis tem e-mail e telefone. */
+  leadsComOsDoisContatos: 1,
+} as const;
+
 type EspecSessao = {
   visitante: string;
   diasAtras: number;
   vistas: string[];
   cliques: { subtipo: string; botao: string; texto: string; posicao: string }[];
-  envios: { email: string; nome: string }[];
+  /**
+   * `telefone` é opcional de propósito: a diferença entre um contato com um só
+   * caminho e um com os dois é o que o funil de qualidade mede, e sem um caso
+   * de cada na massa esse indicador seria sempre zero — um número que não pode
+   * variar não prova consulta nenhuma.
+   */
+  envios: { email: string; nome: string; telefone?: string }[];
 };
 
 /**
@@ -152,12 +198,26 @@ const SESSOES_ALFA: EspecSessao[] = [
     envios: [] },
 ];
 
-/** Site Beta: pouca coisa, só para provar que os filtros separam os sites. */
+/**
+ * Site Beta: pouca coisa, só para provar que os filtros separam os sites — e um
+ * caso que só existe aqui.
+ *
+ * A terceira sessão ENVIA SEM CLICAR EM NADA. É o caso que justifica a etapa
+ * "interagiram" do funil ser "clicou OU enviou": se ela fosse só "clicou", esta
+ * sessão ficaria de fora e a etapa seguinte (enviaram) seria MAIOR que ela — um
+ * funil invertido, desenhando perda onde não houve. Em Alfa toda sessão que
+ * envia também clica, então nenhum teste sobre Alfa perceberia o erro.
+ *
+ * Essa sessão é também o único contato da massa com e-mail E telefone.
+ */
 const SESSOES_BETA: EspecSessao[] = [
   { visitante: 'b1', diasAtras: 2, vistas: ['/'], cliques: [], envios: [] },
   { visitante: 'b2', diasAtras: 1, vistas: ['/', '/orcamento'],
     cliques: [{ subtipo: 'whatsapp', botao: 'cta-whatsapp-hero', texto: 'Falar no WhatsApp', posicao: 'Hero' }],
     envios: [{ email: 'davi@teste.com', nome: 'Davi Teste' }] },
+  { visitante: 'b3', diasAtras: 1, vistas: ['/orcamento'],
+    cliques: [],
+    envios: [{ email: 'elis@teste.com', nome: 'Elis Teste', telefone: '11999990000' }] },
 ];
 
 /** Site da conta rival: existe só para os testes de isolamento. */
@@ -278,11 +338,13 @@ export async function prepararBancoDeTeste(): Promise<void> {
         const pageId = await garantir(spec.vistas[spec.vistas.length - 1]!);
         const chave = `email:${envio.email}`;
         const lead = await db.query<{ id: string }>(
-          `insert into leads (account_id, site_id, client_id, name, email, dedupe_key, first_seen_at, last_seen_at)
-                values ($1,$2,$3,$4,$5,$6,$7,$7)
+          `insert into leads (account_id, site_id, client_id, name, email, phone, dedupe_key,
+                              first_seen_at, last_seen_at)
+                values ($1,$2,$3,$4,$5,$6,$7,$8,$8)
            on conflict (site_id, dedupe_key) do update set last_seen_at = excluded.last_seen_at
              returning id`,
-          [accountId, siteId, clientId, envio.nome, envio.email, chave, new Date(inicio.getTime() + 600_000)],
+          [accountId, siteId, clientId, envio.nome, envio.email, envio.telefone ?? null, chave,
+           new Date(inicio.getTime() + 600_000)],
         );
         await db.query(
           `insert into form_submissions (account_id, site_id, session_id, page_id, lead_id, form_name,

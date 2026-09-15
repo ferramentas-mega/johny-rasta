@@ -45,10 +45,17 @@ const EVENTS = `
      where not e.is_test
   )`;
 
-/** Submissões confirmadas recebidas na janela. */
+/**
+ * Submissões confirmadas recebidas na janela.
+ *
+ * `lead_id` entra aqui porque o funil de qualidade precisa ligar a submissão ao
+ * contato. As demais consultas ignoram a coluna — mas manter UMA definição de
+ * "submissões elegíveis" é o que impede duas telas discordarem sobre quantos
+ * formulários chegaram.
+ */
 const SUBMISSIONS = `
   subs as (
-    select fs.id, fs.session_id, fs.page_id, fs.form_name, fs.created_at
+    select fs.id, fs.session_id, fs.page_id, fs.form_name, fs.created_at, fs.lead_id
       from form_submissions fs
      where fs.site_id = $1
        and fs.created_at >= $2
@@ -397,6 +404,173 @@ export async function getBehavior(
     entradas,
     profundidade,
     porHora,
+  };
+}
+
+// ───────────────────────── funil de leads ─────────────────────────
+
+export type EtapaDoFunil = {
+  chave: 'sessoes' | 'interagiram' | 'enviaram' | 'contatoNovo';
+  rotulo: string;
+  /** O que esta etapa afirma, palavra por palavra. Vai para a tela. */
+  definicao: string;
+  sessoes: number;
+};
+
+export type FunilDeLeads = {
+  etapas: EtapaDoFunil[];
+  /**
+   * Leads DISTINTOS originados das submissões da janela.
+   *
+   * Fica fora das etapas de propósito: a unidade é outra. Uma etapa do funil
+   * conta sessões; um lead pode nascer de duas sessões (a pessoa voltou) e duas
+   * sessões podem virar um lead só. Misturar as duas unidades numa barra faria a
+   * última etapa parecer menor do que a anterior por um motivo que não é perda.
+   */
+  leadsDistintos: number;
+  /**
+   * Submissões confirmadas SEM sessão associada.
+   *
+   * O endpoint de formulários aceita contato sem identificador de visitante —
+   * quem bloqueia analytics, recusou consentimento ou está com o coletor fora do
+   * ar continua virando lead. Esses envios não cabem em nenhuma etapa deste
+   * funil, que é medido por sessão. Omiti-los faria o painel afirmar menos leads
+   * do que existem, então o número aparece ao lado, nomeado.
+   */
+  enviosSemSessao: number;
+  /**
+   * Envios de quem o site JÁ conhecia — contato visto pela primeira vez antes
+   * desta janela.
+   *
+   * Não é perda, e por isso não é etapa: é o mesmo cliente voltando. Aparece
+   * separado porque explica a diferença entre "enviaram" e "contato novo" sem
+   * que ela pareça uma falha do formulário.
+   */
+  enviosDeContatoConhecido: number;
+  /**
+   * Leads da janela com e-mail **e** telefone.
+   *
+   * O único indicador aqui que fala de qualidade do dado em si. Um contato com
+   * os dois caminhos abertos vale mais para quem vai atender do que um com só
+   * um — e é a diferença entre os dois números que diz se vale a pena pedir o
+   * segundo campo no formulário.
+   */
+  leadsComOsDoisContatos: number;
+};
+
+/**
+ * Funil da qualidade dos leads, medido em sessões.
+ *
+ * **Cada etapa é um subconjunto estrito da anterior**, e isso é a única razão de
+ * o desenho em funil não mentir. A tentação era montar as etapas com os
+ * indicadores que já existem — sessões, aberturas de formulário, formulários
+ * enviados, leads — mas "abriu o formulário" e "enviou o formulário" são
+ * conjuntos que se cruzam sem um conter o outro: um formulário visível na página
+ * é enviado sem nunca disparar o evento de abertura. Um funil cuja segunda etapa
+ * pode ser menor que a terceira desenha uma perda que não aconteceu.
+ *
+ * Por isso a etapa de interesse é "clicou em algo OU enviou", que contém a de
+ * envio por construção, e a última é "o envio virou contato identificável", que
+ * é um recorte dos envios.
+ *
+ * O que o funil NÃO afirma: que a queda entre duas etapas tem uma causa. Ele
+ * conta quantas sessões chegaram a cada ponto. Por que pararam é outra pergunta,
+ * e o painel não a responde.
+ */
+export async function getFunilDeLeads(
+  db: Queryable,
+  site: SiteContext,
+  period: ResolvedPeriod,
+): Promise<FunilDeLeads> {
+  const linha = await db.one<{
+    sessoes: number;
+    interagiram: number;
+    enviaram: number;
+    contatoNovo: number;
+    leadsDistintos: number;
+    enviosSemSessao: number;
+    enviosDeContatoConhecido: number;
+    leadsComOsDoisContatos: number;
+  }>(
+    `with ${ELIGIBLE}, ${EVENTS}, ${SUBMISSIONS},
+     -- Sessões com submissão confirmada. Base das duas últimas etapas.
+     comEnvio as (
+       select distinct session_id from subs where session_id is not null
+     ),
+     -- Sessões cujo envio trouxe um contato que o site ainda não conhecia.
+     -- first_seen_at é gravado na criação do lead e o upsert NÃO o toca, então
+     -- ele continua sendo a primeira vez, mesmo depois de dez envios.
+     comContatoNovo as (
+       select distinct s.session_id
+         from subs s
+         join leads l on l.id = s.lead_id
+        where s.session_id is not null
+          and l.first_seen_at >= $2
+     ),
+     -- Clicou em qualquer CTA. Une-se aos envios para formar a etapa de
+     -- interesse, que precisa conter a de envio.
+     comClique as (
+       select distinct session_id from ev where type = 'cta_click'
+     )
+     select
+       (select count(*) from eligible)::int                                      as "sessoes",
+       (select count(*) from eligible e
+         where e.id in (select session_id from comClique)
+            or e.id in (select session_id from comEnvio))::int                   as "interagiram",
+       (select count(*) from eligible e
+         where e.id in (select session_id from comEnvio))::int                   as "enviaram",
+       (select count(*) from eligible e
+         where e.id in (select session_id from comContatoNovo))::int             as "contatoNovo",
+       (select count(distinct lead_id) from subs where lead_id is not null)::int as "leadsDistintos",
+       (select count(*) from subs where session_id is null)::int                 as "enviosSemSessao",
+       (select count(*) from subs s join leads l on l.id = s.lead_id
+         where l.first_seen_at < $2)::int                          as "enviosDeContatoConhecido",
+       (select count(distinct l.id) from subs s join leads l on l.id = s.lead_id
+         where nullif(trim(l.email), '') is not null
+           and nullif(trim(l.phone), '') is not null)::int          as "leadsComOsDoisContatos"`,
+    [site.id, period.from, period.to],
+  );
+
+  if (!linha) throw new Error('Falha ao montar o funil de leads.');
+
+  return {
+    etapas: [
+      {
+        chave: 'sessoes',
+        rotulo: 'Sessões',
+        definicao: 'Visitas registradas no período, sem contar acessos de teste.',
+        sessoes: linha.sessoes,
+      },
+      {
+        chave: 'interagiram',
+        rotulo: 'Interagiram',
+        definicao:
+          'Sessões que clicaram em algum CTA ou enviaram um formulário. Conter o envio é ' +
+          'proposital: um formulário na própria página é enviado sem clique de abertura, e ' +
+          'sem isso esta etapa poderia ficar menor que a seguinte.',
+        sessoes: linha.interagiram,
+      },
+      {
+        chave: 'enviaram',
+        rotulo: 'Enviaram formulário',
+        definicao:
+          'Sessões com ao menos uma submissão confirmada pelo servidor. Tentativa que ' +
+          'falhou ao gravar não entra aqui.',
+        sessoes: linha.enviaram,
+      },
+      {
+        chave: 'contatoNovo',
+        rotulo: 'Trouxeram contato novo',
+        definicao:
+          'Sessões cujo envio trouxe um contato que este site ainda não conhecia. A ' +
+          'diferença para a etapa anterior é gente voltando, não formulário falhando.',
+        sessoes: linha.contatoNovo,
+      },
+    ],
+    leadsDistintos: linha.leadsDistintos,
+    enviosSemSessao: linha.enviosSemSessao,
+    enviosDeContatoConhecido: linha.enviosDeContatoConhecido,
+    leadsComOsDoisContatos: linha.leadsComOsDoisContatos,
   };
 }
 

@@ -2,6 +2,7 @@ import 'server-only';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { withAccount } from '@/server/db';
+import { FUSO_PADRAO, MENSAGEM_FUSO_INVALIDO, fusoValido } from '@/lib/fusos';
 
 /**
  * Cadastro de clientes e sites.
@@ -27,7 +28,20 @@ export const SiteEntrada = z.object({
     .max(253)
     .transform((v) => v.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase())
     .refine((v) => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(v), 'Domínio inválido. Exemplo: meucliente.com.br'),
-  fuso: z.string().trim().min(3).max(64).default('America/Sao_Paulo'),
+  /**
+   * Validado contra a lista, não contra um tamanho.
+   *
+   * Era `z.string().min(3).max(64)`, ou seja, qualquer texto. O valor vai para
+   * `at time zone <fuso>` nas consultas de período: um nome que o Postgres não
+   * conhece lança, e a exceção derruba as telas do site E a visão geral da
+   * conta, que percorre todos os sites. O `<select>` da interface não protege
+   * nada — uma Server Action recebe o que mandarem no corpo.
+   */
+  fuso: z
+    .string()
+    .trim()
+    .default(FUSO_PADRAO)
+    .refine(fusoValido, MENSAGEM_FUSO_INVALIDO),
 });
 export type SiteEntrada = z.infer<typeof SiteEntrada>;
 

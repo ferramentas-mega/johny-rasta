@@ -104,12 +104,52 @@ export async function obterConfiguracaoNaTransacao(
 
 // ───────────────────────── escrita ─────────────────────────
 
+/**
+ * Erro de site que não é desta conta — ou que não existe.
+ *
+ * As duas situações devolvem a mesma coisa, de propósito: distinguir "não é seu"
+ * de "não existe" confirma a existência de um registro alheio a quem só tem o
+ * identificador.
+ */
+export class SiteForaDaConta extends Error {
+  constructor() {
+    super('Site não encontrado nesta conta.');
+    this.name = 'SiteForaDaConta';
+  }
+}
+
+/**
+ * Exige que o site pertença à conta da transação. Lança se não pertencer.
+ *
+ * **Por que isto precisa existir, se há RLS.** A RLS de `site_features` casa por
+ * `account_id`, e o valor gravado ali vem de `app.current_account_id()` — o da
+ * conta que está escrevendo. Ou seja: a política aprova a linha, porque a linha
+ * É da conta certa. O que ela não olha é o `site_id`, que vem do formulário.
+ *
+ * O resultado, antes desta guarda: um usuário autenticado da conta A mandava a
+ * Server Action com o `siteId` de um site da conta B e criava a linha
+ * (A, site-de-B, 'visitas'). A FK aceitava, porque o site existe. A RLS aceitava,
+ * porque o `account_id` é o de A. E como `site_features` tem `unique (site_id,
+ * feature)`, **o dono legítimo ficava impedido de gravar o próprio recurso para
+ * sempre** — contra uma linha que a política esconde dele, então nem o erro fazia
+ * sentido do lado de lá. Uma negação de serviço entre clientes, aberta a qualquer
+ * um com uma sessão válida e um id.
+ *
+ * A consulta roda sob RLS: `sites` só devolve os sites da conta corrente, então
+ * site de outra conta e site inexistente dão o mesmo "nenhuma linha".
+ */
+async function exigirSiteDaConta(db: Queryable, siteId: string): Promise<void> {
+  const site = await db.one<{ id: string }>('select id from sites where id = $1', [siteId]);
+  if (!site) throw new SiteForaDaConta();
+}
+
 export async function salvarRecursos(
   accountId: string,
   siteId: string,
   escolhidos: Recurso[],
 ): Promise<void> {
   await withAccount(accountId, async (db) => {
+    await exigirSiteDaConta(db, siteId);
     for (const recurso of RECURSOS) {
       await db.query(
         `insert into site_features (account_id, site_id, feature, selecionado, atualizado_em)
@@ -129,6 +169,11 @@ export async function salvarModoFormulario(
   modo: ModoFormulario,
 ): Promise<void> {
   await withAccount(accountId, async (db) => {
+    // A RLS já faria este UPDATE afetar zero linhas num site de outra conta —
+    // mas zero linhas afetadas, sem ninguém olhar, virava "Configuração salva"
+    // na tela. Confirmar uma gravação que não aconteceu é o mesmo defeito de
+    // sempre: falha que vira sucesso.
+    await exigirSiteDaConta(db, siteId);
     await db.query('update sites set form_mode = $2 where id = $1', [siteId, modo]);
   });
 }
@@ -165,6 +210,7 @@ export async function registrarErroDeRecurso(
   erro: string,
 ): Promise<void> {
   await withAccount(accountId, async (db) => {
+    await exigirSiteDaConta(db, siteId);
     await db.query(
       `insert into site_features (account_id, site_id, feature, selecionado, erro, atualizado_em)
             values (app.current_account_id(), $1, $2, true, $3, now())
@@ -180,6 +226,11 @@ export async function verificarDiagnostico(
   token: string,
 ): Promise<ResultadoVerificacao> {
   return withAccount(accountId, async (db) => {
+    // Esta função ESCREVE (`carimbarVerificado`), e a escrita não confere o dono
+    // do site — o `account_id` gravado é o de quem chama. Sem a guarda, um id
+    // alheio no formulário criava linha de `site_features` no site de outro.
+    await exigirSiteDaConta(db, siteId);
+
     const eventos = await db.query<EventoDiagnostico>(
       `select e.type as tipo, e.subtype as subtipo, p.path as caminho,
               e.occurred_at as quando, e.button_id as botao
@@ -234,6 +285,7 @@ export async function verificarDiagnostico(
  */
 export async function verificarQualidade(accountId: string, siteId: string): Promise<boolean> {
   return withAccount(accountId, async (db) => {
+    await exigirSiteDaConta(db, siteId);
     const ultima = await db.one<{ url_solicitada: string; performance: string | null; medido_em: Date }>(
       `select url_solicitada, performance, medido_em from lighthouse_results
         where site_id = $1 and performance is not null
@@ -261,6 +313,7 @@ export async function verificarQualidade(accountId: string, siteId: string): Pro
  */
 export async function abrirDiagnostico(accountId: string, siteId: string): Promise<SessaoDiagnostico> {
   return withAccount(accountId, async (db) => {
+    await exigirSiteDaConta(db, siteId);
     const token = `diag_${randomBytes(9).toString('hex')}`;
     const linha = await db.one<{ id: string; aberta_em: Date }>(
       `insert into diagnostic_sessions (account_id, site_id, token)

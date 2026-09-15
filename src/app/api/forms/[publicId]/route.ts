@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withForms } from '@/server/db';
 import { SubmissaoRecebida, resolverSite, registrarSubmissao } from '@/server/services/ingestao';
+import { CORPO_MAXIMO, LIMITES, consumirLimite, corpoGrandeDemais, talvezLimpar } from '@/server/limites';
 
 /**
  * Recebimento de formulários.
@@ -34,6 +35,10 @@ export async function OPTIONS(request: Request) {
 export async function POST(request: Request, { params }: { params: Promise<{ publicId: string }> }) {
   const cabecalhos = cors(request.headers.get('origin'));
   const { publicId } = await params;
+
+  if (corpoGrandeDemais(request, CORPO_MAXIMO.formulario)) {
+    return NextResponse.json({ ok: false, erro: 'Corpo grande demais.' }, { status: 413, headers: cabecalhos });
+  }
 
   let corpo: unknown;
   try {
@@ -70,12 +75,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ pub
   try {
     const resultado = await withForms(async (db) => {
       const site = await resolverSite(db, publicId);
-      if (!site) return null;
-      return registrarSubmissao(db, site, analise.data);
+      if (!site) return { tipo: 'sem_site' as const };
+
+      // Por site, e depois de resolvê-lo: cobrar pelo identificador cru deixaria
+      // qualquer um encher a tabela de contadores com valores inventados.
+      const limite = await consumirLimite(db, `forms:${site.id}`, LIMITES.formularios);
+      if (!limite.permitido) return { tipo: 'excedido' as const, esperar: limite.esperarSegundos };
+
+      await talvezLimpar(db);
+      return { tipo: 'ok' as const, dados: await registrarSubmissao(db, site, analise.data) };
     });
 
-    if (!resultado) {
+    if (resultado.tipo === 'sem_site') {
       return NextResponse.json({ ok: false, erro: 'Site não encontrado.' }, { status: 404, headers: cabecalhos });
+    }
+    if (resultado.tipo === 'excedido') {
+      // O texto fala com quem preencheu o formulário, não com quem programou:
+      // diz o que aconteceu e o que fazer, sem culpar a pessoa.
+      return NextResponse.json(
+        { ok: false, erro: 'Recebemos muitos envios deste site agora há pouco. Tente de novo em alguns minutos.' },
+        { status: 429, headers: { ...cabecalhos, 'Retry-After': String(resultado.esperar) } },
+      );
     }
 
     return NextResponse.json(
@@ -83,8 +103,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pub
         ok: true,
         // `duplicada` deixa explícito que o reenvio foi reconhecido e não gerou
         // um segundo lead. O chamador vê sucesso, e a base não infla.
-        duplicada: resultado.duplicada,
-        submissao: resultado.submissionId,
+        duplicada: resultado.dados.duplicada,
+        submissao: resultado.dados.submissionId,
       },
       { status: 201, headers: cabecalhos },
     );

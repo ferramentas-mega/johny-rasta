@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { Campo, Selecao, BotaoSubmeter, BotaoSecundario, Retorno } from '@/components/Formulario';
 import { PLATAFORMA_LABEL, type Plataforma } from '@/lib/recursos';
+import { FUSOS } from '@/lib/fusos';
 import { salvarIdentificacao, criarClienteRapido, type EstadoIdentificacao } from './acoes';
 import type { EstadoFormulario } from '@/components/Formulario';
 
@@ -11,12 +12,6 @@ import type { EstadoFormulario } from '@/components/Formulario';
 type EstadoCliente = EstadoFormulario & { clienteId?: string };
 const CLIENTE_VAZIO: EstadoCliente = {};
 
-/** Fusos do Brasil. Lista curta de propósito: cobre os casos reais sem virar um seletor de 400 itens. */
-const FUSOS = [
-  'America/Sao_Paulo', 'America/Bahia', 'America/Fortaleza', 'America/Recife',
-  'America/Belem', 'America/Manaus', 'America/Cuiaba', 'America/Campo_Grande',
-  'America/Porto_Velho', 'America/Rio_Branco', 'America/Noronha', 'UTC',
-];
 
 const ESTADO_INICIAL: EstadoIdentificacao = {};
 

@@ -82,8 +82,21 @@ export default async function PaginaConfigurar({
   const snippet = `<script async src="${endpoint}/t.js"\n        data-site="${site.publicId}"></script>`;
   const instrucao = instrucaoDaPlataforma(config.plataforma);
 
-  // A base do diagnóstico: a URL principal, quando existe, senão o domínio.
-  const urlBase = config.urlPrincipal ?? `https://${site.domain}/`;
+  /**
+   * A base do diagnóstico: a URL principal, quando existe e é utilizável, senão
+   * o domínio.
+   *
+   * O `canParse` não é zelo excessivo. A validação de entrada passou a exigir um
+   * endereço absoluto, mas linhas gravadas ANTES dela continuam no banco — e
+   * aqui `new URL()` roda no render de um Server Component, onde uma exceção não
+   * é um campo com erro: é a tela inteira fora do ar, justamente a tela onde se
+   * corrigiria o valor. Cair para o domínio é o comportamento certo, porque é
+   * exatamente o que a tela faz quando não há URL principal nenhuma.
+   */
+  const urlBase =
+    config.urlPrincipal && URL.canParse(config.urlPrincipal)
+      ? config.urlPrincipal
+      : `https://${site.domain}/`;
 
   // A sessão de diagnóstico aberta vem do banco, e não do estado do formulário:
   // é o que faz recarregar a etapa 4 preservar o token em vez de descartar os

@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:prod": "next build && E2E_PROD=1 playwright test",
     "setup": "tsx scripts/setup.ts",
     "doctor": "tsx scripts/diagnostico.ts",
     "producao": "tsx scripts/producao.ts"

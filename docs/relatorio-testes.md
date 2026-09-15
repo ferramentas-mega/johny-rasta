@@ -89,6 +89,21 @@ Rodam contra o banco de testes, com transações reais e RLS ativa.
 | `app_forms` não altera submissões gravadas | GRANT |
 | `app_ingest` não apaga eventos | GRANT |
 
+Acrescentados nesta rodada dois grupos, **e os dois foram verificados desligando a correção**:
+
+- **Escrever no site de outra conta.** As Actions do assistente recebem o `siteId` por campo oculto,
+  e a RLS não barrava: a política de `site_features` casa por `account_id`, cujo valor gravado vem de
+  `app.current_account_id()` — o de quem escreve. A linha `(conta A, site da conta B, 'visitas')`
+  passava. Com a guarda desligada, 5 testes falham; entre eles o caso de controle "no PRÓPRIO site, a
+  mesma chamada grava normalmente", que quebra porque a linha intrusa do teste anterior **trancou o
+  dono legítimo** via `unique (site_id, feature)`. A negação de serviço entre contas se reproduz
+  sozinha na suíte.
+- **O cron enxerga a fila.** Confirma que `withoutAccount` continua vendo zero (a RLS não foi
+  afrouxada) e que a função `SECURITY DEFINER` devolve a conta certa — e **só** o identificador da
+  conta, nunca a linha do job.
+
+---
+
 ### `ingestao.spec.ts`
 
 Normalização de caminhos, chave de deduplicação de lead, idempotência por `event_uid`, regra de
@@ -210,6 +225,36 @@ E as três regras do assistente que mais fáceis seriam de quebrar sem ninguém 
 | Copiar o código **não** conclui a instalação | A etapa 3 só fecha quando algum recurso do coletor aparece verificado, e verificação exige evento recebido |
 | Desmarcar um recurso reduz o pendente | O progresso é derivado, não contado. Um contador diria "etapa 5 de 7" para quem voltou e desmarcou tudo |
 
+### `funil.spec.ts`
+
+Funil de qualidade dos leads. O que estes testes protegem não é um número: é o **encaixe das
+etapas**. Cada uma tem de estar contida na anterior — um funil cuja segunda etapa pode ficar menor
+que a terceira desenha uma perda que não aconteceu.
+
+O caso decisivo está na massa do site Beta: a sessão `b3` **envia sem clicar em nada**. Com a etapa
+de interesse definida como "clicou em CTA", ela ficaria de fora e o número seria 1 contra 2 que
+enviaram. Em Alfa toda sessão que envia também clica, então nenhum teste sobre Alfa perceberia o
+erro. Há também o caso do site sem coleta, que devolve zeros sem inventar proporção.
+
+---
+
+### `limites.spec.ts`
+
+Limites de requisição. Contagem, independência entre chaves, segundos até a janela virar, e o teto
+de tamanho de corpo declarado.
+
+O grupo que importa é "acerto zera o contador". O limitador é cobrado a cada **tentativa**, inclusive
+as que dão certo — e sem zerar, quem entra onze vezes em cinco minutos leva a mesma trava da
+varredura de dicionário. Quem achou o defeito foi a suíte de navegador, que entra pelo `/entrar` em
+quase todo teste e travava em `waitForURL` a partir do décimo login da execução. Um dos casos
+verifica que zerar uma chave **não** zera as outras: um `delete` sem `where` passaria no teste
+anterior e falharia nesse.
+
+Inclui a negativa do banco: os papéis públicos têm `insert` e `update` em `rate_limits`, nunca
+`select` — sem isso, o endpoint de coleta de um site poderia contar as requisições de outro.
+
+---
+
 ### `periodo.spec.ts`
 
 Leitura dos parâmetros da URL, recorte no fuso do site (o dia de São Paulo começa às 03:00 UTC),
@@ -301,6 +346,18 @@ partes que ninguém mais toca: o botão de revelar alternando a senha **sem perd
 não interceptando ponteiro; credencial errada mostrando o erro e não entrando; e a asserção de que o
 cartão **não oferece caminho que não existe** — se "esqueci minha senha", "entrar com o Google" ou
 "criar conta" voltarem sem a implementação junto, este teste falha.
+
+### `seguranca.spec.ts`
+
+Cabeçalhos de segurança medidos **no navegador**, não lidos no `middleware.ts`: prova que eles
+chegam na resposta e que a CSP não recusa nada do que o painel precisa.
+
+O caso da política se declara **pulado** fora do modo de produção, em vez de passar sem ter medido
+nada. A razão está na medição: `next dev` compila com `eval`, e a mesma política acusa **4.536
+violações** ali contra **zero recusas** no `next start`. Um caso que passasse em ambos não estaria
+verificando a política — estaria verificando o ambiente.
+
+---
 
 ### `responsivo.spec.ts` (Pixel 5)
 
@@ -482,45 +539,81 @@ criados por SQL ou pelo seed.
 
 ## Resultado da última execução
 
-Preenchido a cada execução completa:
+Executada em 15/09/2026, lida linha a linha.
 
-- `npm run doctor` — ambiente íntegro
 - `npm run typecheck` — sem erros
 - `npm run lint` — sem avisos
-- `npm test` — **203 testes**, todos passando (13 arquivos)
+- `npm test` — **227 testes**, todos passando (15 arquivos, 9,0 s)
 
   | Arquivo | Testes | | Arquivo | Testes |
   |---|---|---|---|---|
-  | `conexao` | 42 | | `recursos` | 14 |
-  | `url-publica` | 31 | | `periodo` | 13 |
-  | `ingestao` | 20 | | `autorizacao` | 11 |
-  | `pagespeed` | 17 | | `fila-auditoria` | 10 |
-  | `metricas` | 14 | | `otimizacoes` | 9 |
-  | | | | `carteira` · `crux` | 8 · 8 |
-  | | | | `build` | 6 |
+  | `conexao` | 42 | | `periodo` | 13 |
+  | `url-publica` | 31 | | `limites` | 11 |
+  | `ingestao` | 20 | | `fila-auditoria` | 10 |
+  | `autorizacao` | 18 | | `otimizacoes` | 9 |
+  | `pagespeed` | 17 | | `carteira` · `crux` | 8 · 8 |
+  | `metricas` · `recursos` | 14 · 14 | | `build` · `funil` | 6 · 6 |
 
-  A soma por arquivo foi conferida contra o total (o relatório JSON do vitest, não a contagem
-  visual — numa rodada anterior eu reportei 79 onde eram 103).
+  Contagem tirada do relatório JSON do vitest, não da leitura da tela — numa rodada anterior eu
+  reportei 79 onde eram 103.
 
-- `npm run test:e2e` — **58 testes** (48 desktop + 10 celular), todos passando (5,9 min)
-- `npm run build` — build de produção concluído, **25 rotas**
-- `npm start` — servidor de produção respondendo
+- `npm run build` — build de produção concluído
+- `npm run test:e2e:prod` — **63 testes** (52 desktop + 11 celular), todos passando (2,3 min),
+  **contra `next start`** e com a CSP em modo bloqueio
 
-Verificado além da suíte, por execução real e não por leitura do código:
+### A suíte de navegador agora roda contra o pacote publicado
 
-- os seis caminhos de autorização dos endpoints de auditoria (tabela acima, em "o que NÃO foi
-  testado");
-- a tela de login nos dois temas e no celular, sem rolagem horizontal e sem erro de console, com a
-  chuva medida em pixels do canvas;
-- PageSpeed e CrUX contra as APIs de verdade, com os tempos e valores registrados neste documento.
+Mudança desta rodada, e não é detalhe de configuração. Rodar contra `next dev` tem duas
+consequências que só apareceram quando eu medi:
 
-Nota de honestidade, mantida de rodadas anteriores: numa delas eu reportei "55 passando" apoiado numa
-execução que ficou em segundo plano e cuja saída eu não li. Quando rodei de fato, um teste estava
-quebrado. Nesta rodada, duas conferências visuais minhas olharam para um build antigo, porque um
-`npm start` anterior ainda ocupava a porta e o novo falhava num log que eu não tinha aberto. As
-capturas foram refeitas contra o servidor certo, e a armadilha está no `CLAUDE.md`.
+1. **A CSP não pode ser avaliada ali.** O modo de desenvolvimento compila com `eval`: 4.536
+   violações contra zero recusas no `next start`. Medir no lugar errado teria me levado a acrescentar
+   `'unsafe-eval'` à política de produção.
+2. **O que se testa passa a ser o que vai ao ar.** O `next dev` compila sob demanda e serve código
+   diferente do publicado.
 
-Nota de honestidade: numa rodada anterior eu reportei "55 passando" apoiado numa execução que ficou
-em segundo plano e cuja saída eu não cheguei a ler. Quando rodei de fato, um teste estava quebrado —
-uma expectativa que envelheceu ao eu acrescentar um site à massa. Está corrigido, e a execução acima
-foi lida linha a linha.
+O CI foi reordenado junto: `build` antes de `Navegador`, e a suíte roda com `E2E_PROD=1`.
+
+### O CI estava vermelho havia cinco commits, por minha causa
+
+`playwright.config.ts` fixava `executablePath: '/opt/pw-browsers/chromium'` — o caminho do contêiner
+de desenvolvimento, que não existe no runner do GitHub. As 57 provas de navegador falhavam com
+"executable doesn't exist", sempre a mesma linha, nunca um defeito de produto. E o passo de `build`
+vinha **depois**, então era pulado: o CI parou de responder a pergunta para a qual foi criado, e eu
+continuei empurrando commits lendo verde na minha máquina.
+
+Hoje o caminho só é usado se o arquivo existir.
+
+### Defeitos que a própria suíte encontrou nesta rodada
+
+- **O limite de login contava acertos.** A partir do décimo login de uma execução, a suíte travava em
+  `waitForURL`: o limitador recusava o login correto. Um limitador que bloqueia quem sabe a senha não
+  está contendo força bruta.
+- **`column s.lead_id does not exist`.** A consulta do funil referenciava uma coluna que a CTE
+  compartilhada de submissões não selecionava. Apareceu como a tela de leads quebrada no log do
+  servidor, durante a execução.
+- **Duas fontes de verdade para o mesmo número.** `navegacao.spec.ts` trazia `toBe(2)` escrito à mão
+  para as sessões de Beta; ao entrar a sessão `b3` na massa, o teste quebrou. Hoje lê o valor de
+  `scripts/test-db.ts`.
+
+### Verificado além da suíte, por execução real
+
+- **A fila do cron**, com consulta direta ao banco: superusuário via 1 job pendente, `app_user` sem
+  conta via 0, `app_user` com conta via 1. É a medição que provou que os dois endpoints agendados
+  eram um no-op.
+- **A guarda de escrita entre contas**, desligando-a e conferindo que 5 testes falham — inclusive o
+  caso de controle, que quebra pela negação de serviço se reproduzindo ao vivo.
+- **Os seis caminhos de autorização** dos endpoints de auditoria.
+- **PageSpeed e CrUX** contra as APIs de verdade.
+
+### Notas de honestidade, mantidas
+
+Numa rodada anterior reportei "55 passando" apoiado numa execução que ficou em segundo plano e cuja
+saída eu não li; quando rodei de fato, um teste estava quebrado. Em outra, duas conferências visuais
+minhas olharam para um build antigo, porque um `npm start` anterior ainda ocupava a porta e o novo
+falhava num log que eu não tinha aberto.
+
+Nesta rodada aconteceu uma terceira variação do mesmo erro: rodei a suíte inteira com o pipe em
+`tail -60`, o que descartou a saída de que eu precisava **e** mascarou o código de saída. Reportei 11
+falhas sem conseguir explicar nenhuma. As execuções acima foram gravadas em arquivo, sem pipe, e
+lidas do começo.

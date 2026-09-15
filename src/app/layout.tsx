@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { inter, jetbrainsMono } from '@/fonts';
 import '@/styles/theme.css';
 
@@ -66,7 +67,16 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  /**
+   * O nonce da CSP, gerado pelo middleware a cada requisição.
+   *
+   * Sem ele no script de preferências, uma CSP com `script-src` estrito
+   * bloquearia justamente o script que evita a página piscar entre temas. O
+   * Next aplica o mesmo nonce aos scripts que ele próprio injeta.
+   */
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     // O script inline ajusta tema e efeitos antes da hidratação, então os
     // atributos do servidor e do cliente divergem por construção.
@@ -78,7 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: PREFERENCIAS }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: PREFERENCIAS }} />
       </head>
       <body>{children}</body>
     </html>

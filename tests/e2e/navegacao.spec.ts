@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { entrar, valorDoCartao, vigiarConsole, semErrosDeConsole } from './apoio';
+import { ESPERADO_FUNIL_BETA_7D } from '../../scripts/test-db';
 
 /**
  * Navegação, filtros e estado na URL.
@@ -94,7 +95,10 @@ test('trocar de site atualiza todos os módulos da tela', async ({ page }) => {
   await page.waitForURL(/beta|sites\//);
   await expect(page.locator('h1')).toHaveText('beta.teste');
 
-  expect(await valorDoCartao(page, 'sessoes')).toBe(2);
+  // Lido da massa, e não escrito à mão aqui: o número mudou quando a sessão b3
+  // (que envia sem clicar) entrou em Beta, e o teste quebrou por ter duas fontes
+  // de verdade para o mesmo fato. Uma delas agora é a única.
+  expect(await valorDoCartao(page, 'sessoes')).toBe(ESPERADO_FUNIL_BETA_7D.sessoes);
 });
 
 test('recarregar e abrir a rota diretamente preservam o mesmo estado', async ({ page }) => {

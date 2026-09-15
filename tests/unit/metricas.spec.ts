@@ -219,8 +219,10 @@ describe('filtros de período e de site', () => {
       return getKpis(db, s!, { ...p, label: '' });
     });
 
-    expect(beta.atual.sessoes).toBe(2);
-    expect(beta.atual.formularios).toBe(1);
+    // Três sessões desde que b3 entrou na massa — ela envia sem clicar, e é o
+    // caso que sustenta a etapa "interagiram" do funil (tests/unit/funil.spec.ts).
+    expect(beta.atual.sessoes).toBe(3);
+    expect(beta.atual.formularios).toBe(2);
     expect(beta.atual.sessoes).not.toBe(ESPERADO_ALFA_7D.sessoes);
   });
 });

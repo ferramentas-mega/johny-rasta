@@ -16,9 +16,31 @@ export type SessionUser = {
   isDemo: boolean;
 };
 
+/**
+ * Tamanho mínimo do segredo de sessão.
+ *
+ * HS256 assina com HMAC-SHA256: um segredo curto é quebrável por força bruta
+ * offline, e quem o quebrar **fabrica sessões de qualquer usuário** sem precisar
+ * de senha nenhuma. Não é um risco teórico — listas de segredos comuns
+ * ("secret", "changeme", o nome do projeto) são a primeira coisa que se tenta.
+ *
+ * 32 caracteres é o piso, e o `.env.example` manda gerar com
+ * `openssl rand -base64 32`. Aceitar qualquer tamanho deixava o sistema inteiro
+ * valer o que vale a string mais preguiçosa que alguém colar em produção.
+ */
+const TAMANHO_MINIMO_DO_SEGREDO = 32;
+
 function secret(): Uint8Array {
   const value = process.env.SESSION_SECRET;
   if (!value) throw new Error('SESSION_SECRET não definido. Veja .env.example.');
+  if (value.length < TAMANHO_MINIMO_DO_SEGREDO) {
+    // A mensagem diz o tamanho exigido e NUNCA o valor recebido: um erro que
+    // imprime o segredo o escreve no log de quem estiver lendo.
+    throw new Error(
+      `SESSION_SECRET curto demais: precisa de ao menos ${TAMANHO_MINIMO_DO_SEGREDO} caracteres. ` +
+        'Gere com: openssl rand -base64 32',
+    );
+  }
   return new TextEncoder().encode(value);
 }
 

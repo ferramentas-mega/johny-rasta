@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Client } from 'pg';
-import { withAccount, withIngest, withForms } from '@/server/db';
+import { withAccount, withIngest, withForms, withoutAccount } from '@/server/db';
 import { obterSite, listarSites } from '@/server/services/sites';
+import {
+  salvarRecursos,
+  salvarModoFormulario,
+  abrirDiagnostico,
+  SiteForaDaConta,
+} from '@/server/services/onboarding';
 import { prepararBancoDeTeste, MASSA, CONTAS } from '../../scripts/test-db';
 
 /**
@@ -152,5 +158,129 @@ describe('e-mail de login é único', () => {
 
     await admin.query('delete from users where lower(email) = lower($1)', [email]);
     await admin.end();
+  });
+});
+
+describe('escrever no site de outra conta', () => {
+  /**
+   * O buraco que estes testes fecham, e por que a RLS sozinha não fechava.
+   *
+   * As Actions do assistente recebem o `siteId` por CAMPO OCULTO do formulário.
+   * Server Action não é rota: o Next não confere esse valor contra o `[siteId]`
+   * do caminho, e nada impede mandar o id de um site alheio.
+   *
+   * A política de `site_features` casa por `account_id`, e o valor gravado ali
+   * vem de `app.current_account_id()` — o de quem ESCREVE. Ou seja: a política
+   * aprova a linha, porque a linha é da conta certa. O que ela não olha é o
+   * `site_id`, que veio do corpo da requisição.
+   *
+   * Como `site_features` tem `unique (site_id, feature)`, a linha intrusa
+   * trancava o dono legítimo para sempre — contra um registro que a própria
+   * política esconde dele.
+   */
+  it('salvar recursos num site alheio é recusado, não gravado em silêncio', async () => {
+    await expect(salvarRecursos(rival, siteDaAgencia, ['visitas'])).rejects.toThrow(SiteForaDaConta);
+
+    // A prova que importa não é a exceção: é que nada foi gravado. Um `catch`
+    // mal colocado poderia lançar DEPOIS do insert.
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const intrusas = await admin.query(
+      'select 1 from site_features where site_id = $1 and account_id = $2',
+      [siteDaAgencia, rival],
+    );
+    await admin.end();
+    expect(intrusas.rowCount).toBe(0);
+  });
+
+  it('abrir diagnóstico num site alheio é recusado', async () => {
+    await expect(abrirDiagnostico(rival, siteDaAgencia)).rejects.toThrow(SiteForaDaConta);
+  });
+
+  it('trocar o modo de formulário de um site alheio é recusado', async () => {
+    await expect(salvarModoFormulario(rival, siteDaAgencia, 'externo')).rejects.toThrow(
+      SiteForaDaConta,
+    );
+
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const site = await admin.query<{ form_mode: string | null }>(
+      'select form_mode from sites where id = $1',
+      [siteDaAgencia],
+    );
+    await admin.end();
+    expect(site.rows[0]!.form_mode).not.toBe('externo');
+  });
+
+  it('site inexistente e site alheio dão a MESMA resposta', async () => {
+    // Distinguir "não é seu" de "não existe" confirma a existência de um
+    // registro alheio para quem tem só o identificador.
+    const inexistente = '00000000-0000-0000-0000-000000000000';
+    const alheio = salvarRecursos(rival, siteDaAgencia, ['visitas']);
+    const fantasma = salvarRecursos(rival, inexistente, ['visitas']);
+
+    await expect(alheio).rejects.toThrow(SiteForaDaConta);
+    await expect(fantasma).rejects.toThrow(SiteForaDaConta);
+  });
+
+  it('no PRÓPRIO site, a mesma chamada grava normalmente', async () => {
+    // Sem este caso, a guarda poderia estar recusando tudo e os testes acima
+    // passariam do mesmo jeito.
+    await expect(salvarRecursos(agencia, siteDaAgencia, ['visitas'])).resolves.toBeUndefined();
+  });
+});
+
+describe('o cron enxerga a fila', () => {
+  /**
+   * Regressão medida, não deduzida: os dois endpoints agendados rodavam com
+   * `withoutAccount`, sem `app.account_id`, contra tabelas com RLS `FORCE`.
+   * `app.current_account_id()` devolvia NULL, `account_id = NULL` é NULL, e
+   * nenhuma linha casava. A fila era invisível e os endpoints respondiam
+   * "enfileiradas: 0" e "fila vazia" todo dia, sem erro nenhum.
+   */
+  it('sem conta na transação, a fila continua invisível — e por isso o cron pergunta antes', async () => {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    await admin.query(
+      `insert into audit_jobs (account_id, site_id, url, strategy, status)
+       values ($1, $2, 'https://prova-do-cron.teste/', 'mobile', 'pendente')`,
+      [agencia, siteDaAgencia],
+    );
+
+    // O caminho antigo: app_user sem conta. Continua vendo zero — a RLS não foi
+    // afrouxada, e não deve ser.
+    const invisivel = await withoutAccount((db) =>
+      db.one<{ n: number }>(
+        `select count(*)::int as n from audit_jobs where url = 'https://prova-do-cron.teste/'`,
+      ),
+    );
+    expect(invisivel!.n).toBe(0);
+
+    // O caminho novo: a função SECURITY DEFINER responde QUAL conta tem trabalho,
+    // devolvendo só identificadores de conta — nunca a URL, nunca o site.
+    const contas = await withoutAccount((db) =>
+      db.query<{ conta: string }>('select app.contas_com_job_pendente($1) as conta', [10]),
+    );
+    expect(contas.map((c) => c.conta)).toContain(agencia);
+
+    // E dentro da conta, a fila aparece.
+    const visivel = await withAccount(agencia, (db) =>
+      db.one<{ n: number }>(
+        `select count(*)::int as n from audit_jobs where url = 'https://prova-do-cron.teste/'`,
+      ),
+    );
+    expect(visivel!.n).toBe(1);
+
+    await admin.query(`delete from audit_jobs where url = 'https://prova-do-cron.teste/'`);
+    await admin.end();
+  });
+
+  it('a função do cron não devolve dado de cliente, só o identificador da conta', async () => {
+    const colunas = await withoutAccount((db) =>
+      db.query<Record<string, unknown>>('select app.contas_com_job_pendente($1) as conta', [10]),
+    );
+    // Uma função que devolvesse a linha inteira do job seria um jeito de ler
+    // `audit_jobs` de todas as contas sem passar pela política.
+    for (const linha of colunas) expect(Object.keys(linha)).toEqual(['conta']);
   });
 });

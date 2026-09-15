@@ -55,9 +55,16 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-      - name: Navegador
+      # O build vem ANTES do navegador por dois motivos. O barato: build
+      # quebrado é descoberto em segundos, não depois de dois minutos de
+      # Playwright. O que importa: a suíte passa a rodar contra o pacote
+      # publicado (`next start`), e não contra o servidor de desenvolvimento.
+      # A diferença é medível — o modo de desenvolvimento compila com `eval`,
+      # então a CSP acusa milhares de violações que não existem em produção, e
+      # uma política medida ali levaria a afrouxar o que de fato vai ao ar.
+      - run: npm run build
+
+      - name: Navegador, contra o pacote publicado
         run: |
           npx playwright install --with-deps chromium
-          npm run test:e2e
-
-      - run: npm run build
+          E2E_PROD=1 npm run test:e2e

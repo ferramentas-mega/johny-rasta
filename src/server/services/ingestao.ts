@@ -364,12 +364,19 @@ export async function registrarSubmissao(
 
   // Evento de analytics correspondente, SEM conteúdo do formulário. Existe para
   // que a submissão apareça na linha do tempo da sessão.
+  //
+  // `chaveIdempotencia`, e NÃO `dados.idempotencia`: a chave do cliente passou a
+  // ser opcional, e `events.event_uid` é `not null`. Usar a do corpo fazia a
+  // inserção violar a restrição, derrubar a transação inteira por rollback e
+  // perder o lead que a submissão acabara de gravar — exatamente o prejuízo que
+  // tornar a chave opcional queria evitar. A chave efetiva sempre existe: é a do
+  // cliente quando ele manda uma, e uma gerada aqui quando não manda.
   if (sessao) {
     await db.query(
       `insert into events (account_id, site_id, session_id, page_id, type, occurred_at, event_uid, is_test)
             values ($1, $2, $3, $4, 'form_submit_success', $5, $6, $7)
        on conflict (event_uid) do nothing`,
-      [site.accountId, site.id, sessao.id, pageId, agora, dados.idempotencia, teste],
+      [site.accountId, site.id, sessao.id, pageId, agora, chaveIdempotencia, teste],
     );
   }
 

@@ -6,6 +6,7 @@ import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { num, pct } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso } from '@/components/Cartoes';
+import { CartaoProgresso } from '@/components/CartaoProgresso';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { SeletorPeriodo } from '@/components/filtros';
 import { BuscaCarteira } from './busca';
@@ -124,14 +125,38 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
     },
   ];
 
+  /**
+   * Os cartões se dividem em dois tipos, e a divisão não é estética.
+   *
+   * Recebem ANEL de progresso só os indicadores que são uma razão com
+   * denominador real — "quantos dos quantos". Os demais são contagens: desenhar
+   * progresso neles exigiria inventar um teto, e um anel em "1.240 sessões"
+   * obriga quem olha a perguntar "de quê?".
+   */
+  const cartoesComRazao = [
+    {
+      rotulo: 'Sites com coleta',
+      valor: totais.sitesComColeta,
+      total: totais.sites,
+      nota: 'cadastrar não é coletar',
+      tom: 'neutro' as const,
+    },
+    {
+      rotulo: 'Configuração concluída',
+      valor: totais.sites - sitesPendentes,
+      total: totais.sites,
+      nota: 'sem recurso escolhido esperando verificação',
+      // Âmbar: aqui o que falta é pendência, não só progresso.
+      tom: sitesPendentes > 0 ? ('atencao' as const) : ('neutro' as const),
+    },
+  ];
+
   const cartoes = [
     { rotulo: 'Clientes', valor: num(totais.clientes), nota: busca ? 'filtrados pela busca' : 'na carteira' },
-    { rotulo: 'Sites com coleta', valor: `${num(totais.sitesComColeta)}/${num(totais.sites)}`, nota: 'cadastrar não é coletar' },
     { rotulo: 'Sessões', valor: num(totais.sessoes), nota: 'somadas entre os sites' },
     { rotulo: 'Cliques no WhatsApp', valor: num(totais.cliquesWhatsapp), nota: 'clique não é conversa iniciada' },
     { rotulo: 'Leads', valor: num(totais.leads), nota: 'contatos registrados' },
     { rotulo: 'Precisam de atenção', valor: num(precisamAtencao), nota: 'com motivo declarado na tabela' },
-    { rotulo: 'Configuração pendente', valor: num(sitesPendentes), nota: 'sites com recurso sem verificação' },
   ];
 
   return (
@@ -150,6 +175,16 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
 
       <div className="pagina">
         <div className="grade-cartoes">
+          {cartoesComRazao.map((c) => (
+            <CartaoProgresso
+              key={c.rotulo}
+              rotulo={c.rotulo}
+              valor={c.valor}
+              total={c.total}
+              nota={c.nota}
+              tom={c.tom}
+            />
+          ))}
           {cartoes.map((c) => (
             <div key={c.rotulo} style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--bd)', background: 'var(--card)' }}>
               <div style={{ fontSize: 12.5, color: 'var(--tx2)' }}>{c.rotulo}</div>

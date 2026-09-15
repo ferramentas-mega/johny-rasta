@@ -29,7 +29,7 @@ export type Enfileiramento =
   | { ok: false; erro: string };
 
 /** Depois disto, um job `executando` é considerado abandonado por um processo morto. */
-const MINUTOS_ATE_ABANDONO = 10;
+export const MINUTOS_ATE_ABANDONO = 10;
 export const MAX_TENTATIVAS = 3;
 
 /**
@@ -98,6 +98,30 @@ export async function enfileirar(
  * função estoura o tempo máximo.
  */
 export async function reivindicarProximo(db: Queryable): Promise<Job | null> {
+  /**
+   * Antes de reivindicar, encerra os abandonados que já esgotaram as tentativas.
+   *
+   * Sem este passo, `MAX_TENTATIVAS` só valia para o job que FALHA de um jeito
+   * que o código consegue registrar — porque só `registrarFalha` o consultava. O
+   * job cujo processo morre no meio (a Vercel corta a função aos 60s, e é o caso
+   * comum numa página pesada) nunca chega lá: ele fica em `executando`, é
+   * recuperado dez minutos depois, morre de novo, e assim indefinidamente.
+   *
+   * Com uma análise por dia no plano Hobby, uma única URL nessa condição consome
+   * a vaga diária inteira, para sempre, e nenhuma outra análise do sistema
+   * acontece. O sintoma seria "as auditorias pararam", sem erro em lugar nenhum.
+   */
+  await db.query(
+    `update audit_jobs
+        set status = 'erro',
+            concluido_em = now(),
+            erro = coalesce(erro, 'Abandonado após ' || tentativas || ' tentativas sem conclusão.')
+      where status = 'executando'
+        and iniciado_em < now() - make_interval(mins => $1::int)
+        and tentativas >= $2::int`,
+    [MINUTOS_ATE_ABANDONO, MAX_TENTATIVAS],
+  );
+
   return db.one<Job>(
     `update audit_jobs
         set status = 'executando',

@@ -3,24 +3,10 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { Campo, Selecao, BotaoSubmeter, BotaoSecundario, Retorno, ESTADO_VAZIO } from '@/components/Formulario';
 import { salvarSite } from './acoes';
+import { FUSOS } from '@/lib/fusos';
 
 export type SiteEditavel = { id: string; name: string; domain: string; timezone: string; clientId: string };
 
-/** Fusos do Brasil. Lista curta de propósito: cobre os casos reais sem virar um seletor de 400 itens. */
-const FUSOS = [
-  'America/Sao_Paulo',
-  'America/Bahia',
-  'America/Fortaleza',
-  'America/Recife',
-  'America/Belem',
-  'America/Manaus',
-  'America/Cuiaba',
-  'America/Campo_Grande',
-  'America/Porto_Velho',
-  'America/Rio_Branco',
-  'America/Noronha',
-  'UTC',
-];
 
 export function FormularioSite({
   clientes,

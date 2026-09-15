@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { withAccount, withoutAccount } from '@/server/db';
 import { getSessionUser } from '@/server/auth/session';
+import { segredoConfere } from '@/server/segredos';
+import { MINUTOS_ATE_ABANDONO } from '@/server/qualidade/auditoria';
 import { analisar, IntegracaoNaoConfigurada, FalhaNaAnalise } from '@/server/qualidade/pagespeed';
 import { reivindicarProximo, registrarSucesso, registrarFalha, salvarSnapshotCrux } from '@/server/qualidade/auditoria';
 import { consultarPaginaOuOrigem, CruxNaoConfigurado } from '@/server/qualidade/crux';
@@ -38,8 +40,7 @@ const ORCAMENTO_MS = 50_000;
 function autorizadoComoCron(request: Request): boolean {
   const esperado = process.env.CRON_SECRET;
   if (!esperado) return false;
-  const recebido = request.headers.get('authorization');
-  return recebido === `Bearer ${esperado}`;
+  return segredoConfere(request.headers.get('authorization'), `Bearer ${esperado}`);
 }
 
 /**
@@ -72,14 +73,48 @@ async function processar(cron: boolean, accountId?: string) {
     );
   }
 
-  // O cron não tem sessão, então não tem conta: ele varre a fila inteira, o que
-  // só é possível sem RLS de conta. Por isso usa `withoutAccount`, e por isso
-  // este caminho exige o segredo.
-  const executar = cron ? withoutAccount : <T,>(fn: Parameters<typeof withAccount<T>>[1]) =>
-    withAccount<T>(accountId!, fn);
+  /**
+   * O cron não tem sessão, logo não tem conta — mas também NÃO roda sem uma.
+   *
+   * Rodava. Com `withoutAccount`, sem `app.account_id`, e as tabelas de
+   * qualidade estão com RLS FORCE: a fila era invisível, o endpoint respondia
+   * "fila vazia" todo dia, e nenhuma análise agendada jamais aconteceu. Nem um
+   * erro aparecia. Pior: se a reivindicação tivesse funcionado,
+   * `registrarSucesso` gravaria `account_id = app.current_account_id()` — NULL
+   * numa coluna NOT NULL — e o trabalho já pago ao Google se perderia ao salvar.
+   *
+   * Agora o cron PERGUNTA em quais contas há trabalho (função `SECURITY
+   * DEFINER` estreita, que devolve só identificadores de conta) e processa
+   * dentro de `withAccount`, como um usuário logado daquela conta. A política
+   * vale o tempo todo, e um defeito aqui erra uma conta em vez da base inteira.
+   */
+  let contaDoJob = accountId;
+  let restantes = 0;
+
+  if (cron) {
+    const contas = await withoutAccount((db) =>
+      db.query<{ conta: string }>('select app.contas_com_job_pendente($1) as conta', [
+        MINUTOS_ATE_ABANDONO,
+      ]),
+    );
+    if (contas.length === 0) {
+      return NextResponse.json({ processado: false, motivo: 'fila vazia' });
+    }
+    // A mais antiga primeiro — a função já devolve nessa ordem. As demais ficam
+    // para as próximas invocações, e o número vai na resposta: uma fila que não
+    // anda precisa ser visível, não silenciosa.
+    contaDoJob = contas[0]!.conta;
+    restantes = contas.length - 1;
+  }
+
+  const executar = <T,>(fn: Parameters<typeof withAccount<T>>[1]) =>
+    withAccount<T>(contaDoJob!, fn);
 
   const job = await executar((db) => reivindicarProximo(db));
-  if (!job) return NextResponse.json({ processado: false, motivo: 'fila vazia' });
+  // Corrida possível: outra invocação pegou o job entre a pergunta e a
+  // reivindicação. `for update skip locked` garante que ninguém processa duas
+  // vezes; aqui só se relata que não sobrou nada nesta conta.
+  if (!job) return NextResponse.json({ processado: false, motivo: 'fila vazia', contasRestantes: restantes });
 
   const controle = new AbortController();
   const corte = setTimeout(() => controle.abort(), ORCAMENTO_MS);
@@ -119,7 +154,14 @@ async function processar(cron: boolean, accountId?: string) {
       );
     }
 
-    return NextResponse.json({ processado: true, jobId: job.id, url: job.url, strategy: job.strategy, campo });
+    return NextResponse.json({
+      processado: true,
+      jobId: job.id,
+      url: job.url,
+      strategy: job.strategy,
+      campo,
+      contasRestantes: restantes,
+    });
   } catch (erro) {
     const motivo =
       erro instanceof IntegracaoNaoConfigurada ? 'Integração não configurada'

@@ -198,6 +198,52 @@ correção é trocar o eixo numa media query, não encolher o menu.
 requisição. O índice único parcial de `audit_jobs` cobre só `pendente` e `executando`, para que uma
 análise concluída não impeça a próxima.
 
+**`withoutAccount` + RLS `FORCE` = zero linhas, sem erro nenhum.** O cron rodava assim contra
+`audit_jobs` e `monitored_urls`. Sem `app.account_id`, `app.current_account_id()` é `NULL`,
+`account_id = NULL` é `NULL`, e nenhuma política casa. Os dois endpoints agendados respondiam
+`{"enfileiradas": 0}` e `"fila vazia"` **todo dia**, como se a fila estivesse limpa. Medido:
+superusuário via 1 job, `app_user` sem conta via 0, `app_user` com conta via 1. Hoje o cron pergunta
+a `app.contas_com_job_pendente` quais contas têm trabalho e processa cada uma dentro de
+`withAccount`. `withoutAccount` serve para o que antecede o login — não para varrer tabela com RLS.
+
+**A RLS não confere o `site_id` que veio do formulário.** A política de `site_features` casa por
+`account_id`, e o valor gravado vem de `app.current_account_id()`: o de quem escreve. Então a linha
+`(conta A, site da conta B, 'visitas')` **passa** — a política aprova, porque a linha é da conta
+certa. Com `unique (site_id, feature)`, isso trancava o dono legítimo para sempre, contra um registro
+que a própria política esconde dele. Server Action recebe o `siteId` por campo oculto e o Next não o
+confere contra o `[siteId]` da rota. Toda escrita do assistente passa por `exigirSiteDaConta`.
+
+**Coluna `NOT NULL` transforma "campo opcional" em lead perdido.** Ao tornar `idempotencia` opcional
+no endpoint de formulários, o evento de analytics continuou gravando `dados.idempotencia` em
+`events.event_uid`, que é `not null`. Submissão sem chave e com sessão aberta violava a restrição e
+**derrubava a transação inteira por rollback** — perdendo o lead que a mesma transação acabara de
+gravar. Ao tornar um campo opcional, procure todo lugar que o consome.
+
+**Limite de login que conta acertos bloqueia quem sabe a senha.** O limitador é cobrado a cada
+tentativa, inclusive as que dão certo. Quem achou foi a suíte de navegador: ela entra pelo `/entrar`
+em quase todo teste e travava em `waitForURL` a partir do décimo login da execução. Força bruta nunca
+acerta, então o acerto zera o contador (`zerarLimite`) e a varredura continua contida.
+
+**A CSP precisa ser medida no `next start`, nunca no `next dev`.** O modo de desenvolvimento compila
+com `eval` — é assim que o recarregamento a quente funciona. Medido: **4.536 violações** no `next
+dev`, todas de `eval`, contra **zero recusas** no pacote publicado. Quem mede no lugar errado conclui
+que a política precisa de `'unsafe-eval'` e enfraquece a produção por causa de uma ferramenta que não
+vai para lá. Por isso a política só existe com `NODE_ENV=production`, e o CI roda a suíte com
+`E2E_PROD=1`.
+
+**Caminho de executável fixo no `playwright.config.ts` quebra o CI inteiro, em silêncio.**
+`/opt/pw-browsers/chromium` é o contêiner de desenvolvimento e não existe no runner do GitHub. As 57
+provas de navegador falharam em **cinco commits seguidos** com "executable doesn't exist", e o passo
+de build vinha depois e era pulado — o CI parou de responder a pergunta para a qual foi criado. Hoje
+o caminho só é usado se o arquivo existir.
+
+**Texto livre indo para `at time zone` derruba a conta inteira.** `fuso` era
+`z.string().min(3).max(64)`. Um nome que o Postgres não conhece **lança**, e a exceção não fica no
+site: a visão geral percorre todos os sites da conta. O `<select>` da interface não protege nada —
+uma Server Action recebe o que mandarem no corpo. Mesma família: `urlPrincipal` sem validação de URL
+passando por `new URL()` no render de um Server Component, onde a exceção não é um campo com erro, é
+a tela inteira fora do ar — justamente a tela onde se corrigiria o valor.
+
 ---
 
 ## Convenções

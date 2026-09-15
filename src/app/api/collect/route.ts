@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withIngest } from '@/server/db';
 import { EventoRecebido, resolverSite, registrarEvento } from '@/server/services/ingestao';
 import { appHost } from '@/lib/app-url';
+import { CORPO_MAXIMO, LIMITES, consumirLimite, corpoGrandeDemais, talvezLimpar } from '@/server/limites';
 
 /**
  * Endpoint público de coleta de analytics.
@@ -51,6 +52,13 @@ export async function POST(request: Request) {
   const origin = request.headers.get('origin');
   const cabecalhos = cors(origin);
 
+  // Recusado ANTES de ler: `request.text()` carrega tudo na memória, e um POST
+  // de dezenas de megabytes seria lido inteiro só para a validação dizer que é
+  // inválido. Um evento tem algumas centenas de bytes.
+  if (corpoGrandeDemais(request, CORPO_MAXIMO.coleta)) {
+    return NextResponse.json({ erro: 'Corpo grande demais.' }, { status: 413, headers: cabecalhos });
+  }
+
   let corpo: unknown;
   try {
     // O coletor envia text/plain de propósito: evita a requisição de preflight
@@ -86,10 +94,24 @@ export async function POST(request: Request) {
       const site = await resolverSite(db, analise.data.site);
       if (!site) return { status: 404 as const };
       if (!origemPermitida(origin, site.domain)) return { status: 403 as const };
+
+      // O limite é POR SITE, e cobrado depois de resolver o site: cobrar pelo
+      // identificador cru deixaria qualquer um encher a tabela de contadores
+      // com identificadores inventados.
+      const limite = await consumirLimite(db, `collect:${site.id}`, LIMITES.coleta);
+      if (!limite.permitido) return { status: 429 as const, esperar: limite.esperarSegundos };
+
+      await talvezLimpar(db);
       const { duplicado } = await registrarEvento(db, site, analise.data);
       return { status: 204 as const, duplicado };
     });
 
+    if (resultado.status === 429) {
+      return NextResponse.json(
+        { erro: 'Muitos eventos para este site. Tente mais tarde.' },
+        { status: 429, headers: { ...cabecalhos, 'Retry-After': String(resultado.esperar) } },
+      );
+    }
     if (resultado.status === 404) {
       return NextResponse.json({ erro: 'Site não encontrado.' }, { status: 404, headers: cabecalhos });
     }

@@ -34,13 +34,34 @@ export function snippetColetor(endpoint: string, publicId: string): string {
  *    clique no botão (ou um retry de rede) não virar um segundo lead — e faz um
  *    contato novo, de verdade, contar como novo.
  */
+/**
+ * Escapa um valor que vai DENTRO de um atributo HTML entre aspas duplas.
+ *
+ * Este arquivo é o único ponto do projeto que monta HTML por concatenação — em
+ * todo o resto quem escapa é o React. Aqui não dá: o resultado é texto para o
+ * operador copiar, não uma árvore de elementos.
+ *
+ * Hoje os dois chamadores passam a constante `'Fale conosco'`, então não há
+ * ataque em andamento. Escapar mesmo assim é o que impede que o primeiro
+ * chamador a passar o nome do site — um campo que o usuário digita — produza um
+ * formulário quebrado, ou um `onerror=` colado no site do cliente. A alternativa
+ * seria confiar que ninguém vai usar o parâmetro que a própria função oferece.
+ */
+function atributo(valor: string): string {
+  return valor
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export function snippetFormulario(endpoint: string, publicId: string, nomeDoFormulario = 'Fale conosco'): string {
-  return `<form id="painel-form" method="post" action="${endpoint}/api/forms/${publicId}">
+  return `<form id="painel-form" method="post" action="${atributo(endpoint)}/api/forms/${atributo(publicId)}">
   <input name="nome" placeholder="Seu nome" required>
   <input name="email" type="email" placeholder="Seu e-mail">
   <input name="telefone" placeholder="Seu telefone">
   <textarea name="mensagem" placeholder="Mensagem"></textarea>
-  <input type="hidden" name="formulario" value="${nomeDoFormulario}">
+  <input type="hidden" name="formulario" value="${atributo(nomeDoFormulario)}">
   <input type="hidden" name="visitante" value="">
   <input type="hidden" name="idempotencia" value="">
   <button type="submit">Enviar</button>

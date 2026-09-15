@@ -19,6 +19,9 @@ for (const arquivo of ['.env.local', '.env']) {
 const PORTA = 3100;
 const BASE = `http://localhost:${PORTA}`;
 
+/** Onde o contêiner de desenvolvimento deixa o Chromium. Não existe no CI. */
+const CHROMIUM_DO_AMBIENTE = '/opt/pw-browsers/chromium';
+
 const bancoDeTeste = (variavel: string) => {
   const url = new URL(process.env[variavel] ?? '');
   url.pathname = `/${process.env.TEST_DATABASE_NAME ?? 'painel_matrix_test'}`;
@@ -37,8 +40,24 @@ export default defineConfig({
 
   use: {
     baseURL: BASE,
-    // O Chromium do ambiente, em vez de baixar outro.
-    launchOptions: { executablePath: '/opt/pw-browsers/chromium' },
+    /**
+     * O Chromium do ambiente, quando existe — e só então.
+     *
+     * Este caminho é o do contêiner de desenvolvimento, não uma convenção. Ele
+     * estava fixo aqui, e no runner do GitHub, onde o navegador é instalado por
+     * `playwright install` em `~/.cache/ms-playwright`, **as 57 provas de
+     * navegador falharam em cinco commits seguidos** com "executable doesn't
+     * exist" — sempre a mesma linha, nunca um defeito de produto. Pior: o passo
+     * de build vinha depois e era pulado, então o CI parou de responder a
+     * pergunta para a qual foi criado.
+     *
+     * Ausente o arquivo, `launchOptions` fica vazio e o Playwright usa o
+     * navegador que ele mesmo instalou. Verificar a existência é mais barato que
+     * uma variável de ambiente que alguém precisa lembrar de configurar.
+     */
+    launchOptions: existsSync(CHROMIUM_DO_AMBIENTE)
+      ? { executablePath: CHROMIUM_DO_AMBIENTE }
+      : {},
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
@@ -54,7 +73,22 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: `npx next dev --port ${PORTA}`,
+    /**
+     * Desenvolvimento por padrão; produção com `E2E_PROD=1`.
+     *
+     * A diferença não é cosmética para tudo que se mede no console. O modo de
+     * desenvolvimento do Next compila com `eval` (é assim que o recarregamento
+     * a quente funciona), então uma CSP sem `'unsafe-eval'` acusa milhares de
+     * violações que **não existem** no pacote publicado. Medir a política no
+     * servidor de desenvolvimento e concluir que ela precisa afrouxar seria
+     * enfraquecer a produção por causa de uma ferramenta que não vai para lá.
+     *
+     * Exige `npm run build` antes. É o que `npm run test:e2e:prod` faz.
+     */
+    command:
+      process.env.E2E_PROD === '1'
+        ? `npx next start --port ${PORTA}`
+        : `npx next dev --port ${PORTA}`,
     url: BASE,
     reuseExistingServer: false,
     timeout: 120_000,
@@ -63,7 +97,10 @@ export default defineConfig({
       DATABASE_URL_INGEST: bancoDeTeste('DATABASE_URL_INGEST'),
       DATABASE_URL_FORMS: bancoDeTeste('DATABASE_URL_FORMS'),
       DATABASE_URL_ADMIN: bancoDeTeste('DATABASE_URL_ADMIN'),
-      SESSION_SECRET: process.env.SESSION_SECRET ?? 'segredo-de-teste',
+      // 32 caracteres no mínimo: é o que `secret()` exige desde que um segredo
+      // curto deixou de ser aceito. Um fallback abaixo disso derrubaria a suíte
+      // inteira em quem não tem SESSION_SECRET no ambiente.
+      SESSION_SECRET: process.env.SESSION_SECRET ?? 'segredo-de-teste-sem-valor-fora-daqui',
       APP_URL: BASE,
     },
   },

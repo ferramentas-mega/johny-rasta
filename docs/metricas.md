@@ -165,3 +165,64 @@ Não geram lead:
   aconteceu, e não inventa;
 - abertura de formulário — é interesse, não envio;
 - submissão que falhou ao gravar — não existe.
+
+---
+
+## Funil de qualidade dos leads
+
+Na tela `/leads`, acima da listagem. Quatro etapas, **todas contadas em sessões**.
+
+| Etapa | O que conta |
+|---|---|
+| Sessões | Visitas registradas no período, sem acessos de teste |
+| Interagiram | Sessões que clicaram em algum CTA **ou** enviaram um formulário |
+| Enviaram formulário | Sessões com ao menos uma submissão confirmada |
+| Trouxeram contato novo | Sessões cujo envio trouxe um contato que o site ainda não conhecia |
+
+### Por que "clicou OU enviou", e não "abriu o formulário"
+
+A montagem óbvia seria usar os indicadores que já existem: sessões → aberturas de formulário →
+formulários enviados → leads. Ela está errada, e o erro é de forma, não de número.
+
+"Abriu o formulário" e "enviou o formulário" são conjuntos que **se cruzam sem um conter o outro**:
+um formulário visível na própria página é enviado sem nunca disparar o evento de abertura. Um funil
+cuja segunda etapa pode ficar menor que a terceira desenha uma perda que não aconteceu — e quem olha
+conclui que o formulário está afastando gente.
+
+Por isso a etapa de interesse é a **união** de cliques e envios: ela contém a etapa de envio por
+construção. A massa de testes tem um caso dedicado a isso (site Beta, sessão `b3`, que envia sem
+clicar em nada), e um teste falha se a definição mudar.
+
+### A largura é proporcional à PRIMEIRA etapa
+
+Não à anterior. Proporcional à anterior, toda etapa que retém metade desenha a mesma queda — e um
+funil em que 50%→50%→50% tem o mesmo formato que 90%→90%→90% não informa nada.
+
+### O que fica FORA do funil, e por quê
+
+Quatro números aparecem ao lado, e não como etapas:
+
+- **Contatos distintos** — unidade diferente. Uma etapa conta sessões; um contato pode nascer de duas
+  sessões e duas sessões podem virar um contato só. Misturar as unidades numa barra faria a última
+  etapa parecer menor por um motivo que não é perda.
+- **Com e-mail e telefone** — o único indicador aqui que fala da qualidade do dado em si. É a
+  diferença entre os dois números que diz se vale a pena pedir o segundo campo no formulário.
+- **Já conhecidos** — envios de quem o site já tinha registrado antes do período. Não é perda, é
+  retorno. Está aqui porque explica a diferença entre "enviaram" e "contato novo" sem que ela pareça
+  uma falha.
+- **Sem sessão** — envios que chegaram sem identificação de visita: bloqueador de analytics,
+  consentimento negado, coletor fora do ar. O endpoint aceita o contato mesmo assim, porque perder um
+  lead legítimo porque o analytics falhou é o pior resultado possível. Esses envios não cabem num
+  funil medido por sessão; omiti-los faria o painel afirmar menos leads do que existem.
+
+### O que o funil NÃO afirma
+
+Que a queda entre duas etapas tem uma causa. Ele conta quantas sessões chegaram a cada ponto. Por que
+as outras pararam é outra pergunta, e este painel não a responde — a tela diz isso em texto, embaixo
+do gráfico.
+
+### Sem base de cálculo
+
+Zero sessões no período não desenha quatro barras vazias. Barra vazia é lida como "medimos e deu
+zero"; o certo é dizer que não há o que comparar. Largura proporcional a zero é uma conta que não
+existe.
