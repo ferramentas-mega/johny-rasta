@@ -233,3 +233,41 @@ test('as telas não registram erro no console do navegador', async ({ page }) =>
 
   await semErrosDeConsole(erros);
 });
+
+test('arquivar um site é possível pela tela, com a consequência dita antes', async ({ page }) => {
+  // `removerSite` existia desde o começo e nenhum componente a importava:
+  // recurso inteiro no servidor, sem porta na interface.
+  await entrar(page);
+
+  const nome = `arquivar-${Date.now()}`;
+  await page.goto('/sites');
+  await page.getByRole('button', { name: '+ Novo site' }).click();
+  await page.locator('select[name=clienteId]').selectOption({ index: 0 });
+  await page.fill('input[name=nome]', nome);
+  await page.fill('input[name=dominio]', `${nome}.teste`);
+  await page.getByRole('button', { name: 'Cadastrar site' }).click();
+  await page.waitForURL('**/configurar**');
+  const siteId = new URL(page.url()).pathname.split('/')[2]!;
+
+  await page.goto(`/sites?editar=${siteId}`);
+  await page.getByRole('button', { name: 'Arquivar este site' }).click();
+
+  // Um clique não arquiva, e a consequência aparece ANTES: some da lista é o
+  // que se espera; parar de coletar é o que ninguém adivinha.
+  await expect(page.getByText(/a coleta para/i)).toBeVisible();
+  await expect(page.getByText(/histórico é preservado/i)).toBeVisible();
+
+  // Desistir mantém o site.
+  await page.getByRole('button', { name: 'Manter o site' }).click();
+  await page.goto('/sites');
+  await expect(page.locator('.cartao-site').filter({ hasText: nome })).toBeVisible();
+
+  // Confirmar arquiva, e o site sai da lista.
+  await page.goto(`/sites?editar=${siteId}`);
+  await page.getByRole('button', { name: 'Arquivar este site' }).click();
+  await page.getByRole('button', { name: 'Arquivar mesmo assim' }).click();
+  await expect(page.getByRole('status')).toContainText('arquivado');
+
+  await page.goto('/sites');
+  await expect(page.locator('.cartao-site').filter({ hasText: nome })).toHaveCount(0);
+});

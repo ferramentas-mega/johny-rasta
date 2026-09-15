@@ -33,6 +33,12 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
       />
 
       <div className="pagina">
+        {busca.arquivado && (
+          <p role="status" style={{ fontSize: 12.5, color: 'var(--ok-tx)' }}>
+            Site arquivado. O histórico foi preservado, e a coleta dele parou.
+          </p>
+        )}
+
         {filtrado && (
           <p style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
             Filtrando por <strong>{filtrado.name}</strong>. <Link href="/sites">Ver todos os sites</Link>

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { Campo, Selecao, BotaoSubmeter, BotaoSecundario, Retorno, ESTADO_VAZIO } from '@/components/Formulario';
-import { salvarSite } from './acoes';
+import { salvarSite, removerSite } from './acoes';
 import { FUSOS } from '@/lib/fusos';
 
 export type SiteEditavel = { id: string; name: string; domain: string; timezone: string; clientId: string };
@@ -97,6 +97,94 @@ export function FormularioSite({
           <BotaoSecundario onClick={() => setAberto(false)}>Cancelar</BotaoSecundario>
         )}
       </div>
+
+      {emEdicao && <Arquivar site={emEdicao} />}
     </form>
+  );
+}
+
+/**
+ * Arquivar um site.
+ *
+ * `removerSite` existia desde o começo e **nenhum componente a importava** —
+ * recurso inteiro no servidor, sem porta na interface. Mesma família do que
+ * acontecia com a própria edição.
+ *
+ * Duas decisões sobre o desenho:
+ *
+ * 1. **Não fica no cartão.** O cartão é um resumo denso, lido de relance; um
+ *    controle destrutivo ali é fácil de acertar sem querer. Aqui dentro, quem
+ *    chega abriu a edição de propósito.
+ * 2. **Dois passos, com o nome à vista.** Sem `confirm()` do navegador — ele é
+ *    bloqueável, não estiliza e não diz o que vai acontecer. O primeiro clique
+ *    revela a consequência; o segundo executa.
+ *
+ * E a consequência é dita inteira. "Arquivar" soa como esconder da lista, e
+ * para de coletar: as políticas dos papéis públicos casam por site não
+ * arquivado, então o `t.js` continua na página do cliente e os eventos passam a
+ * ser recusados. Quem não souber disso vai procurar o defeito no site.
+ */
+function Arquivar({ site }: { site: SiteEditavel }) {
+  const [estado, acao] = useActionState(removerSite, ESTADO_VAZIO);
+  const [confirmando, setConfirmando] = useState(false);
+
+  if (!confirmando) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirmando(true)}
+        style={{
+          alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0,
+          fontSize: 12, color: 'var(--tx3)', cursor: 'pointer', textDecoration: 'underline',
+        }}
+      >
+        Arquivar este site
+      </button>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        border: '1px solid var(--neg)', borderRadius: 8, padding: 12,
+        display: 'flex', flexDirection: 'column', gap: 10,
+      }}
+    >
+      <p style={{ fontSize: 12.5, lineHeight: 1.7, margin: 0 }}>
+        Arquivar <strong>{site.name}</strong>?
+        <span style={{ display: 'block', color: 'var(--tx2)', marginTop: 4 }}>
+          O histórico é preservado e nada é apagado. Mas a <strong>coleta para</strong>: o script
+          continua na página do cliente e os eventos passam a ser recusados, porque só site ativo
+          recebe. O site sai das listas e dos relatórios.
+        </span>
+      </p>
+      {estado.erro && (
+        <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)', margin: 0 }}>{estado.erro}</p>
+      )}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <button
+          type="submit"
+          formAction={acao}
+          // Sem isto, um campo obrigatório vazio do formulário de EDIÇÃO
+          // bloquearia o arquivamento, que não depende de nenhum deles.
+          formNoValidate
+          name="id"
+          value={site.id}
+          style={{
+            background: 'var(--neg)', color: 'var(--card)', border: 'none', borderRadius: 8,
+            padding: '8px 12px', fontSize: 12.5, cursor: 'pointer',
+          }}
+        >
+          Arquivar mesmo assim
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirmando(false)}
+          style={{ background: 'none', border: 'none', fontSize: 12.5, color: 'var(--tx2)', cursor: 'pointer' }}
+        >
+          Manter o site
+        </button>
+      </div>
+    </div>
   );
 }

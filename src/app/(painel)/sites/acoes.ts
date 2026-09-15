@@ -100,5 +100,15 @@ export async function removerSite(_anterior: EstadoFormulario, dados: FormData):
   const ok = await arquivarSite(usuario.accountId, id);
   if (!ok) return { erro: 'Site não encontrado.' };
   revalidarTudo(id);
-  return { ok: true, mensagem: 'Site arquivado. O histórico é preservado.' };
+
+  /*
+   * A confirmação vai na URL, e não no estado da Action.
+   *
+   * Arquivar tira o site da lista. A lista é a fonte de `emEdicao`, e o
+   * formulário leva `key={emEdicao?.id ?? 'novo'}` — então o site sumir troca a
+   * chave, **remonta o componente** e descarta o resultado da Action junto. A
+   * mensagem de sucesso não tinha como aparecer: o ato de arquivar destruía
+   * quem iria mostrá-la. Quem pegou foi a prova de navegador.
+   */
+  redirect('/sites?arquivado=1');
 }
