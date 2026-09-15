@@ -543,7 +543,7 @@ Executada em 15/09/2026, lida linha a linha.
 
 - `npm run typecheck` — sem erros
 - `npm run lint` — sem avisos
-- `npm test` — **227 testes**, todos passando (15 arquivos, 9,0 s)
+- `npm test` — **232 testes**, todos passando (16 arquivos, 9,0 s)
 
   | Arquivo | Testes | | Arquivo | Testes |
   |---|---|---|---|---|
@@ -553,12 +553,13 @@ Executada em 15/09/2026, lida linha a linha.
   | `autorizacao` | 18 | | `otimizacoes` | 9 |
   | `pagespeed` | 17 | | `carteira` · `crux` | 8 · 8 |
   | `metricas` · `recursos` | 14 · 14 | | `build` · `funil` | 6 · 6 |
+  | | | | `esquema` | 5 |
 
   Contagem tirada do relatório JSON do vitest, não da leitura da tela — numa rodada anterior eu
   reportei 79 onde eram 103.
 
 - `npm run build` — build de produção concluído
-- `npm run test:e2e:prod` — **63 testes** (52 desktop + 11 celular), todos passando (2,3 min),
+- `npm run test:e2e:prod` — **64 testes** (53 desktop + 11 celular), todos passando (2,1 min),
   **contra `next start`** e com a CSP em modo bloqueio
 
 ### A suíte de navegador agora roda contra o pacote publicado
@@ -595,6 +596,16 @@ Hoje o caminho só é usado se o arquivo existir.
 - **Duas fontes de verdade para o mesmo número.** `navegacao.spec.ts` trazia `toBe(2)` escrito à mão
   para as sessões de Beta; ao entrar a sessão `b3` na massa, o teste quebrou. Hoje lê o valor de
   `scripts/test-db.ts`.
+- **O botão de copiar falhava em silêncio** — e quem mostrou foi o CI, não esta máquina. Em certas
+  versões de Chromium headless `navigator.clipboard.writeText` rejeita; o `catch` do componente
+  devolvia o botão para "Copiar" sem dizer nada, o que é indistinguível de um botão quebrado. Hoje o
+  bloco é selecionado na tela e o rótulo pede Ctrl+C. Há um teste que **substitui a API por uma que
+  rejeita**, porque aqui ela funciona e o caminho de falha nunca seria exercitado — foi assim que
+  ele chegou ao CI.
+- **Localizador preso ao rótulo do botão que muda.** A primeira versão do teste acima usava
+  `getByRole('button', { name: 'Copiar' })`; depois do clique o rótulo vira "Copiado", o localizador
+  deixa de casar e `.first()` passa a apontar para o botão do OUTRO snippet da página. O botão ganhou
+  `data-testid`.
 
 ### Verificado além da suíte, por execução real
 

@@ -144,12 +144,74 @@ test('o snippet traz o identificador do site certo, e copiar não conclui a inst
   await page.getByRole('button', { name: 'Salvar seleção' }).click();
 
   await page.goto(`/sites/${b.siteId}/configurar?etapa=instalacao`);
-  await page.getByRole('button', { name: 'Copiar' }).first().click();
-  await expect(page.getByRole('button', { name: 'Copiado' })).toBeVisible();
+  // Localizado pelo identificador, e NÃO pelo rótulo: o rótulo muda ao clicar,
+  // e um localizador por texto passaria a apontar para o botão do outro snippet.
+  const copiar = page.getByTestId('botao-copiar').first();
+  await copiar.click();
+
+  /**
+   * O botão tem de RESPONDER — e a resposta certa depende do navegador.
+   *
+   * Onde a área de transferência funciona, vira "Copiado". Onde ela rejeita
+   * (contexto inseguro, permissão negada, certas versões de Chromium headless —
+   * foi assim que o CI derrubou este teste), o bloco é selecionado na tela e o
+   * rótulo passa a pedir Ctrl+C.
+   *
+   * Afirmar só "Copiado" amarraria o teste ao ambiente, não ao comportamento. O
+   * que o produto promete é dar retorno e deixar o código ao alcance; qual dos
+   * dois caminhos atendeu é detalhe do navegador. O que NÃO pode acontecer é o
+   * botão voltar a "Copiar" em silêncio, e é isso que `not.toBe('ocioso')` nega.
+   */
+  await expect(copiar).not.toHaveAttribute('data-estado', 'ocioso');
+  await expect(copiar).toHaveText(/Copiado|Ctrl\+C/);
 
   await page.reload();
   const passos = page.getByRole('navigation', { name: 'Etapas da configuração' });
   await expect(passos.getByRole('link', { name: /Instalar o rastreamento/ })).toContainText('pendente');
+});
+
+test('sem área de transferência, o snippet fica selecionado e o botão diz o que fazer', async ({ page }) => {
+  /**
+   * O caminho que a MINHA máquina nunca exercita.
+   *
+   * Aqui `navigator.clipboard.writeText` funciona, então o `catch` do
+   * componente ficaria sem cobertura — e foi exatamente por ali que o CI
+   * quebrou, num Chromium onde a promessa rejeita. Um teste que só roda o
+   * caminho feliz deixa o caminho de falha ser descoberto por quem usa.
+   *
+   * Aqui a API é substituída por uma que rejeita, como o navegador faria em
+   * contexto inseguro ou sem permissão.
+   */
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error('negado')) },
+    });
+  });
+
+  await entrar(page);
+  const { siteId } = await cadastrarSite(page, 'semclip');
+
+  // A etapa de instalação só mostra o snippet quando algum recurso de coleta foi
+  // escolhido — sem isso ela se declara "não se aplica", e não há o que copiar.
+  await page.goto(`/sites/${siteId}/configurar?etapa=recursos`);
+  await page.check('input[name="recurso:visitas"]');
+  await page.getByRole('button', { name: 'Salvar seleção' }).click();
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=instalacao`);
+
+  const copiar = page.getByTestId('botao-copiar').first();
+  await copiar.click();
+
+  // Não volta ao estado inicial em silêncio: isso é indistinguível de um botão
+  // quebrado, e o operador cola um snippet vazio sem saber.
+  await expect(copiar).toHaveAttribute('data-estado', 'selecionado');
+  await expect(copiar).toContainText('Ctrl+C');
+
+  // E a saída existe de verdade: o código está selecionado, então o atalho
+  // copia. Dizer "use Ctrl+C" sem selecionar nada seria só uma frase.
+  const selecionado = await page.evaluate(() => window.getSelection()?.toString() ?? '');
+  expect(selecionado).toContain('data-site=');
 });
 
 test('visita e clique de diagnóstico verificam a etapa, e ficam fora dos relatórios', async ({ page, context }) => {

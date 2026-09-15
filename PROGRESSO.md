@@ -56,22 +56,31 @@ corrigido e o que continua em aberto está em [`docs/seguranca.md`](docs/seguran
 
 ---
 
-## MIGRAÇÕES PENDENTES EM PRODUÇÃO
+## Migrações e a ordem de publicação
 
-**Leia isto antes de publicar.** Duas migrações estão no repositório e **não**
-foram aplicadas ao banco de produção:
+**A regra: aplicar a migração, depois publicar. Nunca o contrário.**
 
-- `20260916000009_limites_de_requisicao.sql` — tabela `rate_limits` e as funções
-  `app.consumir_limite`, `app.limpar_limites`, `app.zerar_limite`.
-- `20260916000010_cron_enxerga_a_fila.sql` — `app.contas_com_job_pendente`,
-  `app.contas_com_auditoria_vencida`.
+Não é zelo. Nesta mesma rodada o código subiu antes da `20260916000008` e
+produção passou a responder 500 em tudo — inclusive na coleta, então a janela
+inteira de eventos daquele período se perdeu. Pior: o `/api/diagnostico`
+respondeu `tudoOk: true` durante o incidente, porque conferia se a conexão abria
+e mais nada.
 
-Publicar o código sem aplicá-las **quebra login, coleta e formulários com 500**,
-porque `consumirLimite` chama uma função que não existe. Foi exatamente o que
-aconteceu com a `20260916000008` nesta mesma rodada, e a reparação custou uma
-janela inteira de coleta perdida.
+Estado atual, conferido contra o banco de produção em 15/09/2026:
 
-A ordem é: **aplicar a migração, depois publicar.** Nunca o contrário.
+| Migração | Em produção |
+|---|---|
+| `20260916000009_limites_de_requisicao.sql` | **aplicada** |
+| `20260916000010_cron_enxerga_a_fila.sql` | **aplicada** |
+
+Conferência feita objeto a objeto (`to_regclass` / `to_regprocedure`), incluindo
+o privilégio que importa: `app_ingest` executa `app.consumir_limite` e **não**
+consegue dar `select` em `rate_limits`.
+
+Hoje quem responde essa pergunta é o próprio aplicativo: `/api/diagnostico`
+compara o banco com `src/server/esquema.ts` — a lista do que o código publicado
+exige — e nomeia o que falta. Ao escrever uma migração nova, acrescente ali os
+objetos que o código passou a usar.
 
 ---
 
@@ -117,6 +126,13 @@ de `eval`, contra **zero recusas** no `next start`. Medir no servidor de
 desenvolvimento teria levado a afrouxar a política de produção por causa do
 recarregamento a quente.
 
+**`/api/diagnostico` declarava "tudo OK" sem olhar o esquema.** Foi por isso que ele
+respondeu `tudoOk: true` durante o incidente inteiro em que produção devolvia 500 em tudo,
+inclusive na coleta: a conexão abria, a tabela é que não existia. Agora `src/server/esquema.ts`
+lista o que o código publicado EXIGE do banco — tabelas, colunas acrescentadas por migrações
+posteriores, e funções com a assinatura exata — e o endpoint nomeia o que falta. Há teste que
+derruba uma tabela, uma coluna e uma função de verdade e confere que cada uma é apontada.
+
 **Job preso em `executando` era reivindicado para sempre.** `MAX_TENTATIVAS` só
 era consultado em `registrarFalha`, que não roda quando o processo morre. Uma URL
 pesada consumiria a única vaga diária do plano Hobby, indefinidamente.
@@ -132,15 +148,12 @@ e `snippetFormulario` interpolando dentro de atributo HTML sem escapar.
 
 1. **Token de diagnóstico não expira** e fica no `sessionStorage` — §6 pede sessão
    curta e que a marca de teste não permaneça ativa para visitante real.
-2. **`/api/diagnostico` diz "tudoOk" sem olhar o schema** — por isso não pegou a
-   migração faltando em produção. Deveria conferir que as tabelas e funções que o
-   código usa existem, não só que a conexão abre.
-3. **Sessão não é revogável antes de expirar** — JWT sem estado. Ver
+2. **Sessão não é revogável antes de expirar** — JWT sem estado. Ver
    `docs/seguranca.md`.
-4. **`app_forms` enxerga `leads` de todas as contas** — políticas `using (true)`.
+3. **`app_forms` enxerga `leads` de todas as contas** — políticas `using (true)`.
    Sem vazamento em aberto (as consultas filtram por site), mas é a única parte
    onde a defesa é o código e não a política.
-5. **SSRF: posse do domínio não é verificada** e o validador não resolve DNS.
+4. **SSRF: posse do domínio não é verificada** e o validador não resolve DNS.
 
 ---
 

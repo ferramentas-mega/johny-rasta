@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verificarConexao, type CausaDeFalha } from '@/server/db';
 import { getSessionUser } from '@/server/auth/session';
 import { buildAtual } from '@/lib/build';
+import { verificarEsquema, comoResolverEsquema } from '@/server/esquema';
 
 /**
  * Diagnóstico da conexão com o banco, para quando a aplicação já está publicada
@@ -85,15 +86,47 @@ export async function GET(request: Request) {
   const conexoes = [];
   for (const v of VARIAVEIS) conexoes.push(await verificarConexao(v, autorizado));
 
-  const tudoOk = conexoes.every((c) => c.conecta);
+  const conectaTudo = conexoes.every((c) => c.conecta);
+
+  /**
+   * O ESQUEMA, e não só a conexão.
+   *
+   * Este endpoint já respondeu `tudoOk: true` durante um incidente em que TODAS
+   * as rotas devolviam 500, inclusive a coleta — o código tinha subido antes da
+   * migração. A conexão abria; a tabela é que não existia. Um diagnóstico que
+   * declara saúde sem olhar o que o código usa desvia a investigação para os
+   * lugares errados, e nesse caso custou a janela inteira de eventos.
+   */
+  const esquema = await verificarEsquema();
+  const esquemaCompleto = esquema.verificado && esquema.completo;
+
+  // `tudoOk` só é verdadeiro quando as duas coisas foram CONFERIDAS e estão bem.
+  // Esquema não verificado não vira "ok" por omissão.
+  const tudoOk = conectaTudo && esquemaCompleto;
+
   const painelFunciona =
     conexoes.filter((c) => (ESSENCIAIS as readonly string[]).includes(c.variavel)).every((c) => c.conecta) &&
-    !!process.env.SESSION_SECRET;
+    !!process.env.SESSION_SECRET &&
+    esquemaCompleto;
 
   const build = buildAtual();
 
   const publico = {
     tudoOk,
+    /**
+     * Os nomes dos objetos que faltam são públicos: estão nos arquivos de
+     * migração de um repositório público. O que eles revelam é que o deploy
+     * passou na frente do banco — a informação de que quem está depurando
+     * precisa, e a única que resolve o problema.
+     */
+    esquema: esquema.verificado
+      ? {
+          verificado: true,
+          completo: esquema.completo,
+          faltando: esquema.faltando,
+          oQueFazer: esquema.completo ? undefined : comoResolverEsquema(esquema.faltando),
+        }
+      : { verificado: false, motivo: esquema.motivo },
     // O commit é público (o repositório é público) e é o que permite conferir,
     // de fora, se o domínio está servindo o build que acabou de subir. Sem ele,
     // um deployment que ficou para trás é indistinguível de um atualizado.
