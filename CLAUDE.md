@@ -88,6 +88,14 @@ para forçar a remontagem ao trocar o alvo da edição.
 `DO NOTHING` seguido de `SELECT`, justamente para não precisar conceder UPDATE em `pages` aos papéis
 públicos.
 
+**Massa de teste ancorada em UTC, janela recortada no fuso do site.** A massa posicionava o "dia 0"
+em 12:00 UTC de hoje, enquanto `resolvePeriod` recorta com
+`date_trunc('day', now() at time zone <fuso do site>)`. Entre 00:00 e 03:00 UTC, São Paulo ainda
+está no dia anterior: o dia 0 caía num dia futuro, saía da janela de 7 dias, e quatro testes
+numéricos falhavam — nas outras 21 horas do dia, passavam. Hoje quem responde que dia é hoje é o
+Postgres, com o mesmo fuso da consulta (`FUSO_DA_MASSA` em `scripts/test-db.ts`). Há um teste que
+falha se a âncora voltar a divergir, e ele vale a qualquer hora.
+
 **Testes que gravam não podem mirar sites que outros testes medem.** A massa tem um site dedicado
 (`escrita.teste`) para as suítes que criam sessões e leads. Sem isso, a ordem de execução mudava os
 totais e um teste numérico falhava de forma intermitente.
@@ -103,6 +111,8 @@ totais e um teste numérico falhava de forma intermitente.
   `painel_matrix_test`, recriado a cada execução.
 - Valores esperados dos testes ficam escritos à mão em `scripts/test-db.ts`, derivados da massa. Se
   uma consulta mudar de comportamento, o teste falha — que é o objetivo.
+- `.github/workflows/ci.yml` roda tipos, lint, testes e build a cada push;
+  `pos-deploy.yml` falha se o domínio de produção não passar a servir o commit enviado.
 
 ---
 

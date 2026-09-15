@@ -1,0 +1,63 @@
+# Verificação a cada push: tipos, lint, testes e build.
+#
+# Existe porque a pergunta "o build quebrou?" custou, uma vez, um clone limpo
+# inteiro para ser respondida. Agora a resposta é um check verde ou vermelho na
+# própria tela do commit.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # O CI usa o superusuário do serviço para criar banco, papéis e massa —
+      # é o mesmo caminho do `npm run setup` numa máquina nova. As senhas dos
+      # papéis são descartáveis: vivem só neste contêiner efêmero.
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/postgres
+      DATABASE_URL: postgres://app_user:ci@localhost:5432/painel_matrix
+      DATABASE_URL_INGEST: postgres://app_ingest:ci@localhost:5432/painel_matrix
+      DATABASE_URL_FORMS: postgres://app_forms:ci@localhost:5432/painel_matrix
+      SESSION_SECRET: segredo-de-ci-sem-valor-fora-daqui
+      APP_URL: http://localhost:3000
+      TEST_DATABASE_NAME: painel_matrix_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Banco, papéis e migrações
+        run: npm run db:setup
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+      - name: Navegador
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+
+      - run: npm run build

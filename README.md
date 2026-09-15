@@ -77,9 +77,12 @@ em [`docs/deploy-supabase.md`](docs/deploy-supabase.md).
 | `npm run db:seed` | Recria a massa de desenvolvimento |
 | `npm run db:reset` | Apaga e recria o banco de desenvolvimento |
 | `npm run doctor` | Diagnostica o ambiente local e diz como resolver o que estiver faltando |
+| `npm run producao` | Diz qual commit está no ar no endereço publicado, e se o painel entra |
 
 Já publicado, o endereço `/api/diagnostico` faz a mesma verificação das conexões no servidor, sem
-expor host, usuário ou senha.
+expor host, usuário ou senha. O `npm run producao` consulta esse endereço e responde a pergunta que
+o painel da hospedagem esconde: **qual commit está sendo servido agora**. A tela de login carimba o
+mesmo no rodapé.
 
 Os testes usam um banco separado (`painel_matrix_test`), recriado a cada execução. O banco de
 desenvolvimento nunca é tocado por eles.

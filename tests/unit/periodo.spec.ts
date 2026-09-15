@@ -85,6 +85,51 @@ describe('recorte no fuso do site', () => {
   });
 });
 
+describe('a âncora da massa cai dentro da janela, a qualquer hora do dia', () => {
+  /**
+   * Guarda contra uma falha que já aconteceu e some sozinha.
+   *
+   * A massa ancorava o "dia 0" em 12:00 UTC de hoje, enquanto as consultas
+   * recortam a janela no fuso do site. Entre 00:00 e 03:00 UTC, São Paulo ainda
+   * está no dia anterior: o dia 0 caía num dia futuro, saía da janela de 7 dias,
+   * e quatro testes numéricos quebravam — nas outras 21 horas, passavam.
+   *
+   * Comparar contagem não serviria de guarda: fora daquelas 3 horas, o teste
+   * passaria mesmo com o defeito de volta. Então a asserção é sobre a borda em
+   * si, e vale a qualquer hora.
+   */
+  it('o evento mais recente da massa é anterior ao fim da janela, e não posterior', async () => {
+    const p = await withAccount(accountId, (db) => resolvePeriod(db, site.timezone, { key: '7d' }));
+
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const { rows } = await admin.query<{ ultimo: Date }>(
+      'select max(occurred_at) as ultimo from events where site_id = $1',
+      [site.id],
+    );
+    await admin.end();
+
+    const ultimo = rows[0]!.ultimo;
+    expect(ultimo).not.toBeNull();
+    expect(ultimo.getTime()).toBeLessThan(new Date(p.to).getTime());
+    expect(ultimo.getTime()).toBeGreaterThanOrEqual(new Date(p.from).getTime());
+  });
+
+  it('o dia 0 da massa é o mesmo "hoje" que a consulta enxerga', async () => {
+    const hoje = await withAccount(accountId, (db) => resolvePeriod(db, site.timezone, { key: 'hoje' }));
+    const serie = await withAccount(accountId, async (db) => {
+      const p = await resolvePeriod(db, site.timezone, { key: '7d' });
+      return getDailySeries(db, site, { ...p, label: '' });
+    });
+
+    // O último dia da série de 7 dias tem que ser o mesmo dia que "hoje" recorta.
+    const ultimoDia = serie[serie.length - 1]!.dia;
+    const inicioDeHoje = new Date(hoje.from).toISOString().slice(0, 10);
+    const diaDeHoje = new Date(new Date(hoje.from).getTime() + 12 * 3_600_000).toISOString().slice(0, 10);
+    expect([inicioDeHoje, diaDeHoje]).toContain(ultimoDia);
+  });
+});
+
 describe('a série diária respeita o fuso', () => {
   it('devolve um ponto por dia local, na ordem cronológica', async () => {
     const p = await withAccount(accountId, (db) => resolvePeriod(db, site.timezone, { key: '7d' }));

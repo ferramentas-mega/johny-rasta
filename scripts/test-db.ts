@@ -33,6 +33,15 @@ export function urlDoTeste(variavel: string): string {
 const DIA = 86_400_000;
 
 /**
+ * Fuso de todos os sites da massa, e o mesmo usado para ancorá-la no tempo.
+ *
+ * Precisa ser um valor só: é a janela de recorte das consultas e a colocação
+ * dos eventos ao mesmo tempo. Divergirem foi exatamente a causa da falha
+ * intermitente descrita na âncora, mais abaixo.
+ */
+const FUSO_DA_MASSA = 'America/Sao_Paulo';
+
+/**
  * Identificadores fixos da massa. Os testes referenciam estes valores
  * diretamente, então a massa é parte do contrato dos testes.
  */
@@ -176,9 +185,23 @@ export async function prepararBancoDeTeste(): Promise<void> {
   await db.connect();
   const senha = await hashPassword(SENHA_TESTE);
 
-  // Meia-noite UTC de hoje, para as datas caírem em dias previsíveis.
-  const hoje = new Date();
-  hoje.setUTCHours(12, 0, 0, 0);
+  // Âncora da massa: meio-dia de HOJE no fuso do site, não em UTC.
+  //
+  // Isto já esteve errado e falhava sozinho, uma vez por dia. A massa ancorava
+  // em 12:00 UTC de "hoje" segundo o relógio do processo, enquanto as consultas
+  // recortam a janela com `date_trunc('day', now() at time zone <fuso do site>)`
+  // — veja `resolvePeriod` em src/server/metrics/queries.ts. Entre 00:00 e 03:00
+  // UTC, São Paulo ainda está no dia anterior: o "dia 0" da massa caía num dia
+  // futuro, saía da janela de 7 dias, e quatro testes numéricos quebravam.
+  //
+  // Quem responde que dia é hoje passa a ser o Postgres, com o mesmo fuso e a
+  // mesma função que a consulta usa. O meio-dia dá 12 horas de folga para cada
+  // lado, então nenhum evento encosta na borda do dia.
+  const { rows: ancora } = await db.query<{ hoje: Date }>(
+    `select (date_trunc('day', now() at time zone $1) + interval '12 hours') at time zone $1 as hoje`,
+    [FUSO_DA_MASSA],
+  );
+  const hoje = ancora[0].hoje;
 
   async function criarConta(nome: string, email: string) {
     const accountId = randomUUID();
@@ -194,8 +217,8 @@ export async function prepararBancoDeTeste(): Promise<void> {
     const siteId = randomUUID();
     await db.query(
       `insert into sites (id, account_id, client_id, name, domain, timezone, public_id, snippet_seen_at)
-       values ($1, $2, $3, $4, $5, 'America/Sao_Paulo', $6, now())`,
-      [siteId, accountId, clientId, nome, dominio, publicId],
+       values ($1, $2, $3, $4, $5, $7, $6, now())`,
+      [siteId, accountId, clientId, nome, dominio, publicId, FUSO_DA_MASSA],
     );
     return siteId;
   }

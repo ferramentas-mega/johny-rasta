@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verificarConexao, type CausaDeFalha } from '@/server/db';
 import { getSessionUser } from '@/server/auth/session';
+import { buildAtual } from '@/lib/build';
 
 /**
  * Diagnóstico da conexão com o banco, para quando a aplicação já está publicada
@@ -87,8 +88,15 @@ export async function GET(request: Request) {
     conexoes.filter((c) => (ESSENCIAIS as readonly string[]).includes(c.variavel)).every((c) => c.conecta) &&
     !!process.env.SESSION_SECRET;
 
+  const build = buildAtual();
+
   const publico = {
     tudoOk,
+    // O commit é público (o repositório é público) e é o que permite conferir,
+    // de fora, se o domínio está servindo o build que acabou de subir. Sem ele,
+    // um deployment que ficou para trás é indistinguível de um atualizado.
+    commit: build.commit,
+    ambiente: build.ambiente,
     // O que realmente responde "consigo entrar?".
     painelFunciona,
     coletaFunciona: conexoes
@@ -118,9 +126,6 @@ export async function GET(request: Request) {
     {
       ...publico,
       sessaoConfigurada: !!process.env.SESSION_SECRET,
-      // Uma variável salva só em "Preview" não existe em "Production", e o
-      // sintoma é idêntico ao de não ter sido salva.
-      ambiente: process.env.VERCEL_ENV ?? (process.env.VERCEL ? 'desconhecido' : 'fora da Vercel'),
       // Só os NOMES, e só para quem está autorizado: revela nome digitado
       // errado, que produz exatamente o mesmo "ausente" de quem não criou nada.
       variaveisEncontradas: Object.keys(process.env)

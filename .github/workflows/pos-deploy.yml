@@ -1,0 +1,62 @@
+# Depois de publicar: o domínio está servindo ESTE commit?
+#
+# Um build pode compilar, virar deployment de produção e mesmo assim não estar
+# no ar — é o que acontece quando a atribuição automática de domínio está
+# desligada e o deployment nasce "staged". O sintoma é invisível: nada fica
+# vermelho, o domínio responde, e o código é de dias atrás.
+#
+# Este workflow torna isso barulhento.
+name: Conferir publicação
+
+on:
+  push:
+    branches: [claude/busy-hopper-3seo9l]
+  workflow_dispatch:
+
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Esperar a publicação e comparar o commit
+        env:
+          ENDERECO: https://johny-rasta.vercel.app
+          ESPERADO: ${{ github.sha }}
+        run: |
+          curto="${ESPERADO:0:7}"
+          echo "Commit enviado: $curto"
+          echo "Conferindo $ENDERECO/api/diagnostico"
+
+          # A publicação leva alguns minutos. Dez tentativas, 45s entre elas.
+          for tentativa in $(seq 1 10); do
+            codigo=$(curl -s -o /tmp/resposta.json -w '%{http_code}' \
+                          --max-time 20 "$ENDERECO/api/diagnostico" || echo 000)
+
+            if [ "$codigo" = "404" ]; then
+              motivo="o endereço responde 404: o build no ar nem tem essa rota"
+            elif [ "$codigo" = "000" ]; then
+              motivo="o endereço não respondeu"
+            else
+              no_ar=$(jq -r '.commit // "desconhecido"' /tmp/resposta.json)
+              echo "  tentativa $tentativa — HTTP $codigo, commit no ar: $no_ar"
+              if [ "$no_ar" = "$curto" ]; then
+                echo ""
+                echo "Publicado: $ENDERECO serve $curto."
+                jq -r '"painel entra: \(.painelFunciona)  coleta ativa: \(.coletaFunciona)"' \
+                   /tmp/resposta.json
+                exit 0
+              fi
+              motivo="o domínio serve $no_ar, e não $curto"
+            fi
+
+            echo "  tentativa $tentativa — $motivo"
+            [ "$tentativa" -lt 10 ] && sleep 45
+          done
+
+          echo ""
+          echo "::error::O domínio não acompanhou este push — $motivo"
+          echo ""
+          echo "O build provavelmente ficou 'staged': pronto, porém sem o domínio."
+          echo "Na Vercel: Deployments › no mais recente, ⋯ › Promote to Production."
+          echo "Para não repetir: Settings › Domains › Edit, e faça o domínio"
+          echo "seguir a branch de produção em vez de um deployment fixo."
+          exit 1

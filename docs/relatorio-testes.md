@@ -98,11 +98,23 @@ ser notado: TLS exigido em host remoto e dispensado em local, verificação de c
 CA, falha FECHADA em string ilegível, classificação das oito causas de erro de conexão, e resolução
 da URL pública (incluindo ignorar `APP_URL` sem esquema).
 
+### `build.spec.ts`
+
+O carimbo de build: commit encurtado para sete dígitos, ausência de commit fora da Vercel, distinção
+entre `preview` e `production` (uma variável salva num não vale no outro), e descrição sem separador
+solto quando não há commit.
+
 ### `periodo.spec.ts`
 
 Leitura dos parâmetros da URL, recorte no fuso do site (o dia de São Paulo começa às 03:00 UTC),
 fusos diferentes produzindo janelas diferentes, período anterior de mesma duração, intervalo
 personalizado inclusivo nos dois extremos, e série diária em ordem cronológica.
+
+Inclui o guarda contra uma falha que **some sozinha**: a massa ancorava o dia 0 em 12:00 UTC, e a
+janela é recortada no fuso do site. Entre 00:00 e 03:00 UTC o dia 0 caía num dia futuro e quatro
+testes numéricos quebravam; nas outras 21 horas, passavam. Comparar contagens não serviria de
+guarda — passaria com o defeito de volta. A asserção é sobre a borda: o evento mais recente da massa
+tem de ser anterior ao fim da janela. Verificado restaurando a âncora antiga, que o faz falhar.
 
 ---
 
@@ -178,6 +190,7 @@ por causa deles:
 | Pool de uma conexão em serverless, com três `withAccount` concorrentes por render | Revisão de código |
 | `tlsPara` falhando ABERTO em string de conexão ilegível | Revisão de código |
 | `APP_URL` sem esquema virando caminho relativo no site do cliente | Revisão de código |
+| Massa ancorada em UTC e janela recortada no fuso do site: falha diária das 00:00 às 03:00 UTC | Suíte rodada depois da virada da data |
 
 Três erros de contagem manual nos valores esperados da massa também apareceram — nesses casos o
 código estava certo e a expectativa estava errada. Foram corrigidas as expectativas.
@@ -237,13 +250,14 @@ Preenchido a cada execução completa:
 - `npm run doctor` — ambiente íntegro (9 verificações)
 - `npm run typecheck` — sem erros
 - `npm run lint` — sem avisos
-- `npm test` — 73 testes, todos passando (5 arquivos, 3,5 s)
+- `npm test` — 79 testes, todos passando (6 arquivos, 3,3 s)
 - `npm run test:e2e` — 32 testes (26 desktop + 6 celular), todos passando (3,0 min)
 - `npm run build` — build de produção concluído, 17 rotas
 - `npm start` — servidor de produção respondendo
 
-Reexecutada por inteiro depois da revisão de documentação descrita acima. A revisão não tocou em
-`src/`, e a suíte confirma que nada mudou de comportamento.
+Reexecutada por inteiro depois do carimbo de build e da correção da âncora da massa. Verificado
+além da suíte: a tela de login renderiza `production · 98390f6` com as variáveis da Vercel e `local`
+sem elas; `/api/diagnostico` devolve o commit; `npm run producao` lê esse endereço e responde.
 
 Nota de honestidade: numa rodada anterior eu reportei "55 passando" apoiado numa execução que ficou
 em segundo plano e cuja saída eu não cheguei a ler. Quando rodei de fato, um teste estava quebrado —

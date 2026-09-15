@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "setup": "tsx scripts/setup.ts",
-    "doctor": "tsx scripts/diagnostico.ts"
+    "doctor": "tsx scripts/diagnostico.ts",
+    "producao": "tsx scripts/producao.ts"
   },
   "dependencies": {
     "jose": "^6.2.12",
