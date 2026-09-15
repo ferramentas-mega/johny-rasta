@@ -169,6 +169,20 @@ id correto em mãos.
 
 Coisas que quebraram durante o desenvolvimento e podem quebrar de novo:
 
+**Recurso implementado sem porta na tela é recurso que não existe.** Uma varredura das 14 Server
+Actions do projeto achou três casos: editar site (Action, URL e formulário funcionando, e nenhum
+link levando até lá), arquivar site e remover cliente. Pior, o teste da edição montava
+`/sites?editar=<id>` à mão — passava com o produto inalcançável. **Teste que constrói o caminho que
+o usuário não tem prova o mecanismo e esconde a tela quebrada.** Ao acrescentar uma Action, a
+pergunta é "de onde alguém clica nisso?", e o teste começa pelo clique. `removerCliente` continua
+órfã, de propósito: arquivar cliente com sites ativos tem regra própria e merece tela própria.
+
+**Cadastrar sem descadastrar é uma porta que só abre.** `monitored_urls` só tinha cadastro. URL
+prioritária é reanalisada a cada sete dias e o plano Hobby dá uma execução por dia: um endereço
+digitado errado consumia a vaga diária para sempre. Ao criar um cadastro que alimenta trabalho
+recorrente, a remoção faz parte do mesmo recurso — e ela apaga só o que ainda não rodou, nunca a
+medição já feita, que é histórico.
+
 **`revalidatePath` não pode ser chamado durante o render de uma página.** Só em Server Actions e
 Route Handlers. A tela de Rastreamento grava `snippet_seen_at` chamando o serviço direto, sem passar
 pela Action.
@@ -176,6 +190,13 @@ pela Action.
 **Ordem de escrita e leitura na mesma renderização.** A mesma tela marca o snippet como visto
 *antes* de ler o site — marcar depois faria a página exibir o estado anterior ao próprio ato que
 acabou de acontecer.
+
+**Remontagem por `key` descarta o resultado da Action que a causou.** O formulário de sites leva
+`key={emEdicao?.id ?? 'novo'}`. Arquivar o site tira ele da lista, a lista é a fonte de `emEdicao`,
+a chave muda para `'novo'` e o componente remonta — levando junto a mensagem de sucesso que a
+própria Action acabara de devolver. O ato destruía quem ia mostrá-lo, e a confirmação nunca
+aparecia. Quando a Action muda a coleção que decide a chave, a confirmação vai na URL (um
+`redirect` com marca), que sobrevive à remontagem.
 
 **Componentes cliente sobrevivem à navegação.** Um formulário cujo `useState` inicializa a partir de
 uma prop não reinicializa quando só a prop muda. As telas de cadastro passam `key={id ?? 'novo'}`

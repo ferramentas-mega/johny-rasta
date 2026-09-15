@@ -175,6 +175,12 @@ divisíveis por quatro: máximo 1 virava `0, 0, 1, 1, 1`. Ver o commit da revis�
 de componentes — inclusive o que a prova de navegador deixou de decidir, e onde
 a cobertura real passou a morar.
 
+**Revisão das cinco abas do site, e da aba Sites.** Três recursos existiam
+inteiros no servidor e não tinham porta na tela — editar site, arquivar site e
+remover URL monitorada —, e a etapa de formulários não tinha como ser concluída
+por ela mesma. Detalhe que vale guardar: o teste da edição montava
+`/sites?editar=<id>` à mão, então passava com o produto inalcançável.
+
 ---
 
 ## Defeitos encontrados e ainda abertos
@@ -189,7 +195,12 @@ a cobertura real passou a morar.
    isso resolver DNS no validador seria teatro. Ver `docs/seguranca.md`.
 4. **Sem justiça entre contas na fila de auditoria** — FIFO global, uma execução
    por dia no plano Hobby.
-5. **A massa de navegador não exercita o segundo eixo do gráfico.** Máximos 5 e
+5. **`removerCliente` continua órfã** — arquivar cliente com sites ativos tem
+   regra própria (`arquivarCliente` devolve um motivo) e merece tela própria.
+6. **Os totais de rodapé do Desempenho são somados no componente**, contra a
+   regra da casa. Ali há prova de navegador exigindo que batam com os cartões,
+   então é dívida conhecida, não divergência solta.
+7. **A massa de navegador não exercita o segundo eixo do gráfico.** Máximos 5 e
    2 caem no mesmo topo, e ali a implementação certa e a normalizada desenham a
    mesma curva. Quem decide hoje é `tests/unit/eixo.spec.ts`; fechar de vez pede
    um site de massa com ordens de grandeza separadas.
