@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react';
 import { num, dataCurta } from '@/lib/formato';
+import { escalasDoGrafico } from '@/lib/eixo';
 import type { DailyPoint } from '@/server/metrics/queries';
 
 /**
@@ -30,14 +31,6 @@ const LARGURA = 760;
 const ALTURA = 240;
 const INTERNO_L = LARGURA - PAD.left - PAD.right;
 const INTERNO_A = ALTURA - PAD.top - PAD.bottom;
-
-/** Escala "bonita": topo arredondado para cima, para o eixo ter marcas legíveis. */
-function escala(maximo: number): number {
-  if (maximo <= 0) return 1;
-  const magnitude = 10 ** Math.floor(Math.log10(maximo));
-  const passo = [1, 2, 2.5, 5, 10].find((p) => maximo <= p * magnitude) ?? 10;
-  return passo * magnitude;
-}
 
 function caminho(valores: number[], topo: number): string {
   const n = valores.length;
@@ -69,10 +62,12 @@ export function Grafico({ pontos, periodo }: { pontos: DailyPoint[]; periodo: st
   const formularios = pontos.map((p) => p.formularios);
   const mostrarSegunda = metrica !== 'formularios';
 
-  const topoEsq = escala(Math.max(...principal, 0));
-  const topoDir = escala(Math.max(...formularios, 0));
+  // Os dois eixos dividem as MESMAS linhas, então compartilham a contagem de
+  // intervalos — e ela é fixa. Cada topo depende só do máximo da própria série:
+  // trocar a métrica principal não pode mexer na escala dos formulários.
+  const { esquerda: eixoEsq, direita: eixoDir } = escalasDoGrafico(principal, formularios);
+  const topoEsq = eixoEsq.topo;
 
-  const marcas = [0, 0.25, 0.5, 0.75, 1];
   const dx = pontos.length > 1 ? INTERNO_L / (pontos.length - 1) : 0;
 
   // Em 30 dias mostrar todo dia vira borrão: um a cada 5.
@@ -140,10 +135,10 @@ export function Grafico({ pontos, periodo }: { pontos: DailyPoint[]; periodo: st
           </linearGradient>
         </defs>
 
-        {marcas.map((t) => {
-          const y = PAD.top + INTERNO_A - t * INTERNO_A;
+        {eixoEsq.marcas.map((valor, i) => {
+          const y = PAD.top + INTERNO_A - (i / eixoEsq.intervalos) * INTERNO_A;
           return (
-            <g key={t}>
+            <g key={valor}>
               <line x1={PAD.left} y1={y} x2={PAD.left + INTERNO_L} y2={y} stroke="var(--rowbd)" strokeWidth="1" />
               <text
                 x={PAD.left - 8}
@@ -154,7 +149,7 @@ export function Grafico({ pontos, periodo }: { pontos: DailyPoint[]; periodo: st
                 className="mono"
                 data-eixo="esquerda"
               >
-                {num(Math.round(topoEsq * t))}
+                {num(valor)}
               </text>
               {mostrarSegunda && (
                 <text
@@ -165,7 +160,7 @@ export function Grafico({ pontos, periodo }: { pontos: DailyPoint[]; periodo: st
                   className="mono"
                   data-eixo="direita"
                 >
-                  {num(Math.round(topoDir * t))}
+                  {num(eixoDir.marcas[i]!)}
                 </text>
               )}
             </g>
@@ -176,7 +171,7 @@ export function Grafico({ pontos, periodo }: { pontos: DailyPoint[]; periodo: st
         <path d={caminho(principal, topoEsq)} fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
         {mostrarSegunda && (
-          <path d={caminho(formularios, topoDir)} fill="none" stroke="var(--tx2)" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" />
+          <path d={caminho(formularios, eixoDir.topo)} fill="none" stroke="var(--tx2)" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" />
         )}
 
         {principal.map((v, i) => (

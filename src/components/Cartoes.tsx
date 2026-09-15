@@ -38,6 +38,12 @@ export function CartaoIndicador({
         <span>{rotulo}</span>
         <span
           title={ajuda}
+          // `role="img"` não é decoração: `aria-label` NÃO é válido num `<span>`
+          // sem papel — a função implícita é `generic`, que não aceita nome do
+          // autor, e o leitor de tela pode descartar o rótulo inteiro. O efeito
+          // seria a definição não chegar a ninguém, sem nada aparecer errado na
+          // tela. `img` aceita nome, e o crachá é de fato um glifo.
+          role="img"
           aria-label={`Definição: ${ajuda}`}
           tabIndex={0}
           style={{

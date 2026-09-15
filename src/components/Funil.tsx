@@ -81,7 +81,12 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
 
               // Opacidade decrescente: a primeira etapa é a mais clara porque é
               // a maior, e a cor não codifica estado nenhum aqui — só ordem.
-              const opacidade = 0.5 - i * 0.09;
+              //
+              // O piso não é decoração defensiva: são quatro etapas hoje, e na
+              // sexta a conta chega a 0,05 — uma etapa que existe, tem número e
+              // não se vê. Quem acrescentasse a etapa veria o número aparecer e
+              // o trapézio não, sem erro nenhum para investigar.
+              const opacidade = Math.max(0.12, 0.5 - i * 0.09);
 
               return (
                 <g key={etapa.chave}>

@@ -66,21 +66,47 @@ test('a série de formulários tem eixo próprio, com números reais', async ({ 
     return Math.max(...rotulos.map(numero));
   };
 
-  // Em 30 dias o maior dia de cliques é maior que o maior dia de formulários,
-  // então as duas escalas precisam divergir. Se o gráfico ainda normalizasse a
-  // série contra um eixo só, os dois topos andariam juntos.
   await page.getByRole('button', { name: '30 dias' }).click();
   await page.waitForURL(/periodo=30d/);
 
+  /** A curva tracejada, exatamente como o SVG a descreve. */
+  const tracejada = () =>
+    painel.locator('svg path[stroke-dasharray]').first().getAttribute('d');
+
   const direitaComVisitas = await topo('direita');
+  const tracejadaComVisitas = await tracejada();
 
   await painel.getByRole('button', { name: 'Cliques em CTA' }).click();
-  const esquerdaComCliques = await topo('esquerda');
   const direitaComCliques = await topo('direita');
+  const tracejadaComCliques = await tracejada();
 
-  // Trocar a métrica principal muda SÓ o eixo da esquerda.
+  // Trocar a métrica principal não pode mexer na série de formulários: nem no
+  // topo do eixo dela, nem no traçado.
   expect(direitaComCliques).toBe(direitaComVisitas);
-  expect(esquerdaComCliques).toBeGreaterThan(direitaComCliques);
+  expect(tracejadaComCliques).toBe(tracejadaComVisitas);
+  expect(tracejadaComVisitas).toBeTruthy();
+
+  // ─── O QUE ESTA PROVA NÃO DECIDE, e por quê ────────────────────────────────
+  //
+  // Ela não distingue "escala própria" de "normalizada contra o eixo da
+  // esquerda" com a massa de hoje, e é melhor dizer isso aqui do que deixar
+  // alguém confiar demais nela. Na janela de 30 dias o maior dia de cliques é 5
+  // e o de formulários é 2; com rótulos inteiros e um número fixo de linhas, as
+  // duas séries caem no MESMO topo. Quando os topos coincidem, as duas
+  // implementações desenham exatamente a mesma curva — não há diferença para
+  // observar, em teste nenhum.
+  //
+  // Medido: reintroduzi a normalização do protótipo no componente e este
+  // arquivo continuou passando. As asserções acima valem (elas quebram assim
+  // que os topos divergirem), mas quem depender só delas vai superestimar a
+  // cobertura.
+  //
+  // Fechar de verdade pede massa com ordens de grandeza separadas — centenas de
+  // visitas contra um punhado de formulários, que é o caso para o qual o
+  // segundo eixo existe. Enquanto isso não houver, quem garante a régua é
+  // `tests/unit/eixo.spec.ts`, que prova que todo rótulo é inteiro, igualmente
+  // espaçado, e que cada eixo depende só da própria série.
+  expect(await topo('esquerda')).toBeGreaterThan(0);
 });
 
 test('sessões convertidas e envios por sessão mostram valores diferentes', async ({ page }) => {
