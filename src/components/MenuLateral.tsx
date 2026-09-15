@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Marca } from '@/components/Marca';
 import { Icone, type IconeNome } from '@/components/icones';
 import { TextoMatrix } from '@/components/TextoMatrix';
+import { MenuInferior } from '@/components/MenuInferior';
 
 /**
  * Menu lateral.
@@ -70,9 +71,16 @@ export function MenuLateral({
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('');
 
+  const contagemDe = (href: string) =>
+    href === '/clientes' ? contagens.clientes
+    : href === '/sites' ? contagens.sites
+    : href === '/leads' ? contagens.leads
+    : null;
+
   return (
-    // Layout em CSS, não inline: no celular a barra lateral vira uma faixa
-    // horizontal no topo, e isso é uma media query — que estilo inline não tem.
+    <>
+    {/* Layout em CSS, não inline: no celular a barra lateral vira uma faixa
+        horizontal no topo, e isso é uma media query — que estilo inline não tem. */}
     <aside className="lateral">
       <div className="lateral-marca">
         <Marca />
@@ -81,11 +89,7 @@ export function MenuLateral({
       <nav aria-label="Seções do painel" className="lateral-nav">
         {ITENS.map((item) => {
           const on = ativo(item);
-          const contagem =
-            item.href === '/clientes' ? contagens.clientes
-            : item.href === '/sites' ? contagens.sites
-            : item.href === '/leads' ? contagens.leads
-            : null;
+          const contagem = contagemDe(item.href);
 
           return (
             <Link
@@ -161,5 +165,13 @@ export function MenuLateral({
         </div>
       </div>
     </aside>
+
+    {/* No celular a navegação vai para o rodapé, ao alcance do polegar. O CSS
+        decide qual das duas aparece — as duas nunca estão visíveis juntas. */}
+    <MenuInferior
+      itens={ITENS.map((i) => ({ ...i, contagem: contagemDe(i.href) }))}
+      busca={busca}
+    />
+    </>
   );
 }

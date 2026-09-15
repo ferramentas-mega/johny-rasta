@@ -140,6 +140,31 @@ export default async function PaginaConfiguracoes({ searchParams }: { searchPara
           </p>
         </Painel>
 
+        {/*
+          A sessão vive aqui porque no celular a barra lateral não existe: a
+          navegação mudou para o rodapé, e "Sair" não cabe entre seis destinos.
+          No desktop ele continua no rodapé do menu — os dois apontam para a
+          mesma rota, não há duas formas de sair.
+        */}
+        <Painel titulo="Sessão" subtitulo={`Conectado como ${ctx.usuario.name} · ${ctx.usuario.accountName}`}>
+          <form action="/api/sair" method="post">
+            <button
+              type="submit"
+              style={{
+                cursor: 'pointer',
+                background: 'var(--elev)',
+                border: '1px solid var(--bd)',
+                borderRadius: 10,
+                padding: '11px 16px',
+                fontSize: 13.5,
+                color: 'var(--tx)',
+              }}
+            >
+              Sair da conta
+            </button>
+          </form>
+        </Painel>
+
         <footer style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
           <Aviso tom="ok">DADOS REAIS</Aviso>
           <Aviso>CONTA: {ctx.usuario.accountName.toUpperCase()}</Aviso>

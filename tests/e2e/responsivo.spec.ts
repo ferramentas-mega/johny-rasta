@@ -161,21 +161,84 @@ test('o painel se declara instalável, com os ícones que o Chrome exige', async
   await expect(page.locator('link[rel=manifest]')).toHaveAttribute('href', /manifest/);
 });
 
-test('a navegação do celular é uma faixa curta, não uma tela inteira', async ({ page }) => {
+test('no celular a navegação fica no rodapé, ao alcance do polegar', async ({ page }) => {
   await entrar(page);
 
   // Era um `aside` de largura mínima 240px que quebrava para uma linha própria
   // e ocupava a tela inteira: no celular era preciso rolar o menu completo
-  // antes de chegar a qualquer número. A faixa precisa caber numa fração do
-  // topo, e continuar visível ao rolar.
-  const menu = page.locator('.lateral');
-  const altura = await menu.evaluate((el) => el.getBoundingClientRect().height);
+  // antes de chegar a qualquer número. Hoje a barra lateral não existe aqui.
+  await expect(page.locator('.lateral')).toBeHidden();
+
+  const rodape = page.locator('.menu-inferior');
+  await expect(rodape).toBeVisible();
+  expect(await rodape.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+
+  const altura = await rodape.evaluate((el) => el.getBoundingClientRect().height);
   const tela = page.viewportSize()!.height;
-  expect(altura, 'o menu não pode comer mais de 15% da altura do celular').toBeLessThan(tela * 0.15);
+  expect(altura, 'a barra não pode comer mais de 12% da altura do celular').toBeLessThan(tela * 0.12);
 
-  expect(await menu.evaluate((el) => getComputedStyle(el).position)).toBe('sticky');
+  // Os seis destinos continuam alcançáveis, e nenhum rótulo é cortado.
+  const itens = rodape.getByRole('link');
+  await expect(itens).toHaveCount(6);
+  const cortado = await rodape.evaluate((barra) => {
+    const b = barra.getBoundingClientRect();
+    return [...barra.querySelectorAll('a')].some((a) => a.getBoundingClientRect().right > b.right + 1);
+  });
+  expect(cortado, 'nenhum item pode ficar cortado na borda').toBe(false);
 
-  // Todos os itens continuam alcançáveis, rolando na horizontal.
-  await expect(page.getByRole('navigation', { name: 'Seções do painel' }).getByRole('link')).toHaveCount(6);
-  await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible();
+  // O conteúdo não termina debaixo da barra fixa.
+  const respiro = await page
+    .locator('.conteudo-painel')
+    .evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
+  expect(respiro).toBeGreaterThanOrEqual(altura);
+});
+
+test('o facho acompanha o item ativo, e o ativo vem da rota', async ({ page }) => {
+  await entrar(page);
+
+  const centro = async (sel: string) => {
+    const c = await page.locator(sel).boundingBox();
+    return c!.x + c!.width / 2;
+  };
+
+  /**
+   * Tolerância de 2px, e não igualdade exata.
+   *
+   * A posição do facho é calculada com `offsetLeft`/`offsetWidth`, que são
+   * INTEIROS, enquanto a medição do teste usa `getBoundingClientRect`, que é
+   * fracionária. Com seis itens dividindo 390px, cada um mede 65,33px — e a
+   * diferença de arredondamento é subpixel, não desalinhamento.
+   */
+  const desalinho = async () =>
+    Math.abs((await centro('.facho')) - (await centro('.item-inferior[aria-current="page"]')));
+
+  /**
+   * `expect.poll` e não um `waitForTimeout`: o facho desliza numa transição de
+   * 340ms, e medir logo após a navegação pega ele no meio do caminho. Esperar
+   * um tempo fixo tornaria o teste dependente da máquina; esperar a condição
+   * falha só se ele nunca chegar.
+   */
+  const alinha = async (porque: string) =>
+    expect.poll(desalinho, { message: porque, timeout: 3000 }).toBeLessThanOrEqual(2);
+
+  // O destaque é derivado do `pathname`, não de um estado próprio do
+  // componente — foi um estado paralelo que, no protótipo, deixava "Leads"
+  // aceso sobre a tela de Desempenho.
+  await expect(page.locator('.item-inferior[aria-current="page"]')).toContainText('Visão geral');
+  await alinha('o facho precisa nascer sobre o item ativo');
+
+  await page.locator('.item-inferior').filter({ hasText: 'Leads' }).click();
+  await page.waitForURL('**/leads**');
+  await expect(page.locator('.item-inferior[aria-current="page"]')).toContainText('Leads');
+  await alinha('e acompanhar a navegação');
+});
+
+test('no celular, sair da conta continua possível — pelas Configurações', async ({ page }) => {
+  await entrar(page);
+  await page.locator('.item-inferior').filter({ hasText: 'Configurações' }).click();
+  await page.waitForURL('**/configuracoes**');
+
+  await page.getByRole('button', { name: 'Sair da conta' }).click();
+  await page.waitForURL('**/entrar**');
+  await expect(page.locator('input[name=email]')).toBeVisible();
 });

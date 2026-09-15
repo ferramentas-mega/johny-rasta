@@ -717,3 +717,141 @@ select option {
     height: 20px;
   }
 }
+
+/* ==========================================================================
+   Navegação de rodapé (celular)
+   ==========================================================================
+
+   Fixa embaixo, onde o polegar alcança. Substitui a faixa de navegação do topo:
+   duas barras custariam duas vezes a altura útil, e a de cima ficava longe da
+   mão em telas grandes.
+
+   O facho sobre o item ativo é o efeito do componente de referência, escrito
+   nos tokens do tema. A posição vem de medição do DOM (veja `MenuInferior`),
+   porque os itens não têm largura igual. */
+
+.menu-inferior {
+  display: none;
+}
+
+.facho {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  width: 38px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--gold);
+  box-shadow: 0 0 14px 2px var(--gold);
+}
+
+/* A transição só liga depois da primeira colocação; senão o facho desliza da
+   borda esquerda da tela até o item ativo no primeiro quadro. */
+.facho-animado {
+  transition:
+    left 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease;
+}
+
+/* O cone de luz descendo do facho. Recortado num trapézio: uma barra retangular
+   pareceria uma sombra, não um facho. */
+.facho-cone {
+  position: absolute;
+  left: -30%;
+  top: 3px;
+  width: 160%;
+  height: 46px;
+  pointer-events: none;
+  clip-path: polygon(5% 100%, 25% 0, 75% 0, 95% 100%);
+  background: linear-gradient(to bottom, var(--gold-fill), transparent);
+}
+
+@media (max-width: 860px) {
+  .menu-inferior {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: flex;
+    align-items: stretch;
+    background: var(--side);
+    border-top: 1px solid var(--bd);
+    /* O respiro da barra de gestos do celular vem daqui; sem ele o rótulo fica
+       debaixo da faixa do sistema. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Seis itens numa tela de 360px dão 60px cada — apertado, mas os rótulos
+       cabem. Abaixo disso, rola. */
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .menu-inferior::-webkit-scrollbar {
+    display: none;
+  }
+
+  .item-inferior {
+    position: relative;
+    z-index: 2;
+    /* `1 0 auto`: cresce para dividir a largura, mas NUNCA encolhe abaixo do
+       próprio texto. Com uma base fixa, "Configurações" era cortado no sexto
+       item; assim a barra rola quando os seis não cabem, em vez de clipar. */
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 9px 4px 8px;
+    text-decoration: none;
+    color: var(--tx3);
+    transition: color 0.18s ease;
+  }
+
+  .item-inferior[aria-current='page'] {
+    color: var(--gold);
+  }
+
+  .item-inferior:hover {
+    color: var(--tx);
+  }
+
+  .item-inferior-icone {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .item-inferior-rotulo {
+    font-size: 9.5px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  .item-inferior-contagem {
+    position: absolute;
+    top: -6px;
+    left: 12px;
+    min-width: 14px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: var(--gold);
+    color: var(--on-gold);
+    font-size: 9px;
+    line-height: 14px;
+    text-align: center;
+  }
+
+  /* A barra lateral inteira sai do celular: a navegação foi para o rodapé, e
+     conta e "Sair" moraram numa faixa de 68px que não mostrava mais nada. Os
+     dois foram para a tela de Configurações, que é um destino do próprio menu.
+     São 68px de conteúdo recuperados em TODA tela. */
+  .lateral {
+    display: none;
+  }
+
+  /* O conteúdo não pode terminar debaixo da barra fixa. */
+  .conteudo-painel {
+    padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+  }
+}
