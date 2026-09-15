@@ -192,7 +192,7 @@ select option {
 }
 
 /* ==========================================================================
-   Tela de login
+   Cartão de vidro: login e telas de erro
    ==========================================================================
 
    O visual veio de um componente pronto (shadcn + Tailwind + framer-motion +
@@ -203,10 +203,14 @@ select option {
    nos tokens do tema, em verde e não em roxo.
 
    As animações daqui não precisam de guarda própria: o bloco
-   `prefers-reduced-motion` acima zera a duração de toda animação da página. */
+   `prefers-reduced-motion` acima zera a duração de toda animação da página.
+
+   Os nomes são `cartao-vidro` e `veu-de-fundo`, e não `...-login`: as telas de
+   404 e de erro usam os mesmos blocos. Classe chamada "login" usada fora do
+   login é o tipo de nome que faz alguém mexer no lugar errado. */
 
 /*
- * Véu entre a chuva e o formulário.
+ * Véu entre a chuva e o conteúdo.
  *
  * Escurecer o FUNDO é diferente de apagar a chuva: baixar a opacidade do canvas
  * apagaria o dígito inteiro, rastro incluído, e o efeito sumiria. O véu deixa o
@@ -216,7 +220,7 @@ select option {
  * No tema claro o véu é BRANCO, não preto. A intenção é a mesma (afastar o
  * fundo do primeiro plano); preto sobre uma tela clara faria o contrário.
  */
-.veu-login {
+.veu-de-fundo {
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -226,13 +230,13 @@ select option {
     rgba(0, 0, 0, 0.62);
 }
 
-[data-tema='claro'] .veu-login {
+[data-tema='claro'] .veu-de-fundo {
   background:
     radial-gradient(60% 55% at 50% 50%, rgba(255, 255, 255, 0.9), transparent 100%),
     rgba(255, 255, 255, 0.7);
 }
 
-.cartao-login {
+.cartao-vidro {
   position: relative;
   border-radius: 16px;
   padding: 26px 22px;
@@ -245,7 +249,7 @@ select option {
 }
 
 /* Trama diagonal quase invisível, que tira o "chapado" do fundo do cartão. */
-.cartao-login::before {
+.cartao-vidro::before {
   content: '';
   position: absolute;
   inset: 0;

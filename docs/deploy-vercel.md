@@ -133,6 +133,30 @@ painel continua funcionando, o que é útil para conferir o login primeiro:
 > deployment de Preview. O sintoma engana: o `/api/diagnostico` aberto pela URL de preview acusa
 > tudo ausente, como se você não tivesse salvado nada.
 
+**As duas da qualidade técnica.** Opcionais: sem elas, a análise de PageSpeed/CrUX fica desligada e
+a tela diz isso — nenhuma nota inventada aparece. O resto do painel funciona igual.
+
+| Key | Value |
+|---|---|
+| `PAGESPEED_API_KEY` | chave do Google Cloud, com **as duas** APIs habilitadas |
+| `CRON_SECRET` | segredo do agendador, gerado como o `SESSION_SECRET` |
+
+São duas APIs habilitadas **separadamente** no mesmo projeto do Google Cloud: *PageSpeed Insights
+API* e *Chrome UX Report API*. Esquecer a segunda produz 403 só no CrUX, com o PageSpeed
+funcionando — o que faz parecer defeito do painel. O passo a passo está em
+[`qualidade-tecnica.md`](qualidade-tecnica.md).
+
+Sem `CRON_SECRET`, os endpoints `/api/auditorias/*` respondem **401 a todo mundo, inclusive ao cron
+da Vercel**. É de propósito: o padrão é negar, porque um agendador aberto enfileira análises de
+graça e queima a quota da conta. A Vercel envia o valor dessa variável como
+`Authorization: Bearer …` automaticamente — você não configura nada além de salvá-la.
+
+O `vercel.json` já declara os dois crons diários: `0 6 * * *` enfileira e `30 6 * * *` processa. No
+plano Hobby, **dois crons por projeto e uma execução por dia** é o limite, e uma expressão mais
+frequente **falha o deploy** em vez de ser ignorada. A regra semanal das análises vive na consulta,
+não no agendador — e isso dá uma análise automática por dia, com o botão "Executar agora" da tela de
+Qualidade técnica para quando você quiser mais.
+
 **Não adicione `DATABASE_URL_ADMIN`.** Ela só serve para migração e seed, e o código da aplicação
 nunca a importa. Fora dali, ela seria uma credencial de superusuário exposta sem necessidade.
 

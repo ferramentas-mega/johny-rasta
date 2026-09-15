@@ -28,7 +28,7 @@ export default function PaginaEntrar() {
         Véu entre a chuva e o formulário. Decorativo e transparente ao ponteiro:
         nunca pode virar uma camada que intercepta o clique no campo de e-mail.
       */}
-      <div className="veu-login" aria-hidden="true" />
+      <div className="veu-de-fundo" aria-hidden="true" />
 
       {/*
         `position: relative` + `zIndex: 1` põem o cartão ACIMA do canvas e do

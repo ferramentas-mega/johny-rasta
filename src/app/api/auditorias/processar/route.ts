@@ -14,12 +14,17 @@ import { consultarPaginaOuOrigem, CruxNaoConfigurado } from '@/server/qualidade/
  * primeiro.
  *
  * Quem chama:
- *  - o cron diário (`vercel.json`), autenticado pelo CRON_SECRET;
- *  - a própria tela, logo depois de enfileirar, para o usuário não esperar o
- *    cron do dia seguinte.
+ *  - **GET**: o cron diário do `vercel.json`, autenticado pelo `CRON_SECRET`.
+ *    A Vercel dispara crons por GET, e só por GET — um endpoint só de POST
+ *    nunca seria chamado por ela. Foi o que aconteceu aqui: o agendador
+ *    enfileirava todo dia e ninguém drenava a fila, porque este arquivo
+ *    exportava apenas POST enquanto o comentário afirmava que o cron o chamava.
+ *  - **POST**: a própria tela, logo depois de enfileirar, para o usuário não
+ *    esperar o cron do dia seguinte. Aceita sessão OU segredo.
  *
  * O que NÃO chama: qualquer um. O endpoint consome quota da chave do Google —
- * 25.000 análises por dia — e aberto seria um jeito barato de esgotá-la.
+ * 25.000 análises por dia — e aberto seria um jeito barato de esgotá-la. Por
+ * isso o GET exige o segredo mesmo havendo sessão: é o caminho do agendador.
  */
 
 export const runtime = 'nodejs';
@@ -37,13 +42,27 @@ function autorizadoComoCron(request: Request): boolean {
   return recebido === `Bearer ${esperado}`;
 }
 
+/**
+ * O caminho do agendador. Só o segredo abre — nunca a sessão: um GET autenticado
+ * por cookie seria disparável por qualquer página que o usuário logado abrisse.
+ */
+export async function GET(request: Request) {
+  if (!autorizadoComoCron(request)) {
+    return NextResponse.json({ erro: 'Não autorizado.' }, { status: 401 });
+  }
+  return processar(true);
+}
+
 export async function POST(request: Request) {
   const usuario = await getSessionUser().catch(() => null);
   const cron = autorizadoComoCron(request);
   if (!usuario && !cron) {
     return NextResponse.json({ erro: 'Não autorizado.' }, { status: 401 });
   }
+  return processar(cron, usuario?.accountId);
+}
 
+async function processar(cron: boolean, accountId?: string) {
   if (!process.env.PAGESPEED_API_KEY) {
     // Configuração ausente é 503, não 500: o servidor está bem, a integração é
     // que não está ligada. E jamais devolve nota inventada.
@@ -57,7 +76,7 @@ export async function POST(request: Request) {
   // só é possível sem RLS de conta. Por isso usa `withoutAccount`, e por isso
   // este caminho exige o segredo.
   const executar = cron ? withoutAccount : <T,>(fn: Parameters<typeof withAccount<T>>[1]) =>
-    withAccount<T>(usuario!.accountId, fn);
+    withAccount<T>(accountId!, fn);
 
   const job = await executar((db) => reivindicarProximo(db));
   if (!job) return NextResponse.json({ processado: false, motivo: 'fila vazia' });

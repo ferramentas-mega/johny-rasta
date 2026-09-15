@@ -35,6 +35,21 @@ adicionar um `catch` que devolve dados vazios, não adicione.
 **Zero e "indisponível" não são a mesma coisa.** Zero afirma "medimos e não houve". Sem medição, a
 tela diz "Indisponível" ou "Sem base de cálculo". Divisão por zero devolve `null`, não `0`.
 
+**Nota técnica pertence a uma URL e a um dispositivo.** Nunca a um cliente, nunca a um site inteiro.
+A mesma página tem notas diferentes no celular e no computador. Se alguém pedir "a nota do cliente",
+a resposta certa é a lista das análises, não uma média inventada para caber num cartão.
+
+**Laboratório e campo não se misturam.** Lighthouse mede uma execução controlada; o CrUX mede
+usuários reais em 28 dias. Neste projeto, a mesma página deu LCP de 12,0 s no laboratório e 3,2 s no
+campo — os dois estão certos, e nenhum substitui o outro. Em particular: o Lighthouse **não mede
+INP**, mede TBT. A coluna se chama `tbt_ms` pelo nome do que ela é.
+
+**A interface não conclui causalidade.** Lentidão e queda de conversão podem aparecer juntas sem uma
+causar a outra. A tela de Otimizações mostra os dois sinais separados, com a evidência de cada um.
+Pela mesma razão, ficar sem eventos só vira aviso num site que **já coletava com regularidade**
+(mais de 30 eventos) — site pequeno passa dias sem visita, e alarme falso treina o usuário a ignorar
+a lista.
+
 **Uma transação, uma conexão.** `Queryable` serializa as consultas de uma mesma transação numa
 fila, porque o driver `pg` não aceita duas simultâneas no mesmo client. Um `Promise.all` dentro de
 um `withAccount` não quebra — ele espera. Fora de uma transação, `Promise.all` é livre: cada
@@ -79,6 +94,16 @@ O login é a exceção que confirma a regra: acontece antes de existir contexto 
 usa duas funções `SECURITY DEFINER` estreitas (`app.find_user_for_login`,
 `app.find_user_for_session`) em vez de afrouxar a política de `users`. Ambas fixam `search_path`.
 
+As tabelas de qualidade técnica (`monitored_urls`, `lighthouse_results`, `crux_snapshots`,
+`audit_jobs`, `optimizations`) recebem GRANT **apenas de `app_user`**. Os papéis públicos não têm
+nada ali: nem para ler.
+
+O cron é a segunda exceção, e ela é estreita de propósito. Ele não tem sessão, logo não tem conta, e
+precisa varrer a fila inteira — então usa `withoutAccount`. É exatamente por isso que esse caminho
+exige o `CRON_SECRET`, e por isso o **GET** de `/api/auditorias/processar` recusa a sessão: um GET
+autorizado por cookie seria disparável por qualquer página que o usuário logado abrisse. Sem a
+variável configurada, os dois endpoints respondem 401 a todo mundo.
+
 Há testes que provam cada uma dessas restrições, inclusive tentando ler dados de outra conta com o
 id correto em mãos.
 
@@ -116,6 +141,37 @@ falha se a âncora voltar a divergir, e ele vale a qualquer hora.
 (`escrita.teste`) para as suítes que criam sessões e leads. Sem isso, a ordem de execução mudava os
 totais e um teste numérico falhava de forma intermitente.
 
+**O `fetch` do Next.js cacheia GET por padrão, e isso falsifica medição.** A URL da API do PageSpeed
+é idêntica a cada execução da mesma página e estratégia, então a **primeira resposta com falha
+ficava valendo para sempre**: a mesma URL falhava eternamente pelo aplicativo e respondia 200 via
+`curl`. Toda chamada externa de medição leva `cache: 'no-store'`. Se for tentado a tirar, não tire.
+
+**HTTP 200 não quer dizer que a análise deu certo.** O PageSpeed responde 200 e informa a falha
+dentro do corpo, em `lighthouseResult.runtimeError`. Interpretar como sucesso gravaria uma linha com
+quatro notas nulas — que na tela parece medição. Hoje isso lança e o job volta para a fila. Pelo
+mesmo motivo, `registrarFalha` **não toca** em `lighthouse_results`.
+
+**`ctx.font` não resolve variáveis CSS.** O canvas usa o parser de fonte do CSS, que não resolve
+`var(--fonte-mono)` fora de uma árvore de estilo. String inválida é ignorada **em silêncio** e o
+contexto fica em `10px sans-serif`. Como o espaçamento das linhas da chuva é calculado em JS,
+aumentar o tamanho aumentava só o vazio entre os dígitos, sem nenhum erro aparecer. O valor é lido
+com `getComputedStyle` e concatenado já resolvido.
+
+**Canvas transparente não se apaga pintando por cima.** `source-over` nunca zera o que já está lá:
+pintar preto translúcido acumula uma camada opaca e deixa resíduo. Para apagar o rastro num canvas
+sobreposto, é `globalCompositeOperation = 'destination-out'`, que reduz o **alfa** do que já foi
+desenhado.
+
+**Servidor antigo preso na porta serve HTML velho.** Mais de uma conferência visual minha olhou para
+um build que não era o recém-compilado: o `npm start` novo falhava com `EADDRINUSE` num arquivo de
+log que eu não lia, e o processo anterior continuava respondendo — com chunks que já não existiam em
+disco, dando 400 e impedindo a hidratação. Se a tela parecer "sem JavaScript", confira o log do
+servidor **antes** de procurar defeito no componente.
+
+**Fila: deduplicação por índice, não por `select` antes do `insert`.** Entre um e outro cabe outra
+requisição. O índice único parcial de `audit_jobs` cobre só `pendente` e `executando`, para que uma
+análise concluída não impeça a próxima.
+
 ---
 
 ## Convenções
@@ -139,4 +195,13 @@ totais e um teste numérico falhava de forma intermitente.
 - **Portal do cliente** — o modelo de dados e as políticas suportam, mas não há telas nem login
   para clientes finais. A plataforma é interna.
 - **Exportação de relatórios** — não implementada.
-- **Recuperação de senha** — não implementada. Usuários são criados pelo seed ou via SQL.
+- **Recuperação de senha** — não implementada. Usuários são criados pelo seed ou via SQL. É por isso
+  que a tela de login **não** tem "esqueci minha senha": link para rota inexistente é um 404
+  fantasiado de funcionalidade.
+- **Login com o Google, e cadastro pela interface** — não há OAuth. O cartão de login foi adaptado de
+  um componente que trazia os dois, e os dois saíram junto com "lembrar de mim" (a sessão tem uma
+  duração só). Há teste em `tests/e2e/login.spec.ts` que **falha se algum voltar** sem a
+  implementação junto.
+- **Mais de uma análise técnica automática por dia** — o limite é do plano Hobby da Vercel (dois
+  crons, uma execução diária cada). O código não tem teto: num plano pago, muda-se a expressão do
+  cron, não o código.

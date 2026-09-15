@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { TelaDeErro } from '@/components/TelaDeErro';
+import { estiloAcao } from '@/components/estilosDeErro';
 
 /**
  * Tela de erro da aplicação.
@@ -14,6 +16,10 @@ import { useEffect } from 'react';
  * segmento. Como é justamente o layout do painel que consulta o banco, uma
  * fronteira colocada ao lado dele não pegaria nada — o caso para o qual ela
  * existe seria o único que escaparia.
+ *
+ * O diagnóstico do texto é o que importa aqui, e foi preservado inteiro ao
+ * trocar a moldura: ele aponta a causa mais provável e onde ler o motivo exato.
+ * Uma tela bonita que só diz "algo deu errado" custa uma investigação.
  */
 export default function ErroDaAplicacao({
   error,
@@ -27,78 +33,41 @@ export default function ErroDaAplicacao({
   }, [error]);
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 520,
-          border: '1px solid var(--bd)',
-          borderRadius: 12,
-          background: 'var(--card)',
-          padding: 24,
-        }}
-      >
-        <p className="mono" style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--warn-tx)' }}>
-          ERRO NO SERVIDOR
-        </p>
-        <h1 style={{ fontSize: 18, fontWeight: 600, margin: '6px 0 10px' }}>
-          Não foi possível carregar esta tela
-        </h1>
-        <p style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.6 }}>
-          A causa mais comum é a conexão com o banco de dados: variável de ambiente ausente, senha
-          incorreta, ou host inacessível a partir do servidor.
-        </p>
-        <p style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.6, marginTop: 10 }}>
-          O motivo exato está no log do servidor. Numa hospedagem, procure em{' '}
-          <strong>Runtime Logs</strong>; rodando localmente, no terminal onde a aplicação subiu.
-        </p>
-
-        {error.digest && (
-          <p className="mono" style={{ fontSize: 11, color: 'var(--tx3)', marginTop: 14 }}>
+    <TelaDeErro
+      codigo="500"
+      titulo="Não foi possível carregar esta tela"
+      descricao={
+        <>
+          <p>
+            A causa mais comum é a conexão com o banco de dados: variável de ambiente ausente, senha
+            incorreta, ou host inacessível a partir do servidor.
+          </p>
+          <p style={{ marginTop: 10 }}>
+            O motivo exato está no log do servidor. Numa hospedagem, procure em{' '}
+            <strong>Runtime Logs</strong>; rodando localmente, no terminal onde a aplicação subiu.
+          </p>
+        </>
+      }
+      detalhe={
+        error.digest ? (
+          <p className="mono" style={{ fontSize: 11, color: 'var(--tx3)' }}>
             Identificador desta ocorrência: {error.digest}
           </p>
-        )}
-
-        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-          <button
-            type="button"
-            onClick={reset}
-            style={{
-              cursor: 'pointer',
-              background: 'var(--gold)',
-              color: 'var(--on-gold)',
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 16px',
-              fontWeight: 600,
-              fontSize: 13.5,
-            }}
-          >
+        ) : undefined
+      }
+      acoes={
+        <>
+          <button type="button" onClick={reset} style={estiloAcao(true)}>
             Tentar de novo
           </button>
-          <a
-            href="/entrar"
-            style={{
-              background: 'var(--elev)',
-              border: '1px solid var(--bd)',
-              borderRadius: 8,
-              padding: '10px 16px',
-              fontSize: 13.5,
-              color: 'var(--tx2)',
-              textDecoration: 'none',
-            }}
-          >
+          <a href="/api/diagnostico" style={estiloAcao(false)}>
+            Abrir o diagnóstico
+          </a>
+          <a href="/entrar" style={estiloAcao(false)}>
             Voltar para o login
           </a>
-        </div>
-      </div>
-    </main>
+        </>
+      }
+    />
   );
 }

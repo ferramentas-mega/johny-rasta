@@ -44,6 +44,12 @@ Uma das sessões envia **dois** formulários. É esse detalhe que torna "sessõe
 diferente de "envios por sessão" (50%) — no protótipo o modelo não admitia isso, e as duas taxas
 davam sempre o mesmo número.
 
+As tabelas de qualidade técnica (`monitored_urls`, `lighthouse_results`, `audit_jobs`,
+`optimizations`) **não** entram na massa fixa: cada suíte que depende delas limpa e insere o cenário
+de que precisa. É deliberado — uma nota fixa na massa compartilhada faria os testes de otimização
+dependerem da ordem de execução, que foi exatamente o defeito intermitente já corrigido nas suítes
+de escrita.
+
 ---
 
 ## Testes de unidade e integração (vitest)
@@ -110,6 +116,82 @@ O carimbo de build: commit encurtado para sete dígitos, ausência de commit for
 entre `preview` e `production` (uma variável salva num não vale no outro), e descrição sem separador
 solto quando não há commit.
 
+### `carteira.spec.ts`
+
+A agregação por cliente: sessões, cliques no WhatsApp e leads batem **site a site** com o painel
+individual; a contagem inclui os sites sem coleta, mas distingue "cadastrado" de "coletando de
+verdade"; a taxa da carteira é Σ convertidas ÷ Σ sessões (e não a média das taxas por cliente); sem
+sessões a taxa é indisponível e não zero; `variacao` devolve `null` sobre base zero em vez de um
+crescimento infinito; e a carteira de uma conta não enxerga os clientes da outra.
+
+Duas regras da carteira **não** têm teste próprio e estão listadas em "o que não foi testado": o
+cálculo da janela no fuso de cada site (a massa usa um fuso só) e a não-soma de visitantes únicos
+entre sites (a carteira simplesmente não expõe esse número).
+
+### `url-publica.spec.ts`
+
+31 casos de URL que o servidor **se recusa a buscar**, escritos contra SSRF e contra queimar a quota:
+`localhost`, faixas privadas de IPv4, o endereço de metadados `169.254.169.254`, IPv6 de loopback,
+endereços IPv4 mapeados em IPv6, esquemas que não sejam HTTP(S), credenciais na URL e portas
+incomuns.
+
+Estes testes acharam **três buracos no meu próprio validador**, e nenhum era óbvio à leitura:
+`http://[::1]/` passava porque `URL.hostname` devolve o host **com** os colchetes, e eu comparava
+com `::1` sem eles; `http://[::]/` passava pelo mesmo motivo; e o IPv4 mapeado passava porque o Node
+normaliza `::ffff:127.0.0.1` para a forma hexadecimal `::ffff:7f00:1`, que não casava com nenhuma
+das minhas comparações decimais.
+
+### `pagespeed.spec.ts` e `crux.spec.ts`
+
+O parser do PageSpeed é testado contra **resposta real gravada** (`tests/fixtures/`), não contra um
+objeto que eu inventei — um exemplo escrito à mão confirma o que eu imaginei da API, não o que ela
+devolve.
+
+Cobrem: as quatro notas na escala 0–1; URL solicitada e final guardadas separadamente; a versão do
+Lighthouse registrada, porque ela muda os ids das auditorias; métricas de laboratório lidas como
+número e não como texto formatado; **a ausência de INP no laboratório — só TBT**; descarte de
+auditorias sem ação possível e das que já passaram; diagnósticos ordenados por economia estimada,
+sem nunca inventar uma; `null` preservado como `null` em todos os caminhos (categoria avaliada como
+nula, categoria ausente, métrica sem `numericValue`), corpo vazio e `null` não lançando; e a
+conversão 0–1 → 0–100 em que **zero real vira zero e ausência continua ausência**.
+
+Dois testes formam um par sobre a armadilha do `runtimeError`: o primeiro mostra que interpretar um
+corpo com `runtimeError` **ainda devolve notas nulas** — quer dizer, o parser sozinho não protege —,
+e o segundo, que por isso `analisar` precisa recusar **antes** de gravar.
+
+No CrUX: os três indicadores de campo, o p75 aceito como string sem perder o valor (o CLS veio como
+`"0.05"` em resposta real), a janela que a API devolveu guardada como tal e **não** confundida com o
+período do painel, o escopo carimbado para a tela não confundir página com origem, métrica ausente
+como `null` e nunca zero, resposta vazia não lançando nem inventando janela, e período incompleto
+não virando data pela metade.
+
+### `fila-auditoria.spec.ts`
+
+Clique repetido devolvendo a **mesma** tarefa em vez de duplicar; celular e computador como tarefas
+diferentes, e não duplicata; recusa de URL não cadastrada em `monitored_urls`; recusa de endereço
+privado **antes de qualquer consulta**; reivindicação marcando `executando` e contando a tentativa;
+o mesmo job pendente não sendo entregue duas vezes; gravação do resultado concluindo a tarefa;
+contagem de tentativas até esgotar; cada dispositivo guardando a própria última análise.
+
+E a asserção que mais importa: **a análise anterior continua legível depois de um erro**. É a prova
+de que `registrarFalha` não escreve em `lighthouse_results` — uma linha com quatro notas nulas seria
+indistinguível de uma medição real.
+
+A retomada de job abandonado há mais de 10 minutos **não** tem teste: exigiria manipular o relógio
+ou o `iniciado_em` gravado. Está na lista do que não foi testado.
+
+### `otimizacoes.spec.ts`
+
+Nota baixa numa página monitorada virando item técnico; nota boa **não** entrando; **nota ausente não
+entrando — ausência não é nota ruim**; só a análise mais recente contando, para que uma nota velha e
+ruim não alerte para sempre; URL prioritária virando pendência de atualização e URL não prioritária
+não virando; e a lista de uma conta não mostrando pendência de outra.
+
+Os dois casos em que a lista **não** deve falar têm teste próprio, porque são o tipo de conclusão
+que um painel dá de graça e erra: site de pouco tráfego sem eventos recentes **não** vira
+"rastreamento quebrado", e a lista **não afirma relação** entre problema técnico e queda de
+conversão.
+
 ### `periodo.spec.ts`
 
 Leitura dos parâmetros da URL, recorte no fuso do site (o dia de São Paulo começa às 03:00 UTC),
@@ -166,11 +248,35 @@ Envio válido gravando e aparecendo no painel; envio sem contato recusado pelo s
 campo; **falha do servidor mostrando erro e não uma confirmação falsa**; endpoint de coleta
 recusando site inexistente e evento malformado; reenvio do mesmo evento reconhecido como duplicado.
 
+### `carteira.spec.ts`
+
+As quatro telas desta rodada, na tela renderizada: a carteira lista clientes e o total é **a soma das
+linhas exibidas**; a busca filtra, fica na URL e sobrevive a voltar e avançar do navegador; abrir um
+cliente mostra os sites dele **e só os dele**; conversão sem base aparece como "Sem base", nunca como
+0%; a aba de Qualidade técnica abre e **declara o que cada número é** (laboratório ou campo); sem
+análise a tela diz que não há, em vez de mostrar nota zerada; URL fora do domínio do site é recusada;
+endereço privado é recusado **antes de qualquer chamada externa**; as Otimizações filtram por tipo,
+pela URL e pelo clique; e nenhuma das telas novas registra erro no console.
+
+### `login.spec.ts`
+
+O caminho feliz do login já é exercido por cinco suítes, que entram por `/entrar`. Aqui ficam as
+partes que ninguém mais toca: o botão de revelar alternando a senha **sem perder o que foi digitado**
+(recriar o input em vez de trocar o `type` limparia o campo); o véu do fundo sendo `aria-hidden` e
+não interceptando ponteiro; credencial errada mostrando o erro e não entrando; e a asserção de que o
+cartão **não oferece caminho que não existe** — se "esqueci minha senha", "entrar com o Google" ou
+"criar conta" voltarem sem a implementação junto, este teste falha.
+
 ### `responsivo.spec.ts` (Pixel 5)
 
 Nenhuma rolagem horizontal em nenhuma tela, tabelas largas rolando dentro do próprio contêiner,
 navegação por teclado, foco sempre visível, `prefers-reduced-motion` desligando os efeitos por
 padrão, e a preferência de efeitos persistindo após recarregar.
+
+Inclui a chuva da tela de login: ela existe mas **não anima** para quem pede menos movimento, e
+**não intercepta o login** — a prova aqui não é de estilo, é entrar de verdade com ela na tela. Um
+canvas em tela cheia por cima do formulário seria um jeito silencioso de tornar o login inutilizável,
+e nenhuma asserção sobre CSS pegaria isso.
 
 ---
 
@@ -197,6 +303,14 @@ por causa deles:
 | `tlsPara` falhando ABERTO em string de conexão ilegível | Revisão de código |
 | `APP_URL` sem esquema virando caminho relativo no site do cliente | Revisão de código |
 | Massa ancorada em UTC e janela recortada no fuso do site: falha diária das 00:00 às 03:00 UTC | Suíte rodada depois da virada da data |
+| Três buracos no validador de URL: `[::1]`, `[::]` e IPv4 mapeado em IPv6 passavam | `url-publica.spec.ts`, escrito contra o meu próprio código |
+| Cache do `fetch` do Next.js repetindo indefinidamente a primeira resposta com falha do PageSpeed | Primeira análise real: falhava pelo app e respondia 200 via `curl` |
+| HTTP 200 com `lighthouseResult.runtimeError` interpretado como sucesso | Revisão do parser depois de ver o corpo real |
+| Botão "Executar agora" aparecendo só no retorno `ok`, sumindo após um clique duplo | Uso manual da tela de Qualidade |
+| `getByRole('alert')` casando o anunciador de rotas vazio do Next, além do erro real | Suíte de navegador, violação de modo estrito |
+| `ctx.font` com `var(--fonte-mono)`: fonte inválida ignorada em silêncio, chuva presa em 10px | Conferência visual depois de aumentar o tamanho e nada mudar |
+| Canvas transparente "apagado" com `source-over`, acumulando preto opaco em vez de apagar rastro | Captura de tela: a chuva virou parede estática de dígitos |
+| **Cron enfileirando todo dia e ninguém drenando a fila:** a Vercel dispara crons por GET, e `/api/auditorias/processar` exportava só POST — o comentário do arquivo afirmava que o cron o chamava | Conferência dos endpoints ao escrever esta documentação |
 
 Três erros de contagem manual nos valores esperados da massa também apareceram — nesses casos o
 código estava certo e a expectativa estava errada. Foram corrigidas as expectativas.
@@ -263,7 +377,43 @@ dos dois clusters é o deste projeto: isso só o diálogo *Connect* do painel re
 Todo o desenvolvimento e os testes rodaram contra o PostgreSQL local, com schema idêntico.
 **A conexão em si, confirme na primeira execução fora deste ambiente.**
 
-**Integrações externas.** Nenhuma foi implementada nesta rodada, então não há o que testar.
+**As APIs do Google, em rede.** Os parsers do PageSpeed e do CrUX são testados contra resposta real
+gravada, e a fila é testada contra o banco. **A chamada HTTP em si não tem teste automatizado** — ela
+depende de chave, de quota e de rede, e um teste que sai para a internet falha por motivos que não
+são defeito do código.
+
+Foi verificado **à mão, com chamada real**, e o resultado está registrado aqui porque medição sem
+execução não vale: PageSpeed respondendo em 11 s e 12 s (879 KB de corpo, Lighthouse 13.4.1) e CrUX
+devolvendo LCP 3105 ms, INP 205 ms e CLS 0,05 numa janela de 17/08 a 13/09. Na mesma página, o
+laboratório deu LCP de 12,0 s contra 3,2 s do campo — a divergência que motiva mostrar os dois lado a
+lado, em vez de escolher um.
+
+**A retomada de job abandonado.** O caminho em que um processo morre no meio e o job volta para a
+fila passados 10 minutos exigiria manipular o relógio ou o `iniciado_em` gravado. O código está
+escrito e lido, mas não exercitado.
+
+**Duas regras da carteira.** O cálculo da janela no fuso de **cada** site não tem teste porque a
+massa usa um fuso só — provar isso exigiria uma massa com sites em fusos diferentes. E a não-soma de
+visitantes únicos entre sites não tem teste porque a carteira simplesmente **não expõe** esse número:
+a garantia é de ausência, não de cálculo.
+
+**O cron da Vercel disparando de verdade.** Os três caminhos dos endpoints `/api/auditorias/*` foram
+exercitados **por chamada direta contra o build de produção**, e o resultado está aqui porque
+verificação sem execução não vale:
+
+| Chamada | Resposta |
+|---|---|
+| `GET /agendar` sem cabeçalho | 401 |
+| `GET /agendar` com segredo errado | 401 |
+| `GET /agendar` com o segredo | 503 "integração não configurada" (sem `PAGESPEED_API_KEY` local) |
+| `GET /processar` sem cabeçalho, e com segredo errado | 401 nos dois |
+| `GET /processar` com o segredo | 503, mesma razão |
+| `POST /processar` sem sessão e sem segredo | 401 |
+
+O **agendamento em si** — a Vercel chamando nos horários declarados — só se confirma em produção.
+
+**Integrações externas de terceiros.** Nenhuma (Clarity, Analytics, CRM) foi implementada, então não
+há o que testar.
 
 **Carga e concorrência.** Não foram feitos testes de volume. A massa de desenvolvimento tem ~11 mil
 sessões e ~20 mil eventos, e as consultas respondem rápido com os índices existentes, mas isso não
@@ -280,19 +430,40 @@ criados por SQL ou pelo seed.
 
 Preenchido a cada execução completa:
 
-- `npm run doctor` — ambiente íntegro (9 verificações)
+- `npm run doctor` — ambiente íntegro
 - `npm run typecheck` — sem erros
 - `npm run lint` — sem avisos
-- `npm test` — **103 testes**, todos passando (6 arquivos)
-  (autorizacao 10 · build 4 · conexao 42 · ingestao 20 · metricas 14 · periodo 13 — a soma por
-  arquivo foi conferida contra o total, depois de eu ter reportado 79 numa rodada anterior)
-- `npm run test:e2e` — 32 testes (26 desktop + 6 celular), todos passando (3,0 min)
-- `npm run build` — build de produção concluído, 17 rotas
+- `npm test` — **189 testes**, todos passando (12 arquivos, 6,7 s)
+
+  | Arquivo | Testes | | Arquivo | Testes |
+  |---|---|---|---|---|
+  | `conexao` | 42 | | `periodo` | 13 |
+  | `url-publica` | 31 | | `autorizacao` | 11 |
+  | `ingestao` | 20 | | `fila-auditoria` | 10 |
+  | `pagespeed` | 17 | | `otimizacoes` | 9 |
+  | `metricas` | 14 | | `carteira` · `crux` | 8 · 8 |
+  | | | | `build` | 6 |
+
+  A soma por arquivo foi conferida contra o total (o relatório JSON do vitest, não a contagem
+  visual — numa rodada anterior eu reportei 79 onde eram 103).
+
+- `npm run test:e2e` — **49 testes** (41 desktop + 8 celular), todos passando (4,2 min)
+- `npm run build` — build de produção concluído, **24 rotas**
 - `npm start` — servidor de produção respondendo
 
-Reexecutada por inteiro depois do carimbo de build e da correção da âncora da massa. Verificado
-além da suíte: a tela de login renderiza `production · 98390f6` com as variáveis da Vercel e `local`
-sem elas; `/api/diagnostico` devolve o commit; `npm run producao` lê esse endereço e responde.
+Verificado além da suíte, por execução real e não por leitura do código:
+
+- os seis caminhos de autorização dos endpoints de auditoria (tabela acima, em "o que NÃO foi
+  testado");
+- a tela de login nos dois temas e no celular, sem rolagem horizontal e sem erro de console, com a
+  chuva medida em pixels do canvas;
+- PageSpeed e CrUX contra as APIs de verdade, com os tempos e valores registrados neste documento.
+
+Nota de honestidade, mantida de rodadas anteriores: numa delas eu reportei "55 passando" apoiado numa
+execução que ficou em segundo plano e cuja saída eu não li. Quando rodei de fato, um teste estava
+quebrado. Nesta rodada, duas conferências visuais minhas olharam para um build antigo, porque um
+`npm start` anterior ainda ocupava a porta e o novo falhava num log que eu não tinha aberto. As
+capturas foram refeitas contra o servidor certo, e a armadilha está no `CLAUDE.md`.
 
 Nota de honestidade: numa rodada anterior eu reportei "55 passando" apoiado numa execução que ficou
 em segundo plano e cuja saída eu não cheguei a ler. Quando rodei de fato, um teste estava quebrado —

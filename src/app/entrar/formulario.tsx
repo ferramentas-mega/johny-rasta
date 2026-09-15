@@ -72,7 +72,7 @@ function IconeSeta() {
  * O visual veio de um componente pronto em shadcn/Tailwind/framer-motion. O que
  * foi adotado é a aparência — cartão de vidro, feixes na borda, campos com
  * ícone, botão com estado de espera —, escrita nos tokens do tema
- * (`src/styles/theme.css`, seção "Tela de login").
+ * (`src/styles/theme.css`, seção "Cartão de vidro").
  *
  * O que NÃO foi adotado, e por quê:
  *
@@ -93,7 +93,7 @@ export function FormularioDeLogin() {
   const [senhaVisivel, setSenhaVisivel] = useState(false);
 
   return (
-    <form action={acao} className="cartao-login" style={{ marginTop: 18 }}>
+    <form action={acao} className="cartao-vidro" style={{ marginTop: 18 }}>
       {/* Decorativos: fora da árvore de acessibilidade. */}
       <div className="feixes" aria-hidden="true">
         <span className="feixe feixe-h feixe-topo" />

@@ -60,6 +60,54 @@ nunca somando buckets diários. Há teste garantindo isso.
 
 ---
 
+## A carteira: uma linha por cliente
+
+A tela de Visão geral agrega **por cliente**, não por site. Três decisões mudam o número e por isso
+ficam escritas:
+
+**1. A janela é calculada no fuso de CADA site, dentro do SQL.** Um cliente com um site em São Paulo
+e outro em Lisboa tem duas janelas diferentes no mesmo período de 7 dias. Recortar tudo num fuso só
+faria a carteira discordar do painel individual — e o requisito é que o geral seja exatamente a soma
+dos individuais sob os mesmos filtros.
+
+**2. Visitantes únicos NÃO são somados entre sites.** Somar os únicos de dois sites e chamar o
+resultado de "pessoas únicas da carteira" contaria duas vezes quem visitou os dois. A carteira
+devolve **sessões**, que somam sem mentir. Os únicos continuam existindo no painel de cada site,
+onde a conta é `distinct` sobre a janela inteira.
+
+**3. A taxa da carteira é Σ convertidas ÷ Σ sessões, nunca a média das taxas por cliente.** A média
+de porcentagens dá peso igual a um cliente com 10 sessões e a outro com 10 mil. Os totais também são
+a soma das linhas exibidas, e não uma segunda consulta — duas consultas independentes podem
+divergir; esta não tem como.
+
+### Variação sobre base zero é `null`, não "+∞"
+
+`variacao(atual, anterior)` devolve `null` quando o período anterior é zero. Crescer de 0 para 5 não
+é "aumento infinito" nem "+500%": é uma conta que não existe. A tela diz **Sem base comparável**.
+
+### Comparações com pouco volume são marcadas
+
+Abaixo de **30 sessões** no período, a tela rotula a comparação como *Volume baixo para comparar* em
+vez de exibir a variação percentual. Com 3 sessões virando 6, "+100%" é ruído apresentado como
+tendência.
+
+O número 30 é uma regra de produto, não uma lei estatística — está declarado em
+`src/app/(painel)/visao-geral/page.tsx`, num só lugar, e impresso na própria tela.
+
+---
+
+## Resultado comercial e qualidade técnica são separados
+
+O painel nunca junta os dois num indicador só, e nunca afirma que um causou o outro.
+
+Um site lento pode vender bem; um site rápido pode vender mal. Quando os dois sinais aparecem no
+mesmo cliente, a tela de Otimizações mostra **os dois, separados, com a evidência de cada um** — e
+deixa a conclusão para quem investiga.
+
+As notas técnicas têm documento próprio: [`qualidade-tecnica.md`](qualidade-tecnica.md).
+
+---
+
 ## Quando um número "não bate" (e está certo)
 
 **A coluna de sessões da tabela por página soma mais que o total de sessões.**
@@ -82,6 +130,10 @@ diz "Sem base comparável".
 
 **Um site sem rastreamento instalado mostra "Indisponível", não zero.**
 Mesma razão.
+
+**Uma página sem análise técnica mostra "Indisponível", não nota 0.**
+Nota 0 afirmaria uma medição péssima. Sem análise, não há medição — e a lista de otimizações ignora
+a linha em vez de tratá-la como o pior caso possível.
 
 ---
 

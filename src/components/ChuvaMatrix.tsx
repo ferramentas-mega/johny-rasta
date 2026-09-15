@@ -23,9 +23,8 @@ export type VarianteChuva = 'cabecalho' | 'tela';
  * Cada variante define onde a chuva mora, o tamanho do dígito e a velocidade.
  *
  * `msPorLinha` é o intervalo entre passos: quanto MAIOR, mais devagar a queda.
- * A tela de login cai mais devagar que o cabeçalho de propósito — ela ocupa o
- * campo de visão inteiro, e no mesmo ritmo do cabeçalho o movimento disputa
- * atenção com o formulário.
+ * As duas variantes usam o mesmo ritmo hoje; o campo existe para que mudar uma
+ * delas não exija mexer no motor.
  */
 const VARIANTES: Record<
   VarianteChuva,
@@ -39,7 +38,7 @@ const VARIANTES: Record<
   // leitura se perde primeiro.
   cabecalho: {
     tamanho: 20,
-    msPorLinha: 60,
+    msPorLinha: 33,
     estilo: {
       position: 'absolute',
       inset: 0,
@@ -55,19 +54,15 @@ const VARIANTES: Record<
   // Tela inteira, atrás do conteúdo.
   tela: {
     tamanho: 28,
-    msPorLinha: 95,
+    msPorLinha: 33,
     estilo: {
       position: 'fixed',
       inset: 0,
       width: '100%',
       height: '100%',
       zIndex: 0,
-      // Sem atenuação: os dígitos precisam ficar visíveis, e o cartão de login
-      // tem fundo sólido próprio — é ele que garante a leitura do formulário,
-      // não o apagamento do fundo. Versões anteriores usavam máscara radial
-      // apagando o centro, e o efeito sumia justamente onde se olha.
       // Sem atenuação no canvas: quem atenua é o véu que a tela de login põe
-      // POR CIMA (`.veu-login`), e não a opacidade daqui. A diferença importa —
+      // POR CIMA (`.veu-de-fundo`), e não a opacidade daqui. A diferença importa —
       // baixar a opacidade do canvas apaga o dígito inteiro, rastro incluído,
       // e o efeito some; o véu escurece o conjunto mantendo o contraste entre
       // a cabeça brilhante e a cauda.

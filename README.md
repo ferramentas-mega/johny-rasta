@@ -4,6 +4,10 @@ Painel de análise de desempenho para sites e landing pages de clientes: cadastr
 e sites, coleta própria de visitas e cliques, recebimento de formulários, organização de leads
 e relatórios filtráveis por cliente, site e período.
 
+Duas visões ligadas entre si: a **carteira**, com uma linha por cliente, e o **painel do cliente**,
+com os sites dele. A qualidade técnica de cada página vem do PageSpeed Insights e do Chrome UX
+Report, medida por uma fila em segundo plano — separada dos números comerciais de propósito.
+
 Nasceu de um protótipo exportado do Claude Design — uma maquete sem backend, com números gerados
 no navegador. Hoje é uma aplicação com persistência real, autorização no banco e indicadores
 definidos antes de serem agregados.
@@ -95,13 +99,19 @@ desenvolvimento nunca é tocado por eles.
 src/
   app/                      rotas (App Router; server components por padrão)
     (painel)/               telas autenticadas
+      visao-geral/          carteira: uma linha por cliente
+      clientes/[id]/        painel do cliente, com os sites dele
+      otimizacoes/          onde atuar primeiro, com a evidência ao lado
+      sites/[id]/           desempenho, comportamento, qualidade, rastreamento
     api/collect/            endpoint público de analytics
     api/forms/[publicId]/   endpoint público de formulários
+    api/auditorias/         agendar e processar a fila de análises (cron)
     teste/[publicId]/       página de teste de instalação
   components/               apresentação — nenhum número nasce aqui
   server/
     db/                     pool, transações e troca de papel
     metrics/                FONTE ÚNICA: definições e agregações
+    qualidade/              PageSpeed, CrUX, fila de auditorias, otimizações
     services/               clientes, sites, ingestão
     auth/                   sessão e senha
   lib/                      formatação, períodos
@@ -113,6 +123,7 @@ tests/                      unit (vitest) e e2e (playwright)
 Documentação complementar:
 
 - [`docs/metricas.md`](docs/metricas.md) — o que cada indicador conta, e o que fica de fora
+- [`docs/qualidade-tecnica.md`](docs/qualidade-tecnica.md) — PageSpeed, CrUX, a fila e a chave do Google
 - [`docs/instalacao-rastreamento.md`](docs/instalacao-rastreamento.md) — instalar o coletor num site
 - [`docs/deploy-supabase.md`](docs/deploy-supabase.md) — subir para o Supabase
 - [`docs/deploy-vercel.md`](docs/deploy-vercel.md) — publicar na Vercel, clique a clique
@@ -142,6 +153,20 @@ gravar um formulário devolve erro; nunca uma confirmação sem gravação corre
 
 **Datas em UTC, recorte no fuso do site.** Toda coluna de tempo é `timestamptz` em UTC. Os períodos
 são recortados com `AT TIME ZONE` usando o fuso cadastrado no site, e não aritmética de 24 horas.
+Na carteira, isso acontece **por site, dentro do SQL** — senão o total geral discordaria da soma dos
+painéis individuais sempre que dois sites estivessem em fusos diferentes.
+
+**Resultado comercial e qualidade técnica não se misturam.** Nota de desempenho pertence a uma URL e
+a um dispositivo, nunca a um cliente inteiro. O painel mostra os dois assuntos lado a lado e não
+afirma que um causou o outro: um site lento pode vender bem, e um rápido pode vender mal.
+
+**Análise externa nunca é cacheada.** As chamadas ao PageSpeed e ao CrUX usam `cache: 'no-store'`.
+O `fetch` do Next.js cacheia GET por padrão, e como a URL da API é idêntica a cada execução, a
+primeira resposta ficava valendo para sempre. Medição cacheada não é medição.
+
+**A fila de auditorias guarda estado no banco.** Um array em memória morre junto com a invocação
+serverless e leva a tarefa com ele. Em `audit_jobs`, um processo que morre no meio deixa rastro — e
+o job volta para a fila depois de 10 minutos.
 
 ---
 

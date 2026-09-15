@@ -8,6 +8,10 @@
     {
       "path": "/api/auditorias/agendar",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/auditorias/processar",
+      "schedule": "30 6 * * *"
     }
   ]
 }

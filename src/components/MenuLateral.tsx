@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Marca } from '@/components/Marca';
 import { Icone, type IconeNome } from '@/components/icones';
+import { TextoMatrix } from '@/components/TextoMatrix';
 
 /**
  * Menu lateral.
@@ -42,6 +44,26 @@ export function MenuLateral({
   const ativo = (item: ItemMenu) =>
     pathname === item.href || (item.prefixos ?? []).some((p) => pathname.startsWith(`${p}/`));
 
+  /**
+   * Um contador por item. Incrementar dispara a decodificação daquele rótulo —
+   * e só dele. Um estado booleano global faria os seis animarem juntos.
+   */
+  const [disparos, setDisparos] = useState<Record<string, number>>({});
+  const decodificar = (href: string) =>
+    setDisparos((d) => ({ ...d, [href]: (d[href] ?? 0) + 1 }));
+
+  /**
+   * O item que acabou de virar o ativo decodifica sozinho, uma vez. É a
+   * confirmação visual da navegação que o usuário acabou de fazer — e por isso
+   * anima um item, não os seis.
+   */
+  const itemAtivo = ITENS.find((i) => ativo(i))?.href;
+  useEffect(() => {
+    if (itemAtivo) decodificar(itemAtivo);
+    // Depende só de qual item está ativo: repetir a animação a cada repintura
+    // transformaria o menu num letreiro.
+  }, [itemAtivo]);
+
   const iniciais = usuarioNome
     .split(' ')
     .slice(0, 2)
@@ -78,6 +100,10 @@ export function MenuLateral({
               key={item.href}
               href={`${item.href}${busca}`}
               aria-current={on ? 'page' : undefined}
+              // Ponteiro e teclado disparam igual: quem navega sem mouse vê o
+              // mesmo efeito, em vez de um enfeite reservado a quem tem mouse.
+              onMouseEnter={() => decodificar(item.href)}
+              onFocus={() => decodificar(item.href)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -93,7 +119,7 @@ export function MenuLateral({
               }}
             >
               <Icone nome={item.icone} />
-              <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>
+              <TextoMatrix texto={item.label} disparo={disparos[item.href] ?? 0} />
               {contagem !== null && (
                 <span
                   className="mono"

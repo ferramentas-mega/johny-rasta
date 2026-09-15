@@ -37,7 +37,7 @@ test('o botão de revelar alterna a senha sem perder o que foi digitado', async 
 test('o véu escurece a chuva sem virar uma camada que bloqueia o clique', async ({ page }) => {
   await page.goto('/entrar');
 
-  const veu = page.locator('.veu-login');
+  const veu = page.locator('.veu-de-fundo');
   await expect(veu).toBeAttached();
   await expect(veu).toHaveAttribute('aria-hidden', 'true');
   // Uma camada `position: fixed; inset: 0` por cima do formulário é o jeito
@@ -56,6 +56,20 @@ test('credencial errada mostra o erro e não entra', async ({ page }) => {
   // `<div role="alert">` vazio para anunciar rotas, e o seletor casaria os dois.
   await expect(page.locator('p[role=alert]')).toContainText('E-mail ou senha incorretos');
   await expect(page).toHaveURL(/\/entrar/);
+});
+
+test('rota inexistente responde 404 de verdade, com a identidade do painel', async ({ page }) => {
+  const resposta = await page.goto('/rota-que-nao-existe');
+
+  // O status importa tanto quanto o visual: uma tela bonita devolvida com 200
+  // faria buscadores e monitoramento tratarem o erro como página válida.
+  expect(resposta?.status()).toBe(404);
+  await expect(page.locator('h1')).toHaveText('404');
+  await expect(page.getByRole('link', { name: 'Ir para a visão geral' })).toBeVisible();
+
+  // A chuva de fundo é a mesma das outras telas — é isso que faz o 404
+  // pertencer ao painel em vez de parecer uma página de outro sistema.
+  await expect(page.getByTestId('fx-canvas-tela')).toBeAttached();
 });
 
 test('o cartão não oferece caminho que não existe', async ({ page }) => {
