@@ -50,6 +50,21 @@ Pela mesma razão, ficar sem eventos só vira aviso num site que **já coletava 
 (mais de 30 eventos) — site pequeno passa dias sem visita, e alarme falso treina o usuário a ignorar
 a lista.
 
+**Estado é por recurso, e progresso é derivado.** Não crie um `configurado: true` para o site nem um
+`etapa_atual` no banco. `site_features` guarda só a escolha do operador e o fato histórico de uma
+verificação ter passado, com evidência; o estado exibido e a etapa em que o assistente retoma são
+calculados em `src/lib/recursos.ts`. Um contador mentiria para quem voltasse e desmarcasse um
+recurso.
+
+**Verificação é um evento recebido, nunca um tempo decorrido.** E nunca a presença do snippet no
+HTML: script bloqueado por CSP, consentimento ou bloqueador está lá e não mede nada. A sessão de
+diagnóstico existe para separar o teste do operador do tráfego real — sem o token, "recebemos um
+clique no WhatsApp" pode ser de qualquer pessoa.
+
+**Diagnóstico é teste, decidido no SERVIDOR.** `registrarEvento` e `registrarSubmissao` forçam
+`is_test` quando há token, mesmo que o cliente não tenha marcado. Confiar só no coletor deixaria um
+diagnóstico virar número de relatório se o campo se perdesse no caminho.
+
 **Uma transação, uma conexão.** `Queryable` serializa as consultas de uma mesma transação numa
 fila, porque o driver `pg` não aceita duas simultâneas no mesmo client. Um `Promise.all` dentro de
 um `withAccount` não quebra — ele espera. Fora de uma transação, `Promise.all` é livre: cada
@@ -168,6 +183,17 @@ log que eu não lia, e o processo anterior continuava respondendo — com chunks
 disco, dando 400 e impedindo a hidratação. Se a tela parecer "sem JavaScript", confira o log do
 servidor **antes** de procurar defeito no componente.
 
+**`server-only` quebra o build quando um componente cliente importa o módulo.** Foi por isso que as
+regras puras de configuração saíram para `src/lib/recursos.ts`: os rótulos e o indicador de progresso
+vivem na tela. O efeito colateral bom é que a derivação virou testável sem subir banco.
+
+**`:hover` não existe em estilo inline.** O menu lateral inteiro era inline, e por isso os itens não
+reagiam ao ponteiro. Estado de ponteiro, foco e media query pedem classe no `theme.css`.
+
+**`flex-wrap` numa casca de duas colunas vira uma tela inteira de menu no celular.** O aside pedia
+240px; abaixo disso ele quebrava para uma linha própria e empurrava todo o conteúdo para baixo. A
+correção é trocar o eixo numa media query, não encolher o menu.
+
 **Fila: deduplicação por índice, não por `select` antes do `insert`.** Entre um e outro cabe outra
 requisição. O índice único parcial de `audit_jobs` cobre só `pendente` e `executando`, para que uma
 análise concluída não impeça a próxima.
@@ -195,6 +221,12 @@ análise concluída não impeça a próxima.
 - **Portal do cliente** — o modelo de dados e as políticas suportam, mas não há telas nem login
   para clientes finais. A plataforma é interna.
 - **Exportação de relatórios** — não implementada.
+- **Conector para serviço externo de formulários** — não existe. RD Station, HubSpot e afins
+  precisam entregar o envio ao endpoint de formulários do painel. A tela de configuração diz isso em
+  vez de prometer integração automática.
+- **Service worker** — o painel tem manifesto e ícones para instalação, mas nenhum service worker. Um
+  que guarde dados serviria número em cache, e isso mente sobre quando o número foi medido. Se o
+  Chrome exigir um para oferecer a instalação, que seja de repasse puro.
 - **Recuperação de senha** — não implementada. Usuários são criados pelo seed ou via SQL. É por isso
   que a tela de login **não** tem "esqueci minha senha": link para rota inexistente é um 404
   fantasiado de funcionalidade.

@@ -103,6 +103,7 @@ src/
       clientes/[id]/        painel do cliente, com os sites dele
       otimizacoes/          onde atuar primeiro, com a evidência ao lado
       sites/[id]/           desempenho, comportamento, qualidade, rastreamento
+      sites/[id]/configurar assistente de configuração, retomável
     api/collect/            endpoint público de analytics
     api/forms/[publicId]/   endpoint público de formulários
     api/auditorias/         agendar e processar a fila de análises (cron)
@@ -112,9 +113,10 @@ src/
     db/                     pool, transações e troca de papel
     metrics/                FONTE ÚNICA: definições e agregações
     qualidade/              PageSpeed, CrUX, fila de auditorias, otimizações
+    services/onboarding     estado por recurso, verificação e diagnóstico
     services/               clientes, sites, ingestão
     auth/                   sessão e senha
-  lib/                      formatação, períodos
+  lib/                      formatação, períodos, regras puras de configuração
 supabase/migrations/        SQL numerado, aplicável aqui e no Supabase
 public/t.js                 o coletor instalado nos sites
 tests/                      unit (vitest) e e2e (playwright)
@@ -122,6 +124,7 @@ tests/                      unit (vitest) e e2e (playwright)
 
 Documentação complementar:
 
+- [`docs/configurar-um-site.md`](docs/configurar-um-site.md) — cadastrar, instalar e verificar a medição
 - [`docs/metricas.md`](docs/metricas.md) — o que cada indicador conta, e o que fica de fora
 - [`docs/qualidade-tecnica.md`](docs/qualidade-tecnica.md) — PageSpeed, CrUX, a fila e a chave do Google
 - [`docs/instalacao-rastreamento.md`](docs/instalacao-rastreamento.md) — instalar o coletor num site
@@ -147,6 +150,16 @@ funções. Nenhum componente visual calcula nada, e por isso duas telas não tê
 
 **Estado de instalação é derivado.** Cadastrar um domínio e gerar um identificador não faz o site
 aparecer como "coletando". O estado sai de `max(occurred_at)` sobre os eventos realmente recebidos.
+
+**Cada recurso tem estado próprio, e não existe `configurado: true` para o site.** Um site que mede
+visitas e cliques no WhatsApp e não tem formulário está completamente configurado. O progresso do
+assistente é derivado dos recursos escolhidos e das verificações, nunca de um contador que avança ao
+clicar em "Próximo".
+
+**Verificar é receber um evento, não esperar.** O modo de diagnóstico gera um token que vai na URL do
+site e volta no evento — assim o teste do operador não se confunde com o clique de um visitante. Nada
+é confirmado por temporizador nem pela presença do snippet no HTML, e evento de diagnóstico nasce
+marcado como teste no servidor.
 
 **Falha não vira sucesso.** Erro de API mostra erro; nunca cai para dados de demonstração. Falha ao
 gravar um formulário devolve erro; nunca uma confirmação sem gravação correspondente.

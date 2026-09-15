@@ -159,6 +159,46 @@ letreiro a cada carregamento. O componente só reage quando o contador `disparo`
 
 ---
 
+## Responsividade da casca
+
+A casca do painel era um `flex-wrap` com o menu pedindo 240px. Abaixo dessa largura o menu quebrava
+para uma linha própria e **ocupava a tela inteira**: no celular era preciso rolar marca, seis itens e
+o rodapé de conta antes de chegar a qualquer número.
+
+A correção é trocar o eixo numa media query, não encolher o menu. Abaixo de 860px:
+
+| | Desktop | Celular |
+|---|---|---|
+| Casca | Duas colunas | Coluna única |
+| Menu | Barra lateral de 248px | Faixa de ~60px grudada no topo |
+| Navegação | Empilhada | Uma linha, rolando na horizontal |
+| Marca | Visível | Oculta — já aparece no cabeçalho da tela |
+| Conta | Rodapé da barra | Fim da mesma faixa, só as iniciais e "Sair" |
+
+O indicador do item ativo era uma barra à esquerda; deitado, ele vai para baixo — entre dois itens
+vizinhos numa linha, uma barra lateral desaparece.
+
+Onde o ponteiro é grosseiro (`@media (pointer: coarse)`), os alvos de toque têm no mínimo 44px. Não
+vale para o mouse: botões desse tamanho deixam a interface esparramada.
+
+---
+
+## Instalação como aplicativo
+
+`src/app/manifest.ts` declara nome, `start_url` na Visão geral (a raiz só redireciona), `display:
+standalone` e a cor de tema do menu — para a barra do sistema combinar com a interface em vez de
+recortar um retângulo branco no topo.
+
+Os ícones são gerados a partir do mesmo desenho do favicon: 192 e 512 "any", mais um 512
+**maskable** com o glifo na zona segura e o fundo sangrando até a borda, porque o Android recorta o
+ícone em formas diferentes conforme o fabricante.
+
+`viewport-fit=cover` deixa a interface ir até as bordas em telas com recorte, e o respiro volta pelas
+variáveis `env(safe-area-inset-*)`. O zoom **não** é limitado: impedir o zoom tira do usuário a única
+saída quando a fonte está pequena demais para ele.
+
+---
+
 ## As telas de erro
 
 `TelaDeErro` é a moldura de três casos, com o mesmo visual do login: chuva ao fundo, véu, cartão de

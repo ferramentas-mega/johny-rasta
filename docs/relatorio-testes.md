@@ -192,6 +192,24 @@ que um painel dá de graça e erra: site de pouco tráfego sem eventos recentes 
 "rastreamento quebrado", e a lista **não afirma relação** entre problema técnico e queda de
 conversão.
 
+### `recursos.spec.ts`
+
+A derivação do estado de cada recurso e das etapas do assistente, **sem banco** — a parte pura vive
+em `src/lib/recursos.ts` justamente para isso.
+
+Recurso não escolhido é "não se aplica" e nunca pendência; escolhido sem verificação aguarda;
+verificação vence a espera e não é desfeita por falta de tráfego recente; erro é estado próprio,
+distinto de "aguardando"; qualidade sem chave no servidor é pendência de configuração, não erro do
+site; formulário sem modo escolhido é pendente, e "sem formulário" deixa de se aplicar.
+
+E as três regras do assistente que mais fáceis seriam de quebrar sem ninguém notar:
+
+| Verifica | Por quê |
+|---|---|
+| Só PageSpeed escolhido → instalar e verificar **não se aplicam** | O caminho técnico é independente do rastreamento. Exigir instalação ali deixaria a configuração eternamente incompleta |
+| Copiar o código **não** conclui a instalação | A etapa 3 só fecha quando algum recurso do coletor aparece verificado, e verificação exige evento recebido |
+| Desmarcar um recurso reduz o pendente | O progresso é derivado, não contado. Um contador diria "etapa 5 de 7" para quem voltou e desmarcou tudo |
+
 ### `periodo.spec.ts`
 
 Leitura dos parâmetros da URL, recorte no fuso do site (o dia de São Paulo começa às 03:00 UTC),
@@ -258,6 +276,23 @@ análise a tela diz que não há, em vez de mostrar nota zerada; URL fora do dom
 endereço privado é recusado **antes de qualquer chamada externa**; as Otimizações filtram por tipo,
 pela URL e pelo clique; e nenhuma das telas novas registra erro no console.
 
+### `onboarding.spec.ts`
+
+Os sete casos de aceitação do fluxo de configuração, contra o banco e o navegador de verdade:
+
+1. **Criar o cliente dentro do assistente não perde os dados do site** — o nome digitado continua no
+   campo depois de criar o cliente, e o cliente novo já aparece selecionado.
+2. **Domínio duplicado é explicado**, com o site existente nomeado, e nada é criado.
+3. **Só PageSpeed**: as etapas de instalação e verificação aparecem como "não se aplica" e o caminho
+   fecha sem instalar rastreamento.
+4. **Configuração incompleta é salva e retomada** na primeira etapa pendente — e a instrução mostrada
+   é a da plataforma escolhida, não as cinco versões.
+5. **O snippet traz o identificador do site certo** (dois sites, dois identificadores), e **copiar o
+   código não conclui a instalação**: a etapa continua pendente depois do "Copiado".
+6. **Visita e clique de diagnóstico verificam a etapa** — incluindo a conferência ANTES de qualquer
+   gesto, que não inventa sucesso, e o token sobrevivendo ao recarregamento.
+7. **A configuração de outro cliente responde 404** pela URL.
+
 ### `login.spec.ts`
 
 O caminho feliz do login já é exercido por cinco suítes, que entram por `/entrar`. Aqui ficam as
@@ -273,7 +308,13 @@ Nenhuma rolagem horizontal em nenhuma tela, tabelas largas rolando dentro do pr�
 navegação por teclado, foco sempre visível, `prefers-reduced-motion` desligando os efeitos por
 padrão, e a preferência de efeitos persistindo após recarregar.
 
-Inclui a chuva da tela de login: ela existe mas **não anima** para quem pede menos movimento, e
+Inclui dois casos da instalação como aplicativo e da faixa de navegação: o `/manifest.webmanifest` é
+servido de verdade (status 200, `display: standalone`, `start_url` na visão geral, ícones de 192, 512
+e um `maskable`, **todos existindo e devolvendo PNG**), e o `<link rel=manifest>` aponta para ele —
+sem esse link nada acima é procurado pelo navegador. A faixa do celular precisa ocupar menos de 15%
+da altura da tela, ser `sticky`, e manter os seis itens e o "Sair" alcançáveis.
+
+Inclui também a chuva da tela de login: ela existe mas **não anima** para quem pede menos movimento, e
 **não intercepta o login** — a prova aqui não é de estilo, é entrar de verdade com ela na tela. Um
 canvas em tela cheia por cima do formulário seria um jeito silencioso de tornar o login inutilizável,
 e nenhuma asserção sobre CSS pegaria isso.
@@ -310,6 +351,10 @@ por causa deles:
 | `getByRole('alert')` casando o anunciador de rotas vazio do Next, além do erro real | Suíte de navegador, violação de modo estrito |
 | `ctx.font` com `var(--fonte-mono)`: fonte inválida ignorada em silêncio, chuva presa em 10px | Conferência visual depois de aumentar o tamanho e nada mudar |
 | Canvas transparente "apagado" com `source-over`, acumulando preto opaco em vez de apagar rastro | Captura de tela: a chuva virou parede estática de dígitos |
+| Componente cliente importando um módulo `server-only`, quebrando o build | Primeira compilação do assistente |
+| Recarregar a etapa de verificação descartava o token do diagnóstico, junto com os eventos recém-gerados | Teste de aceitação do diagnóstico |
+| Barra lateral virando uma tela inteira de menu acima do conteúdo no celular | Captura de tela enviada pelo usuário |
+| Itens do menu sem realce ao passar o mouse, porque o estilo era inline e `:hover` não existe ali | Uso da interface |
 | **Cron enfileirando todo dia e ninguém drenando a fila:** a Vercel dispara crons por GET, e `/api/auditorias/processar` exportava só POST — o comentário do arquivo afirmava que o cron o chamava | Conferência dos endpoints ao escrever esta documentação |
 
 Três erros de contagem manual nos valores esperados da massa também apareceram — nesses casos o
@@ -412,6 +457,15 @@ verificação sem execução não vale:
 
 O **agendamento em si** — a Vercel chamando nos horários declarados — só se confirma em produção.
 
+**O convite de instalação do Chrome.** O manifesto e os ícones são servidos, e há teste provando
+isso. O que **não** foi observado é o Chrome de verdade oferecendo a instalação: não consegui
+conferir os critérios atuais de instalabilidade a partir deste ambiente — o proxy de rede bloqueia
+`developer.chrome.com` e o MDN. Se o convite não aparecer, o próximo passo é um service worker de
+repasse puro, nunca um que responda do cache.
+
+**Conector de formulário externo.** Não existe, então não há o que testar. A tela diz isso em vez de
+prometer integração automática.
+
 **Integrações externas de terceiros.** Nenhuma (Clarity, Analytics, CRM) foi implementada, então não
 há o que testar.
 
@@ -433,22 +487,23 @@ Preenchido a cada execução completa:
 - `npm run doctor` — ambiente íntegro
 - `npm run typecheck` — sem erros
 - `npm run lint` — sem avisos
-- `npm test` — **189 testes**, todos passando (12 arquivos, 6,7 s)
+- `npm test` — **203 testes**, todos passando (13 arquivos)
 
   | Arquivo | Testes | | Arquivo | Testes |
   |---|---|---|---|---|
-  | `conexao` | 42 | | `periodo` | 13 |
-  | `url-publica` | 31 | | `autorizacao` | 11 |
-  | `ingestao` | 20 | | `fila-auditoria` | 10 |
-  | `pagespeed` | 17 | | `otimizacoes` | 9 |
-  | `metricas` | 14 | | `carteira` · `crux` | 8 · 8 |
+  | `conexao` | 42 | | `recursos` | 14 |
+  | `url-publica` | 31 | | `periodo` | 13 |
+  | `ingestao` | 20 | | `autorizacao` | 11 |
+  | `pagespeed` | 17 | | `fila-auditoria` | 10 |
+  | `metricas` | 14 | | `otimizacoes` | 9 |
+  | | | | `carteira` · `crux` | 8 · 8 |
   | | | | `build` | 6 |
 
   A soma por arquivo foi conferida contra o total (o relatório JSON do vitest, não a contagem
   visual — numa rodada anterior eu reportei 79 onde eram 103).
 
-- `npm run test:e2e` — **49 testes** (41 desktop + 8 celular), todos passando (4,2 min)
-- `npm run build` — build de produção concluído, **24 rotas**
+- `npm run test:e2e` — **58 testes** (48 desktop + 10 celular), todos passando (5,9 min)
+- `npm run build` — build de produção concluído, **25 rotas**
 - `npm start` — servidor de produção respondendo
 
 Verificado além da suíte, por execução real e não por leitura do código:
