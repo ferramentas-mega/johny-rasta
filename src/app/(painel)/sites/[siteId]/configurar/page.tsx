@@ -330,6 +330,8 @@ export default async function PaginaConfigurar({
               endpoint={endpoint}
               publicId={site.publicId}
               verificado={recurso('formularios').estado === 'verificado'}
+              urlBase={urlBase}
+              sessaoAberta={sessaoAberta}
             />
           )}
 

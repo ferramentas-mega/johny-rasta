@@ -241,6 +241,46 @@ describe('a próxima ação diz a TAREFA, não a posição', () => {
     expect(vistas.size).toBe(ETAPAS.length);
   });
 
+  it('modo de formulário já salvo: a frase passa a cobrar o ENVIO, não a escolha', () => {
+    // O defeito que isto fecha: quem já tinha escolhido o modo continuava lendo
+    // "diga como o formulário deste site funciona". A pessoa acabara de fazer
+    // isso; salvar de novo não mudava nada, e a tela repetia o mesmo pedido.
+    const base = {
+      recursos: {
+        visitas: { selecionado: true, verificado: true },
+        formularios: { selecionado: true },
+      },
+    } as const;
+
+    const semModo = proximaAcao(comEstados(config({ ...base, modoFormulario: null })));
+    expect(semModo.etapa).toBe('formularios');
+    expect(semModo.frase).toMatch(/diga como/i);
+
+    const comModo = proximaAcao(comEstados(config({ ...base, modoFormulario: 'proprio' })));
+    expect(comModo.etapa).toBe('formularios');
+    expect(comModo.frase).toMatch(/envie/i);
+    expect(comModo.frase).not.toEqual(semModo.frase);
+    // E o motivo diz por que salvar não bastou.
+    expect(comModo.motivo).toMatch(/receb/i);
+  });
+
+  it('"sem formulário" não cobra envio nenhum', () => {
+    // Escolher "sem formulário" conclui a etapa; cobrar um envio depois disso
+    // seria cobrar o impossível.
+    const acao = proximaAcao(
+      comEstados(
+        config({
+          recursos: {
+            visitas: { selecionado: true, verificado: true },
+            formularios: { selecionado: true },
+          },
+          modoFormulario: 'sem',
+        }),
+      ),
+    );
+    expect(acao.etapa).not.toBe('formularios');
+  });
+
   it('não começou: manda escolher o que acompanhar, e diz por quê', () => {
     const acao = proximaAcao(comEstados(config({ recursosEscolhidosEm: null })));
     expect(acao.etapa).toBe('recursos');

@@ -206,6 +206,8 @@ export type EstadoDiagnostico = {
   conferidoEm?: string;
   /** Por que a verificação ainda não passou, derivado do que o banco mediu. */
   diagnostico?: DiagnosticoDeInstalacao;
+  /** Envios de formulário gravados nesta sessão. A etapa 5 depende deste número. */
+  formularios?: number;
   /**
    * A conferência para colar no console do navegador do operador.
    *
@@ -268,6 +270,7 @@ export async function conferirDiagnostico(
       erro: undefined,
       eventos: resultado.eventos,
       verificados: resultado.verificados,
+      formularios: resultado.formularios,
       diagnostico: resultado.diagnostico,
       consoleTexto:
         resultado.diagnostico.ofereceConsole && resultado.publicId

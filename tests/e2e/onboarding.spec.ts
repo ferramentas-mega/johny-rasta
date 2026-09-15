@@ -436,3 +436,50 @@ test('o inventário nomeia o que está mal marcado, e diz o que fazer', async ({
   // botões o site tem, só o que já foi clicado.
   await expect(inventario.getByText(/nunca foi clicado não aparece aqui/)).toBeVisible();
 });
+
+test('a etapa de formulários diz o que falta e oferece como conferir', async ({ page }) => {
+  test.setTimeout(120_000);
+  await entrar(page);
+  const { siteId } = await cadastrarSite(page, 'form');
+
+  // Formulários é recurso do coletor: para a etapa 5 ser alcançável, algo do
+  // coletor precisa já estar verificado. Seleciona visitas junto e deixa o
+  // caminho normal do assistente levar até lá.
+  await page.goto(`/sites/${siteId}/configurar?etapa=recursos`);
+  await page.check('input[name="recurso:visitas"]');
+  await page.check('input[name="recurso:formularios"]');
+  await page.getByRole('button', { name: 'Salvar seleção' }).click();
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=formularios`);
+
+  // Sem modo escolhido, a etapa não cobra envio nenhum — não há o que enviar
+  // até o operador dizer como o formulário funciona.
+  await expect(page.getByText('Falta o principal: receber um envio.')).toHaveCount(0);
+
+  await page.check('input[name="modo"][value="proprio"]');
+  await page.getByRole('button', { name: 'Salvar' }).click();
+
+  // ─── o defeito que este teste fecha ────────────────────────────────────────
+  //
+  // Salvar o modo não conclui a etapa: ela só fecha quando o endpoint RECEBE um
+  // envio. Antes, nada na tela dizia isso e o aviso de próxima ação repetia
+  // "diga como o formulário deste site funciona" — o que a pessoa acabara de
+  // fazer. Salvava de novo, nada mudava.
+  await expect(page.getByText('Falta o principal: receber um envio.')).toBeVisible();
+
+  // A frase de "próxima ação" também deixa de cobrar a escolha e passa a cobrar
+  // o envio — mas isso depende da etapa ser a primeira pendente do site, e aqui
+  // a instalação ainda está aberta. Quem trava aquela frase é
+  // `tests/unit/recursos.spec.ts`, onde o cenário é montado sem depender da
+  // ordem das etapas.
+
+  // A etapa passa a oferecer o caminho de verificação, que antes só existia na
+  // etapa 4 — o operador não tinha como concluir daqui.
+  await page.getByRole('button', { name: 'Abrir modo de diagnóstico' }).click();
+  await expect(page.locator('a[href*="painel_diag="]')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Conferir envios recebidos' }).click();
+  // Nenhum envio ainda: diz isso, e diz onde costuma estar o erro. Nunca
+  // confirma recebimento que não houve.
+  await expect(page.getByText(/Nenhum envio gravado ainda neste diagnóstico/)).toBeVisible();
+});

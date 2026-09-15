@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { Campo, Selecao, BotaoSubmeter, BotaoSecundario, Retorno, ESTADO_VAZIO } from '@/components/Formulario';
 import { salvarSite } from './acoes';
@@ -76,9 +77,25 @@ export function FormularioSite({
         opcoes={FUSOS.map((f) => ({ valor: f, texto: f }))}
       />
       <Retorno estado={estado} />
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <BotaoSubmeter>{emEdicao ? 'Salvar alterações' : 'Cadastrar site'}</BotaoSubmeter>
-        {!emEdicao && <BotaoSecundario onClick={() => setAberto(false)}>Cancelar</BotaoSecundario>}
+        {emEdicao ? (
+          /*
+           * Em edição a saída é um LINK, não um botão de estado local.
+           *
+           * O alvo da edição vem da URL (`?editar=<id>`), então fechar só no
+           * cliente não resolve: bastaria recarregar para o formulário reabrir
+           * no mesmo site. Pior, era assim que a tela ficava depois de salvar —
+           * a mensagem de sucesso aparecia e o formulário continuava aberto no
+           * mesmo lugar, sem nada para clicar. Parecia que a edição não tinha
+           * pegado.
+           */
+          <Link href="/sites" style={{ fontSize: 13, color: 'var(--tx2)' }}>
+            {estado.ok ? 'Voltar para a lista' : 'Cancelar'}
+          </Link>
+        ) : (
+          <BotaoSecundario onClick={() => setAberto(false)}>Cancelar</BotaoSecundario>
+        )}
       </div>
     </form>
   );

@@ -300,8 +300,29 @@ const ACAO_DA_ETAPA: Record<EtapaSlug, { frase: string; motivo: string }> = {
   },
 };
 
+/**
+ * A ação pendente também depende do que já foi feito DENTRO da etapa.
+ *
+ * A etapa de formulários tem duas partes, e só a primeira é um formulário do
+ * painel: dizer como o site funciona, e depois o endpoint RECEBER um envio de
+ * verdade. Enquanto a frase saía só do nome da etapa, quem já tinha escolhido o
+ * modo continuava lendo "diga como o formulário deste site funciona" — uma
+ * instrução que a pessoa acabara de cumprir. Salvar de novo não mudava nada, e a
+ * tela repetia o mesmo pedido: o jeito mais rápido de alguém concluir que o
+ * assistente está quebrado.
+ */
 export function proximaAcao(config: ConfiguracaoDoSite): ProximaAcao {
   const etapa = proximaEtapa(config);
+
+  if (etapa === 'formularios' && config.modoFormulario && config.modoFormulario !== 'sem') {
+    return {
+      etapa,
+      frase: 'Envie um formulário de teste pelo site, com o diagnóstico aberto.',
+      motivo:
+        'O modo já está salvo. O que falta é o servidor receber um envio — recebimento não se confirma por configuração.',
+    };
+  }
+
   return { etapa, ...ACAO_DA_ETAPA[etapa] };
 }
 

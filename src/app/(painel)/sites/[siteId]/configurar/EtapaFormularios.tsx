@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { BotaoSubmeter, Retorno, ESTADO_VAZIO } from '@/components/Formulario';
 import { MODO_FORMULARIO_LABEL, type ModoFormulario } from '@/lib/recursos';
-import { salvarFormulario } from './acoes';
+import { salvarFormulario, iniciarDiagnostico, conferirDiagnostico, type EstadoDiagnostico } from './acoes';
 import { Snippet } from '../rastreamento/Snippet';
 import { snippetFormulario } from '@/lib/snippets';
 
@@ -28,12 +28,16 @@ export function EtapaFormularios({
   endpoint,
   publicId,
   verificado,
+  urlBase,
+  sessaoAberta,
 }: {
   siteId: string;
   modo: ModoFormulario | null;
   endpoint: string;
   publicId: string;
   verificado: boolean;
+  urlBase: string;
+  sessaoAberta: { token: string; url: string; expiraEm: string } | null;
 }) {
   const [estado, acao] = useActionState(salvarFormulario, ESTADO_VAZIO);
 
@@ -131,10 +135,128 @@ export function EtapaFormularios({
         </p>
       )}
 
-      {verificado && (
+      {verificado ? (
         <p role="status" style={{ fontSize: 13, color: 'var(--ok-tx)' }}>
           Já recebemos um envio gravado por este site. O recebimento está verificado.
         </p>
+      ) : (
+        modo &&
+        modo !== 'sem' && (
+          <FaltaOEnvio siteId={siteId} urlBase={urlBase} sessaoAberta={sessaoAberta} />
+        )
+      )}
+    </div>
+  );
+}
+
+/**
+ * O que ainda falta para a etapa fechar — e como fazer, aqui mesmo.
+ *
+ * Antes, escolher o modo e salvar era tudo o que esta tela oferecia, e a etapa
+ * continuava pendente: ela só fecha quando o endpoint RECEBE um envio de
+ * verdade. Nada na tela dizia isso, e o aviso de próxima ação repetia "diga como
+ * o formulário deste site funciona" — exatamente o que a pessoa acabara de
+ * fazer. Salvava de novo, nada mudava, e a conclusão razoável era que o
+ * assistente estava quebrado.
+ *
+ * O caminho de verificação é o MESMO da etapa 4 — a sessão de diagnóstico é uma
+ * só por site, e o envio precisa chegar com o token para não confundir o teste
+ * do operador com um lead de verdade. Por isso aqui reaproveita as mesmas
+ * Actions em vez de inventar um segundo mecanismo: dois caminhos divergiriam na
+ * primeira correção feita só num deles.
+ */
+function FaltaOEnvio({
+  siteId,
+  urlBase,
+  sessaoAberta,
+}: {
+  siteId: string;
+  urlBase: string;
+  sessaoAberta: { token: string; url: string; expiraEm: string } | null;
+}) {
+  const [inicio, acaoIniciar] = useActionState(iniciarDiagnostico, {} as EstadoDiagnostico);
+  const [conferencia, acaoConferir] = useActionState(conferirDiagnostico, {} as EstadoDiagnostico);
+
+  const token = conferencia.token ?? inicio.token ?? sessaoAberta?.token;
+  const url = inicio.url ?? sessaoAberta?.url;
+
+  return (
+    <div
+      style={{
+        border: '1px solid var(--bdc)', borderRadius: 10, padding: 14,
+        display: 'flex', flexDirection: 'column', gap: 12,
+      }}
+    >
+      <div>
+        <strong style={{ fontSize: 13.5 }}>Falta o principal: receber um envio.</strong>
+        <p style={{ fontSize: 12.5, color: 'var(--tx2)', marginTop: 6, lineHeight: 1.7 }}>
+          O modo está salvo, e isso é configuração — não é recebimento. Esta etapa só fecha quando o
+          endpoint gravar uma submissão de verdade, porque &quot;alguém clicou em enviar&quot; e &quot;o
+          servidor gravou um lead&quot; são fatos diferentes, e só o segundo vira contato.
+        </p>
+      </div>
+
+      {!url ? (
+        <form action={acaoIniciar} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <input type="hidden" name="siteId" value={siteId} />
+          <input type="hidden" name="base" value={urlBase} />
+          <div>
+            <BotaoSubmeter ocupado="Abrindo…">Abrir modo de diagnóstico</BotaoSubmeter>
+          </div>
+          {inicio.erro && (
+            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)' }}>{inicio.erro}</p>
+          )}
+        </form>
+      ) : (
+        <>
+          <ol style={{ paddingLeft: 20, fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.9, margin: 0 }}>
+            <li>Abra o site por este link (é ele que marca o envio como teste):</li>
+          </ol>
+          <a
+            className="mono"
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: 12, wordBreak: 'break-all' }}
+          >
+            {url}
+          </a>
+          <ol
+            start={2}
+            style={{ paddingLeft: 20, fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.9, margin: 0 }}
+          >
+            <li>Preencha e envie o formulário do site.</li>
+            <li>Volte aqui e confira.</li>
+          </ol>
+
+          <form action={acaoConferir} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input type="hidden" name="siteId" value={siteId} />
+            <input type="hidden" name="token" value={token ?? ''} />
+            <div>
+              <BotaoSubmeter ocupado="Consultando o servidor…">Conferir envios recebidos</BotaoSubmeter>
+            </div>
+
+            {conferencia.erro && (
+              <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)' }}>{conferencia.erro}</p>
+            )}
+
+            {conferencia.conferidoEm && (
+              <p role="status" style={{ fontSize: 12.5, lineHeight: 1.7 }}>
+                {(conferencia.formularios ?? 0) > 0 ? (
+                  <span style={{ color: 'var(--ok-tx)' }}>
+                    {conferencia.formularios} envio(s) gravado(s). O recebimento está verificado.
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--tx2)' }}>
+                    Nenhum envio gravado ainda neste diagnóstico. Se você enviou e não apareceu, o{' '}
+                    <span className="mono">action</span> do formulário provavelmente não aponta para o
+                    endereço acima — ou a resposta do servidor foi erro, e o site engoliu.
+                  </span>
+                )}
+              </p>
+            )}
+          </form>
+        </>
       )}
     </div>
   );

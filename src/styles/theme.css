@@ -1019,3 +1019,21 @@ select option {
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* Duas ações no rodapé do cartão de site: editar o cadastro e abrir a
+   configuração. A de editar é a fraca — corrigir um domínio é raro, continuar a
+   configuração é o que o cartão existe para empurrar. */
+.cartao-site-acoes {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.cartao-site-acao-fraca {
+  color: var(--tx2);
+}
+
+.cartao-site-acao-fraca:hover {
+  color: var(--tx);
+}

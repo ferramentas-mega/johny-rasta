@@ -127,9 +127,19 @@ export function CartaoSite({
           )}
         </span>
 
-        <Link href={`/sites/${site.id}/configurar`} className="cartao-site-acao">
-          {falta ? 'Continuar configuração →' : 'Ver configuração'}
-        </Link>
+        <span className="cartao-site-acoes">
+          {/* A edição existia e não tinha porta: a Action, a URL e o formulário
+              funcionavam, e nenhum lugar da interface levava até lá. Quem
+              precisasse corrigir um domínio digitado errado não tinha por onde.
+              O alvo vai na URL para que recarregar mantenha o formulário aberto
+              no site certo. */}
+          <Link href={`/sites?editar=${site.id}`} className="cartao-site-acao cartao-site-acao-fraca">
+            Editar
+          </Link>
+          <Link href={`/sites/${site.id}/configurar`} className="cartao-site-acao">
+            {falta ? 'Continuar configuração →' : 'Ver configuração'}
+          </Link>
+        </span>
       </footer>
     </article>
   );

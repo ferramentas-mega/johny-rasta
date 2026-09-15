@@ -162,14 +162,26 @@ test('editar o nome de um site atualiza sua identificação nas outras telas', a
   const href = await cartao.getByRole('link', { name: 'beta.teste' }).getAttribute('href');
   const siteId = href!.split('/')[2];
 
-  // A edição continua sendo pela URL, como os demais filtros.
-  await page.goto(`/sites?editar=${siteId}`);
+  // Pela INTERFACE, e não por uma URL montada à mão.
+  //
+  // Esta prova montava `/sites?editar=<id>` sozinha, e por isso passava
+  // enquanto a edição estava inalcançável: a Action existia, a URL respondia, o
+  // formulário funcionava — e nenhum lugar da tela levava até lá. Um teste que
+  // constrói o caminho que o usuário não tem prova o mecanismo e esconde o
+  // produto quebrado.
+  await cartao.getByRole('link', { name: 'Editar' }).click();
+  await page.waitForURL(`**/sites?editar=${siteId}`);
 
   const campoNome = page.locator('input[name=nome]');
   await expect(campoNome).toHaveValue('beta.teste');
   await campoNome.fill(novoNome);
   await page.getByRole('button', { name: 'Salvar alterações' }).click();
   await expect(page.getByRole('status')).toContainText('todas as telas');
+
+  // E há saída. Antes, salvar deixava o formulário aberto no mesmo site, sem
+  // nada para clicar — a edição tinha funcionado e a tela não dizia isso.
+  await page.getByRole('link', { name: 'Voltar para a lista' }).click();
+  await page.waitForURL((u) => !u.search.includes('editar'));
 
   // Existe UM registro do site, então o nome novo vale em toda parte.
   await page.goto('/sites');
