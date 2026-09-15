@@ -96,3 +96,34 @@ test('é possível desligar e religar os efeitos, e a escolha persiste', async (
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-fx', invertido);
 });
+
+test.describe('movimento reduzido na tela de login', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('a chuva de fundo existe, mas não anima para quem pede menos movimento', async ({ page }) => {
+    await page.goto('/entrar');
+
+    // O canvas é renderizado sempre; quem decide se ele desenha é o `data-fx`,
+    // e o script do layout raiz o define a partir da preferência do sistema.
+    await expect(page.getByTestId('fx-canvas-tela')).toBeAttached();
+    await expect(page.locator('html')).toHaveAttribute('data-fx', 'off');
+  });
+});
+
+test('a chuva de fundo não intercepta o login', async ({ page }) => {
+  await page.goto('/entrar');
+
+  const canvas = page.getByTestId('fx-canvas-tela');
+  await expect(canvas).toBeAttached();
+  // Decorativa: fora da árvore de acessibilidade e transparente ao ponteiro.
+  await expect(canvas).toHaveAttribute('aria-hidden', 'true');
+  expect(await canvas.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+
+  // A prova que importa: dá para logar com ela na tela. Um canvas em tela cheia
+  // por cima do formulário seria um jeito silencioso de tornar o login
+  // inutilizável, e nenhum teste de estilo pegaria isso.
+  await page.fill('input[name=email]', 'dona@agencia.teste');
+  await page.fill('input[name=senha]', 'teste123456');
+  await page.click('button[type=submit]');
+  await page.waitForURL('**/visao-geral**');
+});

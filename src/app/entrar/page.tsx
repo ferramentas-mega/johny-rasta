@@ -1,4 +1,5 @@
 import { Marca } from '@/components/Marca';
+import { ChuvaMatrix } from '@/components/ChuvaMatrix';
 import { FormularioDeLogin } from './formulario';
 import { descricaoDoBuild } from '@/lib/build';
 
@@ -21,7 +22,15 @@ export default function PaginaEntrar() {
         background: 'var(--header-bg)',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 380 }}>
+      <ChuvaMatrix variante="tela" />
+
+      {/*
+        `position: relative` + `zIndex: 1` põem o cartão ACIMA do canvas. Sem
+        isso o canvas em tela cheia ficaria por cima do formulário — e como ele
+        tem `pointerEvents: none`, o clique até passaria, mas o texto ficaria
+        atrás da animação.
+      */}
+      <div style={{ width: '100%', maxWidth: 380, position: 'relative', zIndex: 1 }}>
         <Marca />
         <FormularioDeLogin />
         <p
