@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Queryable } from '@/server/db';
 import type { PeriodInput, ResolvedPeriod } from '@/lib/periodo';
+import type { BotaoInventariado, PaginaComTagDuplicada } from '@/lib/botoes';
 
 /**
  * FONTE ÚNICA das agregações.
@@ -405,6 +406,117 @@ export async function getBehavior(
     profundidade,
     porHora,
   };
+}
+
+// ─────────────────── inventário de tags e botões ───────────────────
+
+/**
+ * Tudo o que já foi clicado neste site, com o histórico completo.
+ *
+ * **Não é recortado por período, e isso é a diferença central** em relação a
+ * `getByButton`. Aquela responde "o que performou nesta janela"; esta responde
+ * "o que existe e como está marcado". Um botão bem instalado que não recebeu
+ * clique nos últimos sete dias continua existindo — recortá-lo por período o
+ * faria sumir do inventário e parecer removido do site.
+ *
+ * Eventos de teste ficam de fora: um diagnóstico do operador não é um botão que
+ * os visitantes usam.
+ */
+export async function getInventarioDeBotoes(
+  db: Queryable,
+  siteId: string,
+): Promise<BotaoInventariado[]> {
+  const linhas = await db.query<{
+    buttonId: string;
+    subtipo: string;
+    texto: string;
+    posicao: string | null;
+    paginas: number;
+    exemploPagina: string | null;
+    cliques: number;
+    primeiroEm: Date;
+    ultimoEm: Date;
+  }>(
+    `select e.button_id                                      as "buttonId",
+            coalesce(max(e.subtype), '—')                    as "subtipo",
+            -- O texto MAIS RECENTE, e não qualquer um: o rótulo do botão muda
+            -- quando alguém reescreve a página, e mostrar um texto antigo faria
+            -- o operador procurar na página algo que não está mais escrito lá.
+            coalesce(
+              (array_agg(e.button_text order by e.occurred_at desc)
+                 filter (where e.button_text is not null))[1],
+              e.button_id
+            )                                                as "texto",
+            (array_agg(e.button_position order by e.occurred_at desc)
+               filter (where e.button_position is not null))[1] as "posicao",
+            count(distinct e.page_id)::int                    as "paginas",
+            (array_agg(p.path order by e.occurred_at desc)
+               filter (where p.path is not null))[1]          as "exemploPagina",
+            count(*)::int                                     as "cliques",
+            min(e.occurred_at)                                as "primeiroEm",
+            max(e.occurred_at)                                as "ultimoEm"
+       from events e
+       left join pages p on p.id = e.page_id
+      where e.site_id = $1
+        and e.type = 'cta_click'
+        and e.button_id is not null
+        and not e.is_test
+      group by e.button_id`,
+    [siteId],
+  );
+
+  return linhas.map((l) => ({
+    ...l,
+    // O coletor usa o prefixo `auto:` quando detecta o link sozinho (wa.me,
+    // tel:, mailto:) e não encontra `data-track-id`. É a marca de "medido, mas
+    // sem nome" — o clique conta, o relatório é que fica ilegível.
+    identificado: !l.buttonId.startsWith('auto:'),
+  }));
+}
+
+/**
+ * Páginas com visualização duplicada — o sintoma de coletor instalado duas vezes.
+ *
+ * Duas instâncias do `t.js` disparam duas visualizações da mesma página, na
+ * mesma sessão, com `event_uid` distintos. A deduplicação por idempotência não
+ * pega: do ponto de vista do banco são dois eventos legítimos.
+ *
+ * O prejuízo é silencioso — visualizações dobram, páginas por sessão dobram, e a
+ * taxa de conversão cai pela metade sem nada ter piorado no site. Ninguém
+ * desconfia de um número que só subiu.
+ *
+ * Dois segundos como corte: recarregar a página de verdade leva mais que isso,
+ * e duas tags disparam praticamente no mesmo instante. Uma janela maior
+ * começaria a acusar navegação legítima de ida e volta.
+ */
+export async function getTagsDuplicadas(
+  db: Queryable,
+  siteId: string,
+  dias = 7,
+): Promise<PaginaComTagDuplicada[]> {
+  return db.query<PaginaComTagDuplicada>(
+    `with vistas as (
+       select e.session_id, e.page_id, e.occurred_at,
+              lag(e.occurred_at) over (
+                partition by e.session_id, e.page_id order by e.occurred_at
+              ) as anterior
+         from events e
+        where e.site_id = $1
+          and e.type = 'page_view'
+          and not e.is_test
+          and e.occurred_at > now() - make_interval(days => $2::int)
+     )
+     select coalesce(p.path, '—')          as "caminho",
+            count(*)::int                  as "ocorrencias",
+            max(v.occurred_at)             as "ultimaEm"
+       from vistas v
+       left join pages p on p.id = v.page_id
+      where v.anterior is not null
+        and v.occurred_at - v.anterior < interval '2 seconds'
+      group by p.path
+      order by 2 desc`,
+    [siteId, dias],
+  );
 }
 
 // ───────────────────────── funil de leads ─────────────────────────

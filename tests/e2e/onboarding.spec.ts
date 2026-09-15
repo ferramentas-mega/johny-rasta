@@ -368,3 +368,60 @@ test('a configuração de outro cliente não é acessível pela URL', async ({ p
   const resposta = await page.goto(`/sites/${siteId}/configurar`);
   expect(resposta?.status()).toBe(404);
 });
+
+test('o inventário nomeia o que está mal marcado, e diz o que fazer', async ({ page, context }) => {
+  test.setTimeout(120_000);
+
+  /**
+   * O inventário é construído a partir do que o coletor RECEBEU, então o teste
+   * precisa produzir cliques de verdade — não inserir linhas no banco. É a
+   * diferença entre provar que a consulta agrupa e provar que o caminho
+   * inteiro, do clique ao rótulo na tela, funciona.
+   */
+  await entrar(page);
+  const { siteId } = await cadastrarSite(page, 'invent');
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=instalacao`);
+  const publicId = ((await page.locator('pre').first().textContent()) ?? '').match(/sit_[a-f0-9]+/)![0];
+
+  // Antes de qualquer clique: a tela não inventa botão nenhum.
+  await page.goto(`/sites/${siteId}/rastreamento`);
+  await expect(page.getByText('Nada clicado até agora')).toBeVisible();
+
+  // Um clique REAL na página de teste, que percorre coletor, endpoint e banco.
+  // O link de WhatsApp de lá é bem marcado (`data-track-id` e `data-track-pos`),
+  // então ele é o caso de referência: o inventário tem de mostrar o nome legível
+  // e a posição, não o agrupamento automático.
+  const site = await context.newPage();
+  await site.goto(`/teste/${publicId}`);
+  const requisicao = site.waitForRequest(
+    (r) => r.url().includes('/api/collect') && r.method() === 'POST',
+  );
+  await site.getByRole('link', { name: /WhatsApp/i }).first().click();
+  await requisicao;
+  await site.waitForTimeout(600);
+  await site.close();
+
+  await page.goto(`/sites/${siteId}/rastreamento`);
+  const inventario = page.locator('section').filter({ hasText: 'Inventário de tags e botões' }).first();
+  const tabela = inventario.locator('table');
+
+  // O botão entra pelo identificador que o site declarou, com o texto e a
+  // posição que vieram no evento.
+  await expect(tabela.getByText('cta-whatsapp-hero')).toBeVisible();
+  await expect(tabela.getByText('Falar no WhatsApp')).toBeVisible();
+  // `exact` porque "Hero" também é sufixo do identificador `cta-whatsapp-hero`,
+  // e sem isso o localizador casa com dois elementos da mesma linha.
+  await expect(tabela.getByText('Hero', { exact: true })).toBeVisible();
+
+  // Recém-aparecido é "Novo", e o inventário não cobra nada dele. Marcar um
+  // botão instalado hoje como pendência seria cobrar por trabalho já feito.
+  await expect(tabela.getByText('Novo')).toBeVisible();
+
+  // O cabeçalho deixa de dizer "nada clicado" e passa a contar.
+  await expect(inventario.getByText(/1 botão\(ões\) já clicado\(s\)/)).toBeVisible();
+
+  // A ressalva de escopo fica à vista: este inventário não afirma quantos
+  // botões o site tem, só o que já foi clicado.
+  await expect(inventario.getByText(/nunca foi clicado não aparece aqui/)).toBeVisible();
+});

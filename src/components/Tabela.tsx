@@ -18,6 +18,19 @@ export type Coluna<T> = {
   ajuda?: string;
   alinhamento?: 'esquerda' | 'direita';
   mono?: boolean;
+  /**
+   * Permite que o conteúdo QUEBRE em várias linhas.
+   *
+   * O padrão da tabela é `nowrap`, e isso está certo para o que ela quase sempre
+   * carrega: número, data, caminho e identificador não devem quebrar no meio.
+   * Mas uma coluna com FRASE — a ação sugerida de um botão mal marcado, por
+   * exemplo — some para fora da tabela em vez de quebrar, e o texto é cortado
+   * sem reticências, sem barra de rolagem visível, sem pista de que há mais.
+   *
+   * Opt-in em vez de padrão: inverter o padrão faria toda tabela existente
+   * reflowar, e as que existem dependem de não quebrar.
+   */
+  quebraLinha?: boolean;
   render: (linha: T) => ReactNode;
   /** Valor do rodapé de totais. Ausente = célula vazia. */
   total?: (linhas: T[]) => ReactNode;
@@ -46,7 +59,9 @@ export function Tabela<T>({
     padding: '11px 10px',
     textAlign: c.alinhamento === 'direita' ? 'right' : 'left',
     fontSize: 13,
-    whiteSpace: 'nowrap',
+    whiteSpace: c.quebraLinha ? 'normal' : 'nowrap',
+    // Sem um teto, a coluna que quebra ocupa toda a sobra e espreme as demais.
+    ...(c.quebraLinha ? { maxWidth: 340 } : {}),
   });
 
   return (

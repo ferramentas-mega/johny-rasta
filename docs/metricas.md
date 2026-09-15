@@ -226,3 +226,66 @@ do gráfico.
 Zero sessões no período não desenha quatro barras vazias. Barra vazia é lida como "medimos e deu
 zero"; o certo é dizer que não há o que comparar. Largura proporcional a zero é uma conta que não
 existe.
+
+
+---
+
+## Inventário de tags e botões
+
+Na aba **Rastreamento** de cada site.
+
+### O que ele pode e não pode afirmar
+
+É construído a partir do que o coletor **recebeu**, e isso tem um limite duro que a própria tela diz:
+**um botão que existe na página e nunca foi clicado não aparece aqui.** Afirmar "seu site tem 7
+botões" seria inventar um número sobre um conjunto que este painel não enxerga.
+
+O que ele afirma com segurança é o outro lado: de tudo o que **já foi clicado**, o que está bem
+marcado, o que está sendo agrupado como automático, e o que parou de aparecer.
+
+### Não é recortado por período
+
+É a diferença central para a tabela "por botão" da aba Desempenho. Aquela responde *o que performou
+nesta janela*; esta responde *o que existe e como está marcado*. Um botão bem instalado que não
+recebeu clique nos últimos sete dias continua existindo — recortá-lo por período o faria sumir do
+inventário e parecer removido do site.
+
+### Os estados
+
+| Estado | Quando | O que fazer |
+|---|---|---|
+| **Parou de aparecer** | Tinha volume e ficou 14 dias sem clique, num site que continua coletando | Conferir se o botão ainda existe e se o `data-track-id` sobreviveu ao deploy |
+| **Sem nome** | Detectado sozinho (wa.me, tel:, mailto:) sem `data-track-id` | Acrescentar `data-track-id` e `data-track-pos` — o clique já conta, falta o nome legível |
+| **Sem posição** | Nomeado, mas sem `data-track-pos` | Acrescentar a posição, para separar o mesmo botão em lugares diferentes |
+| **Novo** | Primeiro clique há menos de 7 dias | Nada |
+| **Medindo** | Nomeado, posicionado e recebendo cliques | Nada |
+
+A ordem da tabela acima **é** a ordem de precedência, e é decisão de produto: um botão quebrado
+importa antes de um mal nomeado. A lista também ordena assim — ordenar por volume poria no topo
+justamente o que está funcionando.
+
+### Por que "parou de aparecer" tem duas salvaguardas
+
+É o sinal mais útil do inventário (um botão removido num deploy, ou um `data-track-id` perdido numa
+refatoração, some sem erro nenhum) e o mais fácil de virar alarme falso. As duas regras são as mesmas
+que o painel já aplica a "site sem eventos":
+
+1. **Só afirma sumiço de botão que tinha regularidade** — no mínimo 10 cliques históricos. Um botão
+   clicado duas vezes na vida não sumiu: ele nunca teve volume para se afirmar nada.
+2. **Só afirma sumiço com o SITE ativo** — se a coleta inteira parou, todos os botões parecem
+   sumidos, e a lista apontaria sete problemas onde existe um só, no lugar errado.
+
+### Tag duplicada
+
+O inventário também acusa **coletor instalado duas vezes**: páginas que registraram duas
+visualizações da mesma sessão separadas por menos de dois segundos.
+
+Duas instâncias do `t.js` disparam duas visualizações com `event_uid` distintos — a deduplicação por
+idempotência não pega, porque do ponto de vista do banco são dois eventos legítimos.
+
+O prejuízo é silencioso e caro: as visualizações dobram, páginas por sessão dobra, e a taxa de
+conversão cai pela metade sem nada ter piorado no site. **Ninguém desconfia de um número que só
+subiu.** O caso comum é o script no layout do tema *e* num plugin de inserção de código.
+
+Dois segundos como corte: recarregar a página de verdade leva mais que isso, e duas tags disparam
+praticamente no mesmo instante. Uma janela maior começaria a acusar navegação legítima de ida e volta.

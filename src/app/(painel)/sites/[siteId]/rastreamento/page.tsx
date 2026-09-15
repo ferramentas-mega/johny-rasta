@@ -14,6 +14,16 @@ import { EventoTeste } from './EventoTeste';
 import { registrarSnippetVisto } from '@/server/services/cadastros';
 import { appUrl } from '@/lib/app-url';
 import { snippetColetor, snippetBotao, snippetFormulario } from '@/lib/snippets';
+import { getInventarioDeBotoes, getTagsDuplicadas } from '@/server/metrics/queries';
+import {
+  estadoDoBotao,
+  ordenarInventario,
+  resumirInventario,
+  ESTADO_BOTAO_LABEL,
+  ESTADO_BOTAO_TOM,
+  ESTADO_BOTAO_ACAO,
+  type BotaoComEstado,
+} from '@/lib/botoes';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,12 +88,91 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
     ),
   );
 
+  /**
+   * O inventário, numa transação só e sequencial.
+   *
+   * `Queryable` serializa as consultas de uma mesma transação, então mesmo um
+   * `Promise.all` aqui esperaria — escrever sequencial deixa isso explícito.
+   */
+  const { inventarioBruto, duplicadas } = await withAccount(usuario.accountId, async (db) => {
+    const inventarioBruto = await getInventarioDeBotoes(db, site.id);
+    const duplicadas = await getTagsDuplicadas(db, site.id);
+    return { inventarioBruto, duplicadas };
+  });
+
+  /**
+   * "Site ativo" decide se faz sentido afirmar que um botão sumiu.
+   *
+   * Se a coleta inteira parou, TODOS os botões parecem sumidos — a lista
+   * apontaria para sete problemas onde existe um só, e no lugar errado. O corte
+   * é o mesmo que a aba usa para o estado do site: evento recente.
+   */
+  const siteAtivo =
+    !!site.ultimoEvento &&
+    Date.now() - new Date(site.ultimoEvento).getTime() < 7 * 86_400_000;
+
+  const agora = new Date();
+  const inventario: BotaoComEstado[] = ordenarInventario(
+    inventarioBruto.map((b) => ({ ...b, estado: estadoDoBotao(b, { agora, siteAtivo }) })),
+  );
+  const resumo = resumirInventario(inventario);
+
   const passoAtual =
     site.totalEventos > 0 ? 5 : site.snippetSeenAt ? 4 : 3;
 
   const snippet = snippetColetor(endpoint, site.publicId);
   const exemploBotao = snippetBotao();
   const exemploFormulario = snippetFormulario(endpoint, site.publicId);
+
+  const colunasBotoes: Coluna<BotaoComEstado>[] = [
+    {
+      chave: 'botao', titulo: 'Botão',
+      render: (b) => (
+        <span>
+          <span style={{ display: 'block' }}>{b.texto}</span>
+          <span className="mono" style={{ fontSize: 11, color: 'var(--tx3)' }}>{b.buttonId}</span>
+        </span>
+      ),
+    },
+    { chave: 'subtipo', titulo: 'Tipo', mono: true, render: (b) => b.subtipo },
+    {
+      chave: 'onde', titulo: 'Onde',
+      render: (b) => (
+        <span>
+          <span style={{ display: 'block' }}>{b.posicao ?? '—'}</span>
+          <span className="mono" style={{ fontSize: 11, color: 'var(--tx3)' }}>
+            {b.paginas > 1 ? `${num(b.paginas)} páginas` : (b.exemploPagina ?? '—')}
+          </span>
+        </span>
+      ),
+    },
+    {
+      chave: 'cliques', titulo: 'Cliques', alinhamento: 'direita', mono: true,
+      ajuda: 'Total histórico, sem recorte de período. O inventário responde o que existe, não o que performou nesta semana.',
+      render: (b) => num(b.cliques),
+    },
+    {
+      chave: 'visto', titulo: 'Último clique', mono: true,
+      render: (b) => dataHora(b.ultimoEm),
+    },
+    {
+      chave: 'estado', titulo: 'Situação',
+      // A ação é uma FRASE. Sem quebra, ela sai para fora da tabela e é cortada
+      // sem reticências nem pista de que há mais texto.
+      quebraLinha: true,
+      render: (b) => (
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+          <Etiqueta texto={ESTADO_BOTAO_LABEL[b.estado]} tom={ESTADO_BOTAO_TOM[b.estado]} />
+          {/* Estado sem próxima ação é só um rótulo bonito. */}
+          {b.estado !== 'medindo' && b.estado !== 'novo' && (
+            <span style={{ fontSize: 11, color: 'var(--tx3)', lineHeight: 1.5 }}>
+              {ESTADO_BOTAO_ACAO[b.estado]}
+            </span>
+          )}
+        </span>
+      ),
+    },
+  ];
 
   const colunasEventos: Coluna<LinhaEvento>[] = [
     { chave: 'quando', titulo: 'Quando', mono: true, render: (l) => dataHora(l.quando) },
@@ -186,16 +275,70 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
         </Painel>
 
         <Painel
-          titulo="Marcação de botões"
-          subtitulo="Opcional: nomeia o botão nos relatórios em vez de agrupá-lo como automático"
+          titulo="Inventário de tags e botões"
+          subtitulo={
+            inventario.length === 0
+              ? 'Nada clicado até agora — o inventário se preenche sozinho conforme os cliques chegam'
+              : `${resumo.total} botão(ões) já clicado(s) · ${resumo.medindo} bem marcado(s)` +
+                (resumo.semNome > 0 ? ` · ${resumo.semNome} sem nome` : '') +
+                (resumo.sumiram > 0 ? ` · ${resumo.sumiram} parou de aparecer` : '')
+          }
         >
-          <Snippet codigo={exemploBotao} rotulo="Exemplo de CTA marcado" />
+          {duplicadas.length > 0 && (
+            <div
+              role="alert"
+              style={{
+                border: '1px solid var(--neg)',
+                borderRadius: 10,
+                background: 'var(--card)',
+                padding: '12px 14px',
+                marginBottom: 14,
+              }}
+            >
+              <strong style={{ fontSize: 13.5, color: 'var(--neg)' }}>
+                Coletor instalado mais de uma vez
+              </strong>
+              <p style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.7, margin: '6px 0' }}>
+                Estas páginas registraram duas visualizações da mesma sessão separadas por menos de dois
+                segundos, nos últimos 7 dias. É o sintoma de duas tags na mesma página — e ele é caro em
+                silêncio: as visualizações dobram, páginas por sessão dobra, e a taxa de conversão cai pela
+                metade sem nada ter piorado no site. Ninguém desconfia de um número que só subiu.
+              </p>
+              <ul className="mono" style={{ fontSize: 12, color: 'var(--tx2)', paddingLeft: 20 }}>
+                {duplicadas.map((d) => (
+                  <li key={d.caminho}>
+                    {d.caminho} — {num(d.ocorrencias)} ocorrência(s)
+                  </li>
+                ))}
+              </ul>
+              <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6, marginTop: 6 }}>
+                Procure por <span className="mono">t.js</span> no HTML publicado. O caso comum é o script no
+                layout do tema E num plugin de inserção de código.
+              </p>
+            </div>
+          )}
+
+          {inventario.length > 0 && (
+            <>
+              <Tabela colunas={colunasBotoes} linhas={inventario} vazio="Nenhum botão clicado ainda." />
+              <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+                Esta lista é construída a partir do que o coletor <strong>recebeu</strong>, e por isso tem um
+                limite que vale dizer: um botão que existe na página e nunca foi clicado não aparece aqui.
+                Ela responde &quot;de tudo o que já foi clicado, o que está bem marcado&quot; — não &quot;quantos
+                botões o site tem&quot;.
+              </p>
+            </>
+          )}
+
+          <div style={{ marginTop: inventario.length > 0 ? 16 : 0 }}>
+            <Snippet codigo={exemploBotao} rotulo="Exemplo de CTA marcado" />
           <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
             Sem <span className="mono">data-track-id</span>, cliques em WhatsApp, telefone e e-mail ainda são
             contados — aparecem agrupados como <span className="mono">auto:whatsapp</span> e afins. Para abertura de
             formulário, chame <span className="mono">painel.evento(&apos;form_open&apos;)</span>: um clique que abre um
             formulário não é um envio, e o painel não trata como se fosse.
-          </p>
+            </p>
+          </div>
         </Painel>
 
         <Painel

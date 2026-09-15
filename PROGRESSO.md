@@ -16,7 +16,7 @@ Quem continuar: leia isto antes do `CLAUDE.md`.
 | 5 | Integração assistida (Claude Code / GitHub) | **feito pelo que existe** — instrução assistida na tela; OAuth do GitHub segue fora |
 | 6 | Validação real e modos de teste | **feito** — diagnóstico com prazo de 30 min, nos dois lados |
 | 7 | Formulários sem substituição destrutiva | **feito** — exemplo executável, contato sem analytics |
-| 8 | Inventário de tags e botões | não iniciado |
+| 8 | Inventário de tags e botões | **feito** — estados por botão, ação sugerida e detecção de tag duplicada |
 | 9 | Automação de otimização | não iniciado |
 | 10 | Correções elegíveis | não iniciado |
 | 11 | Evidências de desempenho | não iniciado |
@@ -73,6 +73,9 @@ Estado atual, conferido contra o banco de produção em 15/09/2026:
 | `20260916000009_limites_de_requisicao.sql` | **aplicada** |
 | `20260916000010_cron_enxerga_a_fila.sql` | **aplicada** |
 | `20260916000011_diagnostico_expira.sql` | **aplicada** |
+
+O inventário de tags e botões **não** precisou de migração: ele é derivado de `events`, que já
+guardava `button_id`, `button_text` e `button_position` desde o esquema inicial.
 
 Conferência feita objeto a objeto (`to_regclass` / `to_regprocedure`), incluindo
 o privilégio que importa: `app_ingest` executa `app.consumir_limite` e **não**
