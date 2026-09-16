@@ -1037,3 +1037,51 @@ select option {
 .cartao-site-acao-fraca:hover {
   color: var(--tx);
 }
+
+/* ─── Funil de leads ────────────────────────────────────────────────────────
+   Entrada escalonada e realce ao apontar, os dois em CSS.
+
+   Em CSS, e não em JavaScript, por dois motivos: o funil é componente de
+   SERVIDOR e transformá-lo em cliente para ganhar um `hover` adiaria a primeira
+   pintura sem trazer comportamento novo; e o bloco `prefers-reduced-motion` no
+   topo deste arquivo já zera a duração de toda animação da página — quem pede
+   menos movimento vê o funil pronto, não um funil que não aparece.
+
+   `both` garante o estado final mesmo com duração quase nula. Sem ele, o
+   desenho ficaria invisível justamente para quem pediu menos movimento. */
+@keyframes funil-entra {
+  from {
+    opacity: 0;
+    transform: scaleX(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.funil-camada {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: funil-entra 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: opacity 160ms ease;
+}
+
+/* Ao apontar uma etapa, as outras recuam. O realce é comparativo: destacar sem
+   apagar o resto não ajuda a ler qual faixa é qual. */
+svg:has(.funil-etapa:hover) .funil-etapa:not(:hover) .funil-camada,
+svg:has(.funil-etapa:hover) .funil-etapa:not(:hover) text {
+  opacity: 0.45;
+}
+
+.funil-etapa:hover .funil-camada {
+  fill-opacity: 0.72;
+}
+
+/* Sem ponteiro (celular) não há `hover`, e o funil fica no estado normal — que
+   é o certo: o realce é um extra, nunca o que torna o gráfico legível. */
+@media (hover: none) {
+  .funil-etapa:hover .funil-camada {
+    fill-opacity: revert;
+  }
+}

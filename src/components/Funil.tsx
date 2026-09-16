@@ -33,6 +33,42 @@ const ESPACO = 6;
 /** Largura mínima visível de uma etapa não-zero, para ela não sumir. */
 const MINIMO = 26;
 
+/**
+ * Quantas camadas por etapa.
+ *
+ * Adaptado de um componente pronto (Tailwind + shadcn + `motion`), do qual
+ * aproveitei a IDEIA — borda curva, camadas concêntricas, realce ao apontar — e
+ * não o código: as classes dele (`text-foreground`, `bg-foreground`) dependem de
+ * um Tailwind que este projeto não tem, e instalar Tailwind, shadcn e uma
+ * biblioteca de animação para ganhar um gráfico trocaria o sistema visual
+ * inteiro. Aqui sai em SVG com os tokens do tema, sem dependência nova, e
+ * continua sendo componente de SERVIDOR: o realce é `:hover` em CSS, e não
+ * estado em JavaScript.
+ */
+const CAMADAS = 3;
+
+/**
+ * Lados curvos, com a curva presa na horizontal nas duas pontas.
+ *
+ * O trapézio reto liga os dois pontos por uma diagonal; a curva sai plana de
+ * cima, desce no meio e chega plana embaixo. É o que faz o desenho parecer um
+ * funil em vez de uma pilha de retângulos cortados — e não muda número nenhum:
+ * a meia-largura de cada ponta continua sendo a mesma que o trapézio usava.
+ */
+function ladosCurvos(topo: number, baixo: number, centro: number, altura: number): string {
+  // 0,3 e não 0,55: com etapas de valores próximos a curva forte vira uma
+  // "asa" no degrau grande — testei, e ficou pior que o trapézio reto. Aqui ela
+  // arredonda a queda sem inventar forma onde a queda é pequena.
+  const curva = altura * 0.3;
+  const esquerda =
+    `M ${centro - topo} 0 ` +
+    `C ${centro - topo} ${curva}, ${centro - baixo} ${altura - curva}, ${centro - baixo} ${altura}`;
+  const direita =
+    `L ${centro + baixo} ${altura} ` +
+    `C ${centro + baixo} ${altura - curva}, ${centro + topo} ${curva}, ${centro + topo} 0`;
+  return `${esquerda} ${direita} Z`;
+}
+
 export function Funil({ funil }: { funil: FunilDeLeads }) {
   const base = funil.etapas[0]?.sessoes ?? 0;
   const altura = funil.etapas.length * (ALTURA_ETAPA + ESPACO) - ESPACO;
@@ -66,18 +102,13 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
           >
             {funil.etapas.map((etapa, i) => {
               const proxima = funil.etapas[i + 1];
+              // A etapa inteira é transladada pelo `<g>`; por isso os textos
+              // abaixo usam coordenadas locais, sem somar `y` de novo.
               const y = i * (ALTURA_ETAPA + ESPACO);
               const topo = meia(etapa.sessoes);
               // O rodapé de uma etapa encosta no topo da seguinte: é a
               // inclinação que mostra a queda. A última desce reta.
               const baixo = proxima ? meia(proxima.sessoes) : topo;
-
-              const pontos = [
-                `${centro - topo},${y}`,
-                `${centro + topo},${y}`,
-                `${centro + baixo},${y + ALTURA_ETAPA}`,
-                `${centro - baixo},${y + ALTURA_ETAPA}`,
-              ].join(' ');
 
               // Opacidade decrescente: a primeira etapa é a mais clara porque é
               // a maior, e a cor não codifica estado nenhum aqui — só ordem.
@@ -88,18 +119,39 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
               // o trapézio não, sem erro nenhum para investigar.
               const opacidade = Math.max(0.12, 0.5 - i * 0.09);
 
+              // Camadas concêntricas: a de fora é a maior e a mais apagada, e
+              // cada uma seguinte encolhe e escurece. É o que dá profundidade
+              // sem usar sombra — sombra sobre fundo escuro não aparece.
+              const camadas = Array.from({ length: CAMADAS }, (_, c) => {
+                // Passo pequeno de propósito: com 0,3 as camadas apareciam
+                // como faixas verticais escuras nas bordas, e não como
+                // profundidade. O efeito tem de ser percebido sem ser notado.
+                const escala = 1 - (c / CAMADAS) * 0.1;
+                return {
+                  d: ladosCurvos(topo * escala, baixo * escala, centro, ALTURA_ETAPA),
+                  opacidade: opacidade * (0.7 + (c / Math.max(CAMADAS - 1, 1)) * 0.3),
+                };
+              });
+
               return (
-                <g key={etapa.chave}>
-                  <polygon
-                    points={pontos}
-                    fill="var(--gold)"
-                    fillOpacity={opacidade}
-                    stroke="var(--gold)"
-                    strokeOpacity={0.55}
-                  />
+                <g key={etapa.chave} className="funil-etapa" transform={`translate(0 ${y})`}>
+                  {camadas.map((camada, c) => (
+                    <path
+                      key={c}
+                      d={camada.d}
+                      fill="var(--gold)"
+                      fillOpacity={camada.opacidade}
+                      // Só a camada de fora recebe contorno: repetir o traço em
+                      // todas empastaria o desenho numa mancha sólida.
+                      stroke={c === 0 ? 'var(--gold)' : 'none'}
+                      strokeOpacity={0.55}
+                      style={{ animationDelay: `${i * 90}ms` }}
+                      className="funil-camada"
+                    />
+                  ))}
                   <text
                     x={centro}
-                    y={y + 25}
+                    y={25}
                     textAnchor="middle"
                     className="mono"
                     style={{ fontSize: 17, fill: 'var(--tx)' }}
@@ -108,7 +160,7 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
                   </text>
                   <text
                     x={centro}
-                    y={y + 43}
+                    y={43}
                     textAnchor="middle"
                     style={{ fontSize: 12, fill: 'var(--tx2)' }}
                   >
@@ -118,8 +170,8 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
                       etapa estreita ela não caberia dentro. */}
                   {i > 0 && (
                     <text
-                      x={LARGURA - 4}
-                      y={y + 36}
+                      x={LARGURA - 14}
+                      y={36}
                       textAnchor="end"
                       className="mono"
                       style={{ fontSize: 11.5, fill: 'var(--tx3)' }}
