@@ -9,6 +9,7 @@ import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { num, pct } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso, CartaoNumero } from '@/components/Cartoes';
+import { EstadoVazio } from '@/components/EstadoVazio';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { SeletorPeriodo } from '@/components/filtros';
 import { parsePeriodParams, type PeriodKey } from '@/lib/periodo';
@@ -153,7 +154,18 @@ export default async function PaginaCliente({
         </div>
 
         <Painel titulo="Sites" subtitulo="Os mesmos números que a tela de cada site mostra">
-          <Tabela colunas={colunas} linhas={linhas} vazio="Este cliente não tem site cadastrado." />
+          <Tabela
+            colunas={colunas}
+            linhas={linhas}
+            vazio={
+              <EstadoVazio
+                icone="globo"
+                titulo="Este cliente não tem site cadastrado"
+                explicacao="Sem site, não há o que medir: sessões, leads e qualidade técnica pertencem a um site."
+                acao={{ rotulo: 'Cadastrar site', href: '/sites' }}
+              />
+            }
+          />
           <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
             Site sem rastreamento instalado aparece como "Indisponível", nunca como zero — zero afirmaria que
             medimos e não houve. A taxa do Total é a soma das sessões convertidas dividida pela soma das

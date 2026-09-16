@@ -202,6 +202,36 @@ escrita aqui em vez de fingir cobertura.
 
 ---
 
+## Escala de superfície e espaçamento
+
+Dois sistemas que faltavam, e os dois vieram de auditoria, não de gosto.
+
+**Superfície.** Cinco níveis existiam, mas com degraus de 1,03 → 1,01 → 1,09 → 1,07 de razão de
+luminância. `--side` sobre `--bg` em 1,01 é invisível: profundidade que ninguém enxerga não é
+profundidade, é preto. Hoje: **1,06 → 1,04 → 1,10 → 1,11**.
+
+O teto não é estético. Levantar superfície no escuro baixa o contraste do texto claro:
+
+| Rampa | Degraus | Pior par (`--tx3`) |
+|---|---|---|
+| Anterior | 1,03 · 1,01 · 1,09 · 1,07 | 5,59 |
+| **Adotada** | 1,06 · 1,04 · 1,10 · 1,11 | **5,03** |
+| Testada, recusada | 1,08 · 1,10 · 1,21 · 1,28 | 3,67 ✗ |
+
+Para calibrar: a rampa de exemplo de um SaaS dark de referência (`#08090A` · `#0D0F10` · `#121416` ·
+`#171A1D`) tem degraus de 1,04 a 1,06 — **mais tímidos que os adotados aqui**.
+
+No tema claro a amarração foi literal: `--elev` não podia escurecer um passo sequer, porque `--tx3`
+tinha folga de 0,03 sobre o mínimo. Escurecer o **texto** (#607064 → #56655a) foi o que liberou a
+**superfície** a descer, e a separação entre campo e cartão subiu de 1,159 para 1,204.
+
+**Espaçamento.** Medido: 22 valores distintos de padding e gap, entre eles 6, 7, 9, 11, 14, 17, 18 e
+20 — o "17px aqui, 23px ali" que o brief nomeia. Hoje `--esp-1` a `--esp-9`, de 4 em 4 (4 · 8 · 12 ·
+16 · 20 · 24 · 32 · 40 · 48). A densidade é de ferramenta de operação: o respiro de cartão fica em
+16px, não em 24.
+
+---
+
 ## Componentes
 
 | Componente | Papel |

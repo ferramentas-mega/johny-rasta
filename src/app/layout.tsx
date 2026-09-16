@@ -59,7 +59,7 @@ const PREFERENCIAS = `
  */
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#020502' },
+    { media: '(prefers-color-scheme: dark)', color: '#060b07' },
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
   ],
   width: 'device-width',

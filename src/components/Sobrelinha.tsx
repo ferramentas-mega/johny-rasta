@@ -33,10 +33,11 @@ export function Sobrelinha({
         letterSpacing: 'var(--trilha-ampla)',
         textTransform: 'uppercase',
         color: tom === 'marca' ? 'var(--gold-tx)' : 'var(--tx3)',
-        /* `drop-shadow-[0_0_2px_rgba(16,185,129,.5)]` na referência: um brilho
-           quase imperceptível, que só faz o rótulo parecer aceso. Só no tom de
-           marca — no discreto seria ruído. */
-        textShadow: tom === 'marca' ? 'var(--glow)' : undefined,
+        /* SEM brilho, e a decisão mudou desde que isto foi escrito.
+           A referência usa `drop-shadow-[0_0_2px_…]` — 2px. `--glow` é 18px,
+           desenhado para um `h1` de 28px; em texto de 11,5px ele borra a letra
+           em vez de acender o rótulo, e sobrelinha fica logo acima de um título
+           que JÁ brilha. Dois brilhos empilhados não são hierarquia. */
         lineHeight: 1.4,
       }}
     >

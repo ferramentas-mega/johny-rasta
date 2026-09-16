@@ -98,7 +98,8 @@ export function CartaoIndicador({
           lineHeight: 1,
           margin: '14px 0 8px',
           color: 'var(--gold-tx)',
-          textShadow: 'var(--glow)',
+          // Só o cartão em destaque brilha — ver a nota sobre hierarquia acima.
+          textShadow: destaque ? 'var(--glow)' : 'none',
         }}
       >
         {valor}
@@ -177,8 +178,12 @@ export function CartaoNumero({
           letterSpacing: 'var(--trilha-fechada)',
           lineHeight: 1,
           margin: '10px 0 6px',
+          /* Brilho é HIERARQUIA, não decoração. Na rodada passada eu pus em
+             todo número, e com todos brilhando nenhum se destaca — o efeito
+             líquido é o mesmo de não ter. Fica só onde o número PEDE atenção;
+             o verde da marca já basta para distinguir um indicador normal. */
           color: tom === 'atencao' ? 'var(--warn-tx)' : 'var(--gold-tx)',
-          textShadow: 'var(--glow)',
+          textShadow: tom === 'atencao' ? 'var(--glow)' : 'none',
         }}
       >
         {valor}

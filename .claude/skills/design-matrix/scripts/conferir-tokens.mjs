@@ -43,6 +43,31 @@ import { join, relative } from 'node:path';
 const RAIZ = process.cwd();
 const TEMA = join(RAIZ, 'src/styles/theme.css');
 
+/**
+ * As cópias DECLARADAS: qual token cada valor cravado espelha.
+ *
+ * Existe porque a versão anterior errava o sentido da pergunta. Ela varria as
+ * cores cruas e rastreava as que BATIAM com algum token — e ficava muda no
+ * instante em que uma deixava de bater, que é exatamente o defeito.
+ *
+ * Medido: ao mexer na escala de superfície, `--side` foi de #020502 para
+ * #060b07, e as duas cópias (manifesto PWA e `theme-color`) sumiram da lista
+ * de vigiadas. Cinco viraram três, sem uma linha de aviso. A barra do
+ * navegador ficaria com a cor antiga para sempre.
+ *
+ * Agora a pergunta é a inversa e é uma AFIRMAÇÃO: o valor atual do token
+ * PRECISA aparecer neste arquivo. Cor deliberada que não copia token nenhum (o
+ * preto da chuva, as cores do console do cliente) simplesmente não é declarada
+ * — e por isso não vira ruído.
+ */
+const COPIAS_DECLARADAS = [
+  { arquivo: 'src/app/layout.tsx', token: '--side', tema: 'escuro' },
+  { arquivo: 'src/app/layout.tsx', token: '--side', tema: 'claro' },
+  { arquivo: 'src/app/manifest.ts', token: '--bg', tema: 'escuro' },
+  { arquivo: 'src/app/manifest.ts', token: '--side', tema: 'escuro' },
+  { arquivo: 'src/components/ChuvaMatrix.tsx', token: '--gold', tema: 'claro' },
+];
+
 /** Onde a cor crua é OBRIGATÓRIA, com o motivo. Nada aqui é tolerância vaga. */
 const FORA_DO_ALCANCE_DO_CSS = {
   'src/app/manifest.ts': 'manifesto PWA: o Chrome lê JSON, não folha de estilo',
@@ -271,6 +296,22 @@ for (const arquivo of arquivos(join(RAIZ, 'src'))) {
       }
     }
   });
+}
+
+// ── 6. As cópias declaradas ainda batem com o token? ────────────────────────
+for (const { arquivo, token, tema } of COPIAS_DECLARADAS) {
+  const valor = (tema === 'escuro' ? escuro : claro).get(token);
+  if (!valor) {
+    problemas.push(`${arquivo} declara copiar ${token} (${tema}), e esse token não existe.`);
+    continue;
+  }
+  const conteudo = readFileSync(join(RAIZ, arquivo), 'utf8').toLowerCase();
+  if (!conteudo.includes(valor.toLowerCase())) {
+    problemas.push(
+      `${arquivo} deveria conter ${valor} — o valor de ${token} (${tema}) — e não contém. ` +
+        `A cópia saiu de sincronia: o token mudou e este arquivo ficou para trás.`,
+    );
+  }
 }
 
 console.log(`Tokens: ${escuro.size} no escuro, ${claro.size} no claro.`);

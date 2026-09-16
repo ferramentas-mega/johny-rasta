@@ -37,7 +37,7 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#000000',
     // O mesmo `--side` do menu: a barra do sistema combina com a interface em
     // vez de recortar um retângulo branco no topo.
-    theme_color: '#020502',
+    theme_color: '#060b07',
     lang: 'pt-BR',
     dir: 'ltr',
     categories: ['business', 'productivity'],

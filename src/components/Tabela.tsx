@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { EstadoVazio } from '@/components/EstadoVazio';
 
 /**
  * Tabela de dados.
@@ -44,15 +45,24 @@ export function Tabela<T>({
 }: {
   colunas: Coluna<T>[];
   linhas: T[];
-  vazio?: string;
+  /**
+   * Texto do vazio, ou um `EstadoVazio` montado pela tela.
+   *
+   * Aceita `ReactNode` para que as dez chamadas que já passam uma frase
+   * continuem valendo — elas ganham ícone e composição sem mudar nada — e para
+   * que a tela que TEM um próximo passo real possa passar um com ação.
+   */
+  vazio?: ReactNode;
   rotuloTotal?: string;
 }) {
   const temTotais = colunas.some((c) => c.total);
 
   if (linhas.length === 0) {
-    return (
-      <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', padding: '18px 2px' }}>{vazio}</p>
-    );
+    // String continua funcionando: vira o título de um estado vazio composto.
+    // `vazio=""` (usado onde o painel só aparece se houver linha) continua
+    // significando "não desenhe nada".
+    if (!vazio) return null;
+    return typeof vazio === 'string' ? <EstadoVazio titulo={vazio} /> : <>{vazio}</>;
   }
 
   const celula = (c: Coluna<T>): React.CSSProperties => ({
@@ -66,7 +76,13 @@ export function Tabela<T>({
 
   return (
     <div data-testid="rolagem-tabela" style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
+      {/* Cabeçalho fixo só a partir de 12 linhas: em tabela curta ele não tem
+          o que resolver, e `position: sticky` num `thead` que nunca sai da
+          vista é custo de pintura sem ganho. */}
+      <table
+        className={linhas.length >= 12 ? 'tabela-fixa' : undefined}
+        style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}
+      >
         <thead>
           <tr>
             {colunas.map((c) => (
@@ -90,7 +106,7 @@ export function Tabela<T>({
         </thead>
         <tbody>
           {linhas.map((linha, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid var(--rowbd)' }}>
+            <tr key={i} className="tabela-linha" style={{ borderBottom: '1px solid var(--rowbd)' }}>
               {colunas.map((c) => (
                 <td key={c.chave} className={c.mono ? 'mono' : undefined} style={celula(c)}>
                   {c.render(linha)}

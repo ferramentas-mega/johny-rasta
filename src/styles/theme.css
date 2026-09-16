@@ -8,10 +8,28 @@
 
 :root,
 [data-tema='escuro'] {
+  /*
+   * ── ESCALA DE SUPERFÍCIE ──
+   *
+   * Cinco níveis, e os degraus foram MEDIDOS. Antes eram 1,03 → 1,01 → 1,09 →
+   * 1,07 de razão de luminância: `--side` sobre `--bg` em 1,01 é invisível, e
+   * profundidade que ninguém enxerga não é profundidade — é só preto.
+   *
+   * Agora: 1,06 → 1,04 → 1,10 → 1,11. Para calibrar, a rampa de exemplo de um
+   * sistema SaaS dark de referência (#08090A · #0D0F10 · #121416 · #171A1D) tem
+   * degraus de 1,04 → 1,04 → 1,06. Esta é mais separada que aquela.
+   *
+   * O TETO não é gosto: levantar superfície no escuro BAIXA o contraste do
+   * texto claro. Uma rampa mais ousada (degraus até 1,28) derrubava `--tx3`
+   * para 3,67:1 — reprovado para texto de corpo, e `--tx3` é o token de toda
+   * legenda. Com esta, o pior par fica em 5,03:1.
+   *
+   * `--bg` continua preto absoluto: é a identidade, e é o piso da escala.
+   */
   --bg: #000000;
-  --side: #020502;
-  --card: #030703;
-  --elev: #0a150c;
+  --side: #060b07;
+  --card: #0a120b;
+  --elev: #121d14;
   --bd: #1a6b2e;
   --bdc: #2fc957;
   --glow: 0 0 18px rgba(112, 255, 139, 0.28);
@@ -27,7 +45,7 @@
   --tx: #eef8f0;
   --tx2: #a1b5a6;
   --tx3: #809887;
-  --hover: #111d14;
+  --hover: #18271b;
   --rowbd: rgba(34, 59, 41, 0.7);
   --gold: #70ff8b;
   --gold-fill: rgba(112, 255, 139, 0.12);
@@ -80,10 +98,13 @@
 }
 
 [data-tema='claro'] {
-  --bg: #f1f6f2;
+  /* No claro a escala inverte: o FUNDO recua e a superfície é o papel branco.
+     `--bg` desce um passo para o cartão branco ter de onde subir — antes a
+     diferença entre os dois era pequena demais para o cartão parecer solto. */
+  --bg: #eaf2ec;
   --side: #ffffff;
   --card: #ffffff;
-  --elev: #e9f0ea;
+  --elev: #e4ece6;
   --bd: #cbd9cd;
   --bdc: #1f8f43;
   --glow: none;
@@ -100,10 +121,21 @@
     0 12px 24px rgba(14, 23, 16, 0.08), inset 0 -1px 0 rgba(14, 23, 16, 0.06);
   --tx: #0e1710;
   --tx2: #4c5d50;
-  /* #6b7d6f dava 3,78:1 sobre --elev: reprova para texto de corpo, e é
-     justamente o token das legendas. #607064 passa nos quatro fundos. */
-  --tx3: #607064;
-  --hover: #e9f0ea;
+  /*
+   * Terceira mudança de valor deste token, e cada uma teve medição própria:
+   * #6b7d6f dava 3,78:1 sobre --elev (reprova, e é o token de toda legenda);
+   * #607064 passava, com 4,53:1 — uma folga de 0,03.
+   *
+   * Essa folga era o TETO da escala de superfície: escurecer `--elev` um passo
+   * sequer derrubava a legenda. #56655a abre a margem para 5,12:1 e libera
+   * `--elev` a descer de #e9f0ea para #e4ece6 — a separação entre campo e
+   * cartão sobe de 1,159 para 1,204 de razão.
+   *
+   * O token de texto limitando a escala de SUPERFÍCIE é o tipo de amarração
+   * que só aparece quando as duas coisas são medidas juntas.
+   */
+  --tx3: #56655a;
+  --hover: #dae7de;
   --rowbd: rgba(14, 23, 16, 0.09);
   /* #1f8f43 deixava --on-gold em 4,04:1. Um passo mais escuro leva o texto
      do botão a 4,52:1, e a diferença de matiz não se vê. */
@@ -213,6 +245,31 @@
      usa `tracking-tighter` exatamente aí: em peso 300 as letras já ficam
      arejadas sozinhas, e sem fechar a trilha o número se desfaz. */
   --trilha-fechada: -0.04em;
+
+  /*
+   * ── ESPAÇAMENTO ──
+   *
+   * Medido antes: 22 valores distintos de padding e gap, entre eles 6, 7, 9,
+   * 11, 14, 17, 18 e 20. É literalmente o "17px aqui, 23px ali" — e o efeito é
+   * o mesmo da escala tipográfica: ninguém aponta o erro, todo mundo sente que
+   * as telas não foram feitas juntas.
+   *
+   * Escala de 4 em 4, que é a base do brief e a convenção de SaaS. Os valores
+   * ímpares somem para o vizinho: 6 e 7 viram 8, 9 e 11 viram 12, 14 vira 16.
+   *
+   * Densidade: esta é uma ferramenta de operação, e o brief é explícito — nem
+   * espaçada como landing page, nem apertada. Por isso a escala começa em 4 e o
+   * respiro de cartão fica em `--esp-4` (16px), não em 24.
+   */
+  --esp-1: 4px;
+  --esp-2: 8px;
+  --esp-3: 12px;
+  --esp-4: 16px;
+  --esp-5: 20px;
+  --esp-6: 24px;
+  --esp-7: 32px;
+  --esp-8: 40px;
+  --esp-9: 48px;
 
   --raio-p: 8px;
   --raio-m: 12px;
@@ -745,6 +802,39 @@ select option {
   background: var(--costura);
   opacity: 0.55;
   pointer-events: none;
+}
+
+/*
+ * TABELA — hover de linha e cabeçalho fixo.
+ *
+ * Num sistema de operação as pessoas passam o tempo lendo linha de tabela, e
+ * não havia realce nenhum ao apontar: em tabela larga o olho perde a linha
+ * entre a primeira coluna e a última. É `:hover`, então é classe — não existe
+ * em estilo inline.
+ *
+ * O realce usa `--hover`, o degrau mais alto da escala de superfície. Sutil de
+ * propósito: linha realçada não pode competir com o dado que ela carrega.
+ */
+.tabela-linha {
+  transition: background-color var(--mov-rapido) ease;
+}
+.tabela-linha:hover {
+  background: var(--hover);
+}
+
+/*
+ * Cabeçalho que fica. Vale para tabela alta: rolar dez linhas e não saber mais
+ * qual coluna é qual é o defeito que isto resolve.
+ *
+ * `background` é obrigatório — sem ele o conteúdo passa POR BAIXO e o
+ * cabeçalho vira texto sobreposto. E ele precisa ser opaco: o degrau `--card`
+ * é a superfície em que a tabela vive.
+ */
+.tabela-fixa thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card);
 }
 
 /* Elevação ao apontar.

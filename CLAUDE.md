@@ -203,6 +203,30 @@ que não mudou. É a regra de "recurso sem porta na tela" aplicada ao visual: se
 mais de um lugar, ele é componente (`CartaoNumero`), e o que não é componente escapa de toda
 mudança futura.
 
+**Verificador que rastreia "o que ainda bate" fica mudo exatamente quando algo deixa de bater.** A
+conferência de cópias obrigatórias (manifesto PWA, `theme-color`) varria as cores cruas e rastreava
+as que COINCIDIAM com algum token. Medido ao mexer na escala de superfície: `--side` foi de `#020502`
+para `#060b07`, e as duas cópias **sumiram da lista de vigiadas** — cinco viraram três, sem uma linha
+de aviso, e a barra do navegador ficaria com a cor antiga para sempre. A pergunta estava invertida.
+Hoje as cópias são **declaradas** (`COPIAS_DECLARADAS`: arquivo → token → tema) e a conferência é uma
+AFIRMAÇÃO: o valor atual do token precisa aparecer naquele arquivo. Cor deliberada que não copia
+token nenhum (o preto da chuva, as cores do console do cliente) simplesmente não é declarada, e por
+isso não vira ruído — a primeira tentativa, que acusava todo literal sem token, produziu 15 falsos
+positivos para 2 defeitos reais.
+
+**A escala de SUPERFÍCIE é limitada pelo token de TEXTO, e isso só aparece medindo os dois juntos.**
+No escuro, levantar superfície baixa o contraste do texto claro: uma rampa com degraus até 1,28 de
+razão derrubava `--tx3` para 3,67:1. A rampa adotada (1,06 → 1,04 → 1,10 → 1,11) mantém o pior par
+em 5,03:1 — e, para calibrar, a rampa de exemplo de um sistema SaaS dark de referência tem degraus
+de 1,04 a 1,06, ou seja, **mais tímidos que os nossos**. No claro a amarração foi literal: `--elev`
+não podia escurecer um passo sequer porque `--tx3` (#607064) tinha folga de 0,03 sobre o mínimo;
+escurecer o TEXTO para #56655a foi o que liberou a superfície.
+
+**Brilho é hierarquia, não acabamento.** `--glow` em todo número de indicador é o mesmo que glow em
+nenhum: com tudo brilhando, nada se destaca. Fica no `h1` (um por tela) e no número que PEDE atenção
+— nunca no indicador normal, onde o verde da marca já basta. E nunca em texto pequeno: `--glow` tem
+18px de borrão, desenhado para um título de 28px; em 11,5px ele borra a letra.
+
 **Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
 não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
 eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou

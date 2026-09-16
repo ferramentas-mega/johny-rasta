@@ -7,6 +7,7 @@ import { dataHora, num } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Abas } from '@/components/Abas';
 import { Painel } from '@/components/Cartoes';
+import { EstadoVazio } from '@/components/EstadoVazio';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { SeletorSiteRota } from '@/components/filtros';
 import { Snippet } from './Snippet';
@@ -358,7 +359,13 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
           <Tabela
             colunas={colunasEventos}
             linhas={recentes}
-            vazio="Nenhum evento recebido até agora. Instale o script e abra o site uma vez."
+            vazio={
+              <EstadoVazio
+                icone="cursor"
+                titulo="Nenhum evento recebido até agora"
+                explicacao="Instale o script no site e abra uma página pelo link do diagnóstico. A verificação é um evento que chega — nunca a presença da tag no HTML."
+              />
+            }
           />
         </Painel>
       </div>

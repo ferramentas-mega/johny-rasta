@@ -64,8 +64,12 @@ export function CartaoProgresso({
             letterSpacing: 'var(--trilha-fechada)',
             lineHeight: 1,
             margin: '10px 0 6px',
+            /* Brilho é HIERARQUIA, não decoração. Na rodada passada eu pus em
+               todo número, e com todos brilhando nenhum se destaca — o efeito
+               líquido é o mesmo de não ter. Fica só onde o número PEDE atenção;
+               o verde da marca já basta para distinguir um indicador normal. */
             color: tom === 'atencao' ? 'var(--warn-tx)' : 'var(--gold-tx)',
-            textShadow: 'var(--glow)',
+            textShadow: tom === 'atencao' ? 'var(--glow)' : 'none',
           }}
         >
           {num(valor)}
