@@ -12,12 +12,15 @@ permanece disponível e é alternado por `data-tema` no elemento `<html>`.
 
 ### Escuro (padrão)
 
+Um recorte. A lista completa e atual está em `src/styles/theme.css` — e `npm run design` confere que
+os dois temas cobrem o mesmo conjunto. Esta tabela é para leitura, não é a fonte.
+
 | Token | Valor | Onde aparece |
 |---|---|---|
 | `--bg` | `#000000` | Fundo da aplicação |
-| `--side` | `#020502` | Menu lateral |
-| `--card` | `#030703` | Superfície dos painéis |
-| `--elev` | `#0A150C` | Campos, botões secundários |
+| `--side` | `#060b07` | Menu lateral |
+| `--card` | `#0a120b` | Superfície dos painéis |
+| `--elev` | `#121d14` | Campos, botões secundários |
 | `--bd` | `#1A6B2E` | Bordas |
 | `--bdc` | `#2FC957` | Borda de cartão de indicador |
 | `--gold` | `#70FF8B` | Verde luminoso dos destaques |
