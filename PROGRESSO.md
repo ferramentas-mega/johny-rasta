@@ -20,9 +20,9 @@ Quem continuar: leia isto antes do `CLAUDE.md`.
 | 9 | Automação de otimização | **feito** — fechamento por medição, reanálise enfileirada, varredura diária |
 | 10 | Correções elegíveis | **feito** — auditorias do Lighthouse por URL e dispositivo |
 | 11 | Evidências de desempenho | **feito** — série por URL e dispositivo, laboratório e campo |
-| 12 | UI/UX | parcial — celular, cartões, navegação e funil de leads feitos |
-| 13 | Replay/heatmap (futuro) | não iniciado, por último |
-| 14 | Testes exigidos | parcial |
+| 12 | UI/UX | parcial — celular, cartões, navegação e funil; rolagem lateral agora cobre as 11 telas |
+| 13 | Replay/heatmap (futuro) | **não será feito nesta rodada** — o dado não existe; motivo no CLAUDE.md |
+| 14 | Testes exigidos | **feito** — 374 de unidade, 78 de navegador, com controle negativo por regra |
 | 15 | Ordem e entrega | este arquivo |
 
 Auditoria de segurança (briefing próprio): **feita e implementada**. O que foi
@@ -205,6 +205,26 @@ entraram no banco e não na lista que o `/api/diagnostico` confere. Não quebrou
 nada porque as migrações foram aplicadas antes do código — mas é justamente esse
 arquivo que existe para um deploy contra um banco atrasado ser NOMEADO em vez de
 dar 500 sem explicação.
+
+---
+
+## Por que o §13 não foi feito
+
+Replay de sessão e mapa de calor **não são construíveis com o dado que este sistema coleta**, e
+fingir o contrário seria pior que não fazer.
+
+`events.button_position` parece prometer um mapa de calor e não é isso: é um RÓTULO que o operador
+escreve no HTML (`data-track-pos`), com valores como "topo" ou "rodapé". Não existe coordenada de
+ponteiro em lugar nenhum do sistema, nem gravação de DOM. Um "mapa de calor" derivado dali
+desenharia pontos onde ninguém mediu clique.
+
+Fazer de verdade exige mudar o que o coletor é. O `t.js` declara, na primeira linha, que não lê
+campo de formulário e não envia dado pessoal; um replay grava a tela inteira, inclusive o que a
+pessoa digitou antes de enviar — inclusive o que ela apagou. Isso é outro produto, com outra
+conversa sobre consentimento e retenção, e o próprio briefing marca a seção como futura.
+
+A pergunta vizinha que o painel já responde, com dado medido: **em que botão clicam e onde ele está
+na página** — aba Comportamento e inventário de tags.
 
 ---
 

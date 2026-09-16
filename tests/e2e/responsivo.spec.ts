@@ -12,7 +12,29 @@ import { entrar } from './apoio';
 test('nenhuma tela produz rolagem horizontal no celular', async ({ page }) => {
   await entrar(page);
 
-  for (const rota of ['/visao-geral', '/clientes', '/sites', '/leads', '/configuracoes']) {
+  /*
+   * As abas do site entraram depois, e a falta delas aqui era um buraco real:
+   * são as telas com tabela larga, SVG e painéis novos — exatamente onde a
+   * rolagem lateral aparece. A lista fixa cobria só as cinco telas de topo, que
+   * são as mais simples.
+   */
+  await page.goto('/sites');
+  const href = await page
+    .locator('.cartao-site a[href*="/desempenho"]')
+    .first()
+    .getAttribute('href');
+  const siteId = href!.split('/')[2];
+
+  const rotas = [
+    '/visao-geral', '/clientes', '/sites', '/leads', '/otimizacoes', '/configuracoes',
+    `/sites/${siteId}/desempenho`,
+    `/sites/${siteId}/comportamento`,
+    `/sites/${siteId}/qualidade`,
+    `/sites/${siteId}/rastreamento`,
+    `/sites/${siteId}/configurar`,
+  ];
+
+  for (const rota of rotas) {
     await page.goto(rota);
     await page.waitForLoadState('networkidle');
 

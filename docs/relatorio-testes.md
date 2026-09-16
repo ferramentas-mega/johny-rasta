@@ -539,28 +539,70 @@ criados por SQL ou pelo seed.
 
 ## Resultado da última execução
 
-Executada em 15/09/2026, lida linha a linha.
+Executada em 16/09/2026, contra o **pacote publicado** (`next start`, com a CSP em modo bloqueio).
 
 - `npm run typecheck` — sem erros
 - `npm run lint` — sem avisos
-- `npm test` — **232 testes**, todos passando (16 arquivos, 9,0 s)
+- `npm test` — **374 testes**, todos passando (25 arquivos, ~11 s)
 
   | Arquivo | Testes | | Arquivo | Testes |
   |---|---|---|---|---|
   | `conexao` | 42 | | `periodo` | 13 |
+  | `otimizacoes` | 36 | | `instalacao` | 12 |
   | `url-publica` | 31 | | `limites` | 11 |
-  | `ingestao` | 20 | | `fila-auditoria` | 10 |
-  | `autorizacao` | 18 | | `otimizacoes` | 9 |
-  | `pagespeed` | 17 | | `carteira` · `crux` | 8 · 8 |
-  | `metricas` · `recursos` | 14 · 14 | | `build` · `funil` | 6 · 6 |
-  | | | | `esquema` | 5 |
-
-  Contagem tirada do relatório JSON do vitest, não da leitura da tela — numa rodada anterior eu
-  reportei 79 onde eram 103.
+  | `recursos` | 24 | | `eixo` · `fila-auditoria` | 10 · 10 |
+  | `ingestao` | 20 | | `escopo-publico` · `inventario` | 9 · 9 |
+  | `autorizacao` · `metricas` | 18 · 18 | | `carteira` · `crux` | 8 · 8 |
+  | `pagespeed` | 17 | | `diagnostico-instalacao` | 8 |
+  | `botoes` · `evidencias` | 16 · 16 | | `build` · `formato` · `funil` | 6 · 6 · 6 |
+  | `correcoes` | 15 | | `esquema` | 5 |
 
 - `npm run build` — build de produção concluído
-- `npm run test:e2e:prod` — **64 testes** (53 desktop + 11 celular), todos passando (2,1 min),
-  **contra `next start`** e com a CSP em modo bloqueio
+- `npm run test:e2e:prod` — **78 testes** (66 desktop + 12 celular), todos passando (~2,2 min)
+
+  | Arquivo | Testes | | Arquivo | Testes |
+  |---|---|---|---|---|
+  | `carteira` · `formularios` | 13 · 13 | | `coerencia` | 8 |
+  | `responsivo` | 12 | | `login` | 5 |
+  | `onboarding` | 11 | | `fluxo-completo` · `seguranca` | 3 · 3 |
+  | `navegacao` | 10 | | | |
+
+As duas contagens saem do relatório JSON de cada corredor, não da leitura da tela — numa rodada
+anterior eu reportei 79 onde eram 103.
+
+---
+
+## Controle negativo: os testes desta rodada foram QUEBRADOS de propósito
+
+Teste que passa não prova que verifica alguma coisa. Cada regra nova desta rodada foi conferida
+introduzindo o defeito que ela deveria impedir e confirmando que os testes certos — e só eles —
+caem.
+
+| Regra | Defeito injetado | Caiu |
+|---|---|---|
+| Fechar só quando o sinal some | `not exists` neutralizado | 3 testes |
+| Fechamento idempotente | guarda de status removida | 1 |
+| Fechamento só no site medido | filtro de site removido | 1 |
+| "Depois" é a medição mais recente | `order by medido_em asc` | 2 |
+| Dispositivo faz parte da chave | coluna tirada do casamento | 2 |
+| "Depois" respeita o dispositivo | filtro de estratégia removido | 1 |
+| Reanálise pede só o dispositivo do sinal | sempre os dois | 2 |
+| Varredura diz que foi varredura | rótulo trocado por "nova medição" | 1 |
+| Varredura alcança a conta inteira | escopo de conta removido | 3 |
+| Resumo é a maior economia | trocado por soma | 1 |
+| Ordem: ausência ≠ zero | `economiaMs ?? 0` | 2 |
+| Informativa não é pendência | auditoria sem nota aceita | 3 |
+| Buraco interrompe a linha | buraco desenhado no valor mínimo | 2 |
+| Comparação entre pontas COM valor | pontas cruas com `?? 0` | 2 |
+| Direção depende da métrica | `maiorEhMelhor` ignorado | 2 |
+| Sem rolagem lateral no celular | bloco de 900px na aba de qualidade | 1 |
+
+Dois testes meus **não provavam nada** e foram refeitos depois desse exercício:
+
+- "sem estimativa vai para o fim" comparava contra 20 ms, e com `economiaMs ?? 0` os 20 ms ficam na
+  frente de qualquer jeito. Só contra uma estimativa de **zero** os dois comportamentos se separam.
+- A massa da evidência punha o buraco na segunda posição, deixando o primeiro trecho com um ponto
+  só: 1 traço e 1 círculo — comportamento certo, que não exercita a QUEBRA da linha.
 
 ### A suíte de navegador agora roda contra o pacote publicado
 

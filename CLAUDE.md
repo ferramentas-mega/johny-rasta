@@ -417,6 +417,18 @@ a tela inteira fora do ar — justamente a tela onde se corrigiria o valor.
   um componente que trazia os dois, e os dois saíram junto com "lembrar de mim" (a sessão tem uma
   duração só). Há teste em `tests/e2e/login.spec.ts` que **falha se algum voltar** sem a
   implementação junto.
+- **Replay de sessão e mapa de calor (§13 do briefing)** — não implementados, e **não dá para
+  implementar com o dado que existe**. O coletor não registra coordenada de ponteiro nem mutação de
+  DOM: `events.button_position` é um RÓTULO que o operador escreve no HTML (`data-track-pos`, algo
+  como "topo" ou "rodapé"), não uma posição na tela. Derivar um mapa de calor daí seria desenhar
+  pontos onde ninguém mediu clique nenhum.
+  Fazer de verdade significa capturar movimento do ponteiro (mapa) ou gravar o DOM e suas mutações
+  (replay). As duas coisas mudam o que o `t.js` é: hoje ele declara, na primeira linha, que não lê
+  campo de formulário e não manda dado pessoal — e um replay grava a tela inteira, inclusive o que a
+  pessoa digitou antes de enviar. Isso é outro produto, com outra conversa sobre consentimento, e o
+  briefing marca a seção como futura. A pergunta vizinha que o painel JÁ responde com dado medido é
+  "em que botão clicam, e onde ele está na página", na aba Comportamento e no inventário de tags.
+
 - **Mais de uma análise técnica automática por dia** — o limite é do plano Hobby da Vercel (dois
   crons, uma execução diária cada). O código não tem teto: num plano pago, muda-se a expressão do
   cron, não o código.
