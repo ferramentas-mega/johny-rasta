@@ -3,7 +3,10 @@ import { Client } from 'pg';
 import { withAccount } from '@/server/db';
 import {
   getKpis,
+  getCarteira,
   getDailySeries,
+  getSerieDaConta,
+  totalizarCarteira,
   getByPage,
   getByButton,
   getBySource,
@@ -269,5 +272,76 @@ describe('comportamento', () => {
   it('sessões de uma página nunca passam do total', async () => {
     const c = await medir();
     expect(c.sessoesDeUmaPagina).toBeLessThanOrEqual(c.sessoes);
+  });
+});
+
+describe('série diária da conta', () => {
+  it('a soma da série é EXATAMENTE o total do cartão', async () => {
+    await withAccount(accountId, async (db) => {
+      const dias = 7;
+      const serie = await getSerieDaConta(db, dias);
+      const totais = totalizarCarteira(await getCarteira(db, dias));
+
+      const soma = (campo: 'sessoes' | 'leads' | 'cliquesWhatsapp') =>
+        serie.reduce((a, p) => a + p[campo], 0);
+
+      // Esta é a prova que justifica a consulta existir: a soma da série e o
+      // total do cartão são o mesmo número, ou é defeito.
+      //
+      // O QUE ELA NÃO PROVA, e foi medido: a massa inteira usa um fuso só
+      // (`FUSO_DA_MASSA`). Trocar o fuso de cada site por 'UTC' na consulta —
+      // que é justamente o defeito que a construção por site evita — deixa
+      // este teste VERDE. Com sites em fusos diferentes os dois números
+      // divergiriam em produção e nada apontaria.
+      //
+      // Cobrir isso exige massa com site em outro fuso, e mexer nela mexe nos
+      // valores escritos à mão de toda a suíte numérica. Fica registrado como
+      // lacuna conhecida em vez de passar por cobertura que não existe.
+      // Guarda contra o teste VAZIO: com a série em branco, 0 === 0 passaria e
+      // não provaria nada. Já aconteceu nesta mesma suíte, por um id de conta
+      // errado — o teste ficou verde sem tocar em dado nenhum.
+      expect(serie).toHaveLength(dias);
+      expect(totais.sessoes).toBeGreaterThan(0);
+
+      expect(soma('sessoes')).toBe(totais.sessoes);
+      expect(soma('cliquesWhatsapp')).toBe(totais.cliquesWhatsapp);
+      expect(soma('leads')).toBe(totais.leads);
+    });
+  });
+
+  it('devolve uma linha por dia do período, inclusive dias sem movimento', async () => {
+    await withAccount(accountId, async (db) => {
+      expect(await getSerieDaConta(db, 7)).toHaveLength(7);
+      expect(await getSerieDaConta(db, 30)).toHaveLength(30);
+    });
+  });
+
+  it('não enxerga a conta rival', async () => {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const r = await admin.query<{ id: string }>('select id from accounts where name = $1', [
+      CONTAS.rival.nome,
+    ]);
+    // A conta rival vista pelo SUPERUSUÁRIO: o total que existe no banco,
+    // sem política nenhuma no caminho.
+    const doBanco = await admin.query<{ n: string }>(
+      `select count(*) as n from sessions se
+        join sites s on s.id = se.site_id
+       where s.account_id = $1 and not se.is_test`,
+      [r.rows[0]!.id],
+    );
+    await admin.end();
+
+    const soma = (s: { sessoes: number }[]) => s.reduce((a, p) => a + p.sessoes, 0);
+    const daAgencia = soma(await withAccount(accountId, (db) => getSerieDaConta(db, 30)));
+    const daRival = soma(await withAccount(r.rows[0]!.id, (db) => getSerieDaConta(db, 30)));
+
+    // As duas contas têm movimento, e cada uma só vê o seu. Sem isto o teste
+    // passaria com a rival vazia — que é o resultado de um defeito, não a
+    // prova de isolamento.
+    expect(daAgencia).toBeGreaterThan(0);
+    expect(Number(doBanco.rows[0]!.n)).toBeGreaterThan(0);
+    expect(daRival).toBeLessThanOrEqual(Number(doBanco.rows[0]!.n));
+    expect(daAgencia).not.toBe(daAgencia + daRival);
   });
 });

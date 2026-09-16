@@ -145,3 +145,56 @@ export function segmentosDaSerie(
 
   return { segmentos, pontosIsolados };
 }
+
+/**
+ * Pico, mínimo e média de uma série.
+ *
+ * O componente de referência calculava isto DENTRO da view, junto com a soma e
+ * a variação. Aqui não pode: a primeira regra deste projeto é que nenhum
+ * componente visual calcula número, porque foi assim que duas telas deixaram de
+ * poder discordar. Sendo função pura, também fica testável sem subir banco.
+ *
+ * Medição ausente é IGNORADA, nunca tratada como zero — pela mesma razão da
+ * regra 1 lá em cima. Uma série de cinco dias com dois buracos tem média de
+ * três dias, não de cinco: dividir por cinco afirmaria que houve zero nos dias
+ * em que ninguém mediu.
+ *
+ * Devolve `null` quando não sobra nenhum ponto com valor. Não é zero: zero
+ * afirma "medimos e não houve".
+ */
+export type Resumo = {
+  pico: number;
+  minimo: number;
+  media: number;
+  /** Quantos pontos entraram na conta. A tela pode dizer sobre o que é a média. */
+  medidos: number;
+};
+
+export function resumirSerie(pontos: Ponto[]): Resumo | null {
+  const valores = pontos.map((p) => p.valor).filter((v): v is number => v !== null);
+  if (valores.length === 0) return null;
+  const soma = valores.reduce((a, b) => a + b, 0);
+  return {
+    pico: Math.max(...valores),
+    minimo: Math.min(...valores),
+    media: soma / valores.length,
+    medidos: valores.length,
+  };
+}
+
+/**
+ * A soma da série.
+ *
+ * Existe para a tela poder CONFERIR: o total do cartão e a soma da série
+ * precisam ser o mesmo número, e há teste afirmando isso. Quando divergirem, é
+ * defeito — foi exatamente assim que o protótipo original somava 169 numa tela
+ * e 207 na outra sem que nada apontasse.
+ *
+ * `null` pela mesma razão de `resumirSerie`: série sem nenhuma medição não tem
+ * soma zero, tem ausência de base.
+ */
+export function somaDaSerie(pontos: Ponto[]): number | null {
+  const valores = pontos.map((p) => p.valor).filter((v): v is number => v !== null);
+  if (valores.length === 0) return null;
+  return valores.reduce((a, b) => a + b, 0);
+}

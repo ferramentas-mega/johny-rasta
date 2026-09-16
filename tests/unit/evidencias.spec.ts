@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   faixaDaSerie,
+  resumirSerie,
   segmentosDaSerie,
+  somaDaSerie,
   variacaoDaSerie,
   variacaoEntre,
   type Ponto,
@@ -146,5 +148,41 @@ describe('a régua é a faixa da própria série', () => {
   it('um ponto só vai ao centro horizontal, em vez da borda esquerda', () => {
     const { pontosIsolados } = segmentosDaSerie([p(70, 1)], 100, 40);
     expect(pontosIsolados[0]).toEqual({ x: 50, y: 20 });
+  });
+});
+
+describe('resumo da série', () => {
+  const p = (valor: number | null, dia: number): Ponto => ({ valor, em: new Date(2026, 0, dia) });
+
+  it('pico, mínimo e média de uma série cheia', () => {
+    const r = resumirSerie([p(10, 1), p(30, 2), p(20, 3)]);
+    expect(r).toEqual({ pico: 30, minimo: 10, media: 20, medidos: 3 });
+  });
+
+  it('buraco NÃO entra como zero na média', () => {
+    // Com o buraco contando como zero, a média seria 20/3 = 6,67 — e a tela
+    // afirmaria que houve zero num dia em que ninguém mediu.
+    const r = resumirSerie([p(10, 1), p(null, 2), p(30, 3)]);
+    expect(r?.media).toBe(20);
+    expect(r?.medidos).toBe(2);
+    expect(r?.minimo).toBe(10);
+  });
+
+  it('série só de buracos devolve null, não zero', () => {
+    expect(resumirSerie([p(null, 1), p(null, 2)])).toBeNull();
+    expect(somaDaSerie([p(null, 1)])).toBeNull();
+  });
+
+  it('um ponto só tem pico igual ao mínimo, e isso não é defeito', () => {
+    expect(resumirSerie([p(7, 1)])).toEqual({ pico: 7, minimo: 7, media: 7, medidos: 1 });
+  });
+
+  it('a soma ignora buraco', () => {
+    expect(somaDaSerie([p(10, 1), p(null, 2), p(5, 3)])).toBe(15);
+  });
+
+  it('zero medido é diferente de ausência', () => {
+    // Zero afirma "medimos e não houve": entra na conta.
+    expect(resumirSerie([p(0, 1), p(10, 2)])).toEqual({ pico: 10, minimo: 0, media: 5, medidos: 2 });
   });
 });

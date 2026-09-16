@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Icone, type IconeNome } from '@/components/icones';
+import { Minigrafico } from '@/components/Minigrafico';
 import { Sobrelinha } from '@/components/Sobrelinha';
+import type { Ponto } from '@/lib/evidencias';
 import type { Variacao } from '@/lib/formato';
 
 /**
@@ -159,14 +161,28 @@ export function CartaoNumero({
   valor,
   nota,
   tom = 'neutro',
+  serie,
+  variacao,
 }: {
   rotulo: string;
   valor: string;
   nota: string;
   tom?: 'neutro' | 'atencao';
+  /**
+   * A série por trás do número, quando ela EXISTE.
+   *
+   * Opcional de propósito, e a ausência não é falha de preenchimento: dos sete
+   * indicadores da Visão geral, quatro são estado de AGORA ("sites com coleta",
+   * "precisam de atenção") e não têm histórico diário em lugar nenhum. Desenhar
+   * um gráfico ali seria inventar a medição — que é a regra que este projeto
+   * mais protege. Sem série, o cartão é o mesmo, sem a faixa do gráfico.
+   */
+  serie?: Ponto[];
+  /** Texto da variação, já calculado pela camada de métricas. */
+  variacao?: string;
 }) {
   return (
-    <div className="cartao" style={{ padding: '16px 18px' }}>
+    <div className="cartao" style={{ padding: '16px 18px', overflow: 'hidden' }}>
       <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{rotulo}</div>
       {/* A receita do número da referência: peso leve, trilha fechada, verde
           com brilho. */}
@@ -189,6 +205,25 @@ export function CartaoNumero({
         {valor}
       </div>
       <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{nota}</div>
+
+      {variacao && (
+        <div className="mono" style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)', marginTop: 'var(--esp-1)' }}>
+          {variacao}
+        </div>
+      )}
+
+      {serie && serie.length > 0 && (
+        // Sangrando até a borda: a faixa do gráfico é o rodapé do cartão, e um
+        // respiro lateral aqui faria a área parecer um segundo cartão dentro do
+        // primeiro. O `overflow: hidden` do contêiner é o que a contém.
+        <div style={{ margin: 'var(--esp-3) -18px -16px', opacity: 0.9 }}>
+          <Minigrafico
+            pontos={serie}
+            id={`spark-${rotulo.replace(/[^a-zA-Z]/g, '')}`}
+            cor={tom === 'atencao' ? 'var(--warn-tx)' : 'var(--gold)'}
+          />
+        </div>
+      )}
     </div>
   );
 }

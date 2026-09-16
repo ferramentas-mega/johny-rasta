@@ -1,10 +1,16 @@
 import Link from 'next/link';
 import { withAccount } from '@/server/db';
 import { contextoPainel, type ParametrosBusca } from '@/server/contexto';
-import { getCarteira, totalizarCarteira, type LinhaCarteira } from '@/server/metrics/queries';
+import {
+  getCarteira,
+  getSerieDaConta,
+  totalizarCarteira,
+  type LinhaCarteira,
+} from '@/server/metrics/queries';
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { num, pct } from '@/lib/formato';
 import { Avatar } from '@/components/Avatar';
+import type { Ponto } from '@/lib/evidencias';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso, CartaoNumero } from '@/components/Cartoes';
 import { CartaoProgresso } from '@/components/CartaoProgresso';
@@ -58,7 +64,13 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
   const busca = (typeof params.q === 'string' ? params.q : '').trim().toLowerCase();
   const dias = DIAS[ctx.periodoInput.key] ?? 7;
 
-  const todas = await withAccount(ctx.usuario.accountId, (db) => getCarteira(db, dias));
+  const { todas, serie } = await withAccount(ctx.usuario.accountId, async (db) => ({
+    todas: await getCarteira(db, dias),
+    // Sequencial, e não `Promise.all`: as duas consultas compartilham a MESMA
+    // conexão dentro da transação, e o driver `pg` não aceita duas simultâneas
+    // no mesmo client.
+    serie: await getSerieDaConta(db, dias),
+  }));
   const linhas = busca
     ? todas.filter((l) => l.cliente.toLowerCase().includes(busca))
     : todas;
@@ -157,11 +169,32 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
     },
   ];
 
+  /**
+   * A série de cada indicador que TEM série.
+   *
+   * O dia vira `Date` aqui e não no SQL porque `Ponto` é o tipo puro de
+   * `evidencias.ts`, compartilhado com as evidências de desempenho — e é ele
+   * que as funções de faixa, segmento e resumo já sabem ler.
+   *
+   * `valor` nunca é `null` nesta série: a consulta gera a grade de dias e
+   * devolve zero para dia sem movimento, e aqui zero é uma AFIRMAÇÃO ("medimos
+   * e não houve"), não ausência. O buraco existe no tipo porque as evidências
+   * de Lighthouse têm dias sem medição nenhuma — ali a distinção é real.
+   */
+  const serieDe = (campo: 'sessoes' | 'leads' | 'cliquesWhatsapp'): Ponto[] =>
+    serie.map((p) => ({ valor: p[campo], em: new Date(`${p.dia}T12:00:00`) }));
+
   const cartoes = [
+    // Sem série: "Clientes" é cadastro, não evento datado por dia.
     { rotulo: 'Clientes', valor: num(totais.clientes), nota: busca ? 'filtrados pela busca' : 'na carteira' },
-    { rotulo: 'Sessões', valor: num(totais.sessoes), nota: 'somadas entre os sites' },
-    { rotulo: 'Cliques no WhatsApp', valor: num(totais.cliquesWhatsapp), nota: 'clique não é conversa iniciada' },
-    { rotulo: 'Leads', valor: num(totais.leads), nota: 'contatos registrados' },
+    { rotulo: 'Sessões', valor: num(totais.sessoes), nota: 'somadas entre os sites', serie: serieDe('sessoes') },
+    {
+      rotulo: 'Cliques no WhatsApp',
+      valor: num(totais.cliquesWhatsapp),
+      nota: 'clique não é conversa iniciada',
+      serie: serieDe('cliquesWhatsapp'),
+    },
+    { rotulo: 'Leads', valor: num(totais.leads), nota: 'contatos registrados', serie: serieDe('leads') },
     {
       rotulo: 'Precisam de atenção',
       valor: num(precisamAtencao),
@@ -199,7 +232,14 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
             />
           ))}
           {cartoes.map((c) => (
-            <CartaoNumero key={c.rotulo} rotulo={c.rotulo} valor={c.valor} nota={c.nota} tom={c.tom} />
+            <CartaoNumero
+              key={c.rotulo}
+              rotulo={c.rotulo}
+              valor={c.valor}
+              nota={c.nota}
+              tom={c.tom}
+              serie={c.serie}
+            />
           ))}
         </div>
 

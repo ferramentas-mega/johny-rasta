@@ -225,6 +225,101 @@ export async function getDailySeries(
   );
 }
 
+export type PontoDaConta = {
+  dia: string;
+  sessoes: number;
+  leads: number;
+  cliquesWhatsapp: number;
+};
+
+/**
+ * Série diária da CONTA, para os cartões da Visão geral.
+ *
+ * ── Por que ela NÃO usa as CTEs por escopo ──
+ *
+ * A primeira versão desta função recortava a janela num fuso único, passado por
+ * parâmetro. Estaria errada, e de um jeito silencioso: `CARTEIRA_SQL`, que
+ * produz os números dos cartões, calcula a janela **por site, no fuso de cada
+ * site**, e soma. Com dois sites em fusos diferentes, a série e o cartão
+ * responderiam perguntas diferentes — e é exatamente a armadilha já registrada
+ * no CLAUDE.md: dois critérios separados não dão erro quando divergem, dão
+ * silêncio.
+ *
+ * Então esta consulta repete a MESMA construção de janela da Carteira: dia
+ * local de cada site, últimos N dias contados a partir do "hoje" daquele site,
+ * e a agregação soma por rótulo de dia — que é o que a Carteira faz somando as
+ * linhas por site.
+ *
+ * Como `CARTEIRA_SQL`, ela se apoia na RLS para o recorte de conta, em vez de
+ * filtrar por `account_id` à mão. Não é descuido: é a garantia de que as duas
+ * enxergam exatamente o mesmo conjunto de sites. Um filtro a mais aqui poderia
+ * divergir do vizinho no dia em que um dos dois mudasse.
+ *
+ * As três colunas seguem as regras de atribuição do topo do arquivo, e elas não
+ * são a mesma: sessões e cliques pelo dia em que a SESSÃO começou; leads pelo
+ * dia em que o contato foi visto pela primeira vez, que é fato do lead e não da
+ * sessão.
+ *
+ * Só existe série para o que tem HISTÓRICO. "Sites com coleta", "Configuração
+ * concluída" e "Precisam de atenção" são estado de agora: não há dia a dia deles
+ * em lugar nenhum, e desenhar um seria inventar a medição.
+ */
+export async function getSerieDaConta(db: Queryable, dias: number): Promise<PontoDaConta[]> {
+  return db.query<PontoDaConta>(
+    `with ativos as (
+       select s.id, s.timezone,
+              date_trunc('day', now() at time zone s.timezone)::date as hoje
+         from sites s
+        where s.archived_at is null
+     ),
+     grade as (
+       select a.id, a.timezone, (a.hoje - g)::date as dia
+         from ativos a, generate_series(0, $1::int - 1) g
+     ),
+     ses as (
+       select d.dia, count(*)::int as n
+         from grade d
+         join sessions se
+           on se.site_id = d.id
+          and not se.is_test
+          and (se.started_at at time zone d.timezone)::date = d.dia
+        group by 1
+     ),
+     zap as (
+       select d.dia, count(*)::int as n
+         from grade d
+         join sessions se
+           on se.site_id = d.id
+          and not se.is_test
+          and (se.started_at at time zone d.timezone)::date = d.dia
+         join events e
+           on e.session_id = se.id
+          and not e.is_test
+          and e.type = 'cta_click'
+          and e.subtype = 'whatsapp'
+        group by 1
+     ),
+     lds as (
+       select d.dia, count(*)::int as n
+         from grade d
+         join leads l
+           on l.site_id = d.id
+          and (l.first_seen_at at time zone d.timezone)::date = d.dia
+        group by 1
+     )
+     select to_char(t.dia, 'YYYY-MM-DD') as dia,
+            coalesce(ses.n, 0)           as "sessoes",
+            coalesce(lds.n, 0)           as "leads",
+            coalesce(zap.n, 0)           as "cliquesWhatsapp"
+       from (select distinct dia from grade) t
+       left join ses on ses.dia = t.dia
+       left join lds on lds.dia = t.dia
+       left join zap on zap.dia = t.dia
+      order by t.dia`,
+    [dias],
+  );
+}
+
 // ───────────────────────────── tabelas ─────────────────────────────
 
 export type PageRow = {
