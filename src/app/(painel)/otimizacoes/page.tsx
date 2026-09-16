@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { withAccount } from '@/server/db';
 import { exigirSessao } from '@/server/contexto';
-import { listarOtimizacoes, TIPO_LABEL, STATUS_LABEL, type Otimizacao } from '@/server/qualidade/otimizacoes';
+import { listarOtimizacoes, TIPO_LABEL, type Otimizacao } from '@/server/qualidade/otimizacoes';
+import { Situacao } from './Situacao';
 import { dataHora, num } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso } from '@/components/Cartoes';
@@ -51,7 +52,7 @@ export default async function PaginaOtimizacoes({
     { chave: 'problema', titulo: 'Problema', render: (o) => o.titulo },
     { chave: 'evidencia', titulo: 'Evidência', render: (o) => <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{o.evidencia}</span> },
     { chave: 'acao', titulo: 'Próxima ação', render: (o) => <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{o.proximaAcao}</span> },
-    { chave: 'status', titulo: 'Situação', render: (o) => <Etiqueta texto={STATUS_LABEL[o.status] ?? o.status} tom={o.status === 'pendente' ? 'soft' : 'ok'} /> },
+    { chave: 'status', titulo: 'Situação', quebraLinha: true, render: (o) => <Situacao item={o} /> },
     { chave: 'quando', titulo: 'Desde', render: (o) => <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{dataHora(o.detectadoEm)}</span> },
   ];
 

@@ -4,12 +4,23 @@ import type { Queryable } from '@/server/db';
 /**
  * "Onde atuar primeiro".
  *
- * A lista tem duas origens, e a distinção importa:
+ * **A lista é o SINAL; a tabela é só o acompanhamento.** É a espinha dorsal
+ * deste arquivo.
  *
- *  - **Derivadas**: calculadas na hora a partir dos dados. Some sozinha quando
- *    a causa some. Não guardo no banco porque guardar significaria ter de
- *    apagar depois, e uma linha órfã afirmaria um problema que já acabou.
- *  - **Registradas** (`optimizations`): as que alguém acompanhou, com status.
+ *  - O que aparece é sempre derivado dos dados, calculado na hora. Some sozinho
+ *    quando a causa some — nunca porque alguém disse que resolveu.
+ *  - `optimizations` guarda o que o operador marcou, e só isso. Entra por
+ *    `left join`, contribuindo a situação. Nunca cria linha na lista.
+ *
+ * Antes, a tabela era um `union all` com as derivadas — e **nada no projeto
+ * escrevia nela**, então aquele ramo nunca devolvia linha e a coluna "Situação"
+ * mostrava "Pendente" para sempre. Pior: se alguém tivesse escrito, o item
+ * apareceria DUAS vezes, uma pela tabela e outra pelo sinal.
+ *
+ * **Marcar como resolvida não apaga o sinal.** Se a nota continua baixa, o item
+ * continua na lista — com a marcação ao lado, e dizendo que o sinal persiste.
+ * Esconder seria o mesmo `configurado: true` que este projeto recusa em todo
+ * lugar: estado é derivado, não declarado.
  *
  * Duas coisas que esta lista NÃO faz, de propósito:
  *
@@ -21,37 +32,10 @@ import type { Queryable } from '@/server/db';
  *     deixa a conclusão para quem investiga.
  */
 
-export type TipoOtimizacao = 'tecnico' | 'comercial' | 'coleta' | 'atualizacao';
+import type { ChaveDoSinal, Otimizacao, StatusManual, TipoOtimizacao } from '@/lib/otimizacoes';
 
-export type Otimizacao = {
-  id: string | null;
-  siteId: string;
-  site: string;
-  cliente: string;
-  url: string | null;
-  tipo: TipoOtimizacao;
-  titulo: string;
-  evidencia: string;
-  prioridade: number;
-  status: string;
-  proximaAcao: string;
-  detectadoEm: Date;
-};
-
-export const TIPO_LABEL: Record<TipoOtimizacao, string> = {
-  tecnico: 'Técnico',
-  comercial: 'Comercial',
-  coleta: 'Coleta',
-  atualizacao: 'Atualização',
-};
-
-export const STATUS_LABEL: Record<string, string> = {
-  pendente: 'Pendente',
-  em_andamento: 'Em andamento',
-  aguardando_nova_analise: 'Aguardando nova análise',
-  resolvida_manual: 'Resolvida manualmente',
-  resolvida_por_verificacao: 'Resolvida por verificação',
-};
+/** Reexporta o módulo puro para quem consome ter um import só. */
+export * from '@/lib/otimizacoes';
 
 /** Nota abaixo disto, numa URL monitorada, vira item da lista. */
 const DESEMPENHO_RUIM = 0.5;
@@ -78,25 +62,17 @@ type LinhaBruta = {
 export async function listarOtimizacoes(db: Queryable): Promise<Otimizacao[]> {
   const linhas = await db.query<LinhaBruta>(
     `
-    -- 1. Registradas, com acompanhamento humano.
-    select o.id, o.site_id, s.name as site, c.name as cliente, o.url, o.tipo,
-           o.titulo, coalesce(o.evidencia->>'texto','') as evidencia,
-           o.prioridade, o.status, coalesce(o.proxima_acao,'') as proxima_acao,
-           o.detectado_em
-      from optimizations o
-      join sites s   on s.id = o.site_id
-      join clients c on c.id = s.client_id
-     where o.status not in ('resolvida_manual','resolvida_por_verificacao')
-
-    union all
-
-    -- 2. Desempenho ruim numa URL monitorada. Compara a análise MAIS RECENTE de
+    with sinais (
+      site_id, site, cliente, url, tipo, titulo, evidencia,
+      prioridade, proxima_acao, detectado_em
+    ) as (
+    -- 1. Desempenho ruim numa URL monitorada. Compara a análise MAIS RECENTE de
     --    cada par (url, dispositivo): uma medição antiga não sustenta alerta.
-    select null, r.site_id, s.name, c.name, r.url_solicitada, 'tecnico',
+    select r.site_id, s.name, c.name, r.url_solicitada, 'tecnico',
            'Desempenho baixo em página monitorada',
            'Nota ' || round(r.performance * 100) || '/100 no ' ||
              case r.strategy when 'mobile' then 'celular' else 'computador' end,
-           1, 'pendente', 'Abrir Qualidade técnica e ver os diagnósticos', r.medido_em
+           1, 'Abrir Qualidade técnica e ver os diagnósticos', r.medido_em
       from (
         select distinct on (site_id, url_solicitada, strategy)
                site_id, url_solicitada, strategy, performance, medido_em
@@ -109,14 +85,14 @@ export async function listarOtimizacoes(db: Queryable): Promise<Otimizacao[]> {
 
     union all
 
-    -- 3. URL prioritária sem análise, ou com análise velha.
-    select null, m.site_id, s.name, c.name, m.url, 'atualizacao',
+    -- 2. URL prioritária sem análise, ou com análise velha.
+    select m.site_id, s.name, c.name, m.url, 'atualizacao',
            case when ultima.medido_em is null
                 then 'URL prioritária nunca analisada'
                 else 'Análise desatualizada' end,
            coalesce('Última análise em ' || to_char(ultima.medido_em,'DD/MM/YYYY'),
                     'Nenhuma análise registrada'),
-           2, 'pendente', 'Executar análise', coalesce(ultima.medido_em, m.created_at)
+           2, 'Executar análise', coalesce(ultima.medido_em, m.created_at)
       from monitored_urls m
       join sites s   on s.id = m.site_id
       join clients c on c.id = s.client_id
@@ -130,16 +106,16 @@ export async function listarOtimizacoes(db: Queryable): Promise<Otimizacao[]> {
 
     union all
 
-    -- 4. Site que COLETAVA e parou.
+    -- 3. Site que COLETAVA e parou.
     --
     --    A condição de ter mais de 30 eventos é o que separa "parou de coletar"
     --    de "site de pouco tráfego". Sem ela, todo site pequeno viraria alarme
     --    falso — e alarme falso treina o usuário a ignorar a lista.
-    select null, s.id, s.name, c.name, null, 'coleta',
+    select s.id, s.name, c.name, null, 'coleta',
            'Sem eventos recentes num site que coletava',
            'Último evento em ' || to_char(e.ultimo,'DD/MM/YYYY') ||
              ' · ' || e.total || ' eventos no histórico',
-           1, 'pendente', 'Conferir se o script continua instalado', e.ultimo
+           1, 'Conferir se o script continua instalado', e.ultimo
       from sites s
       join clients c on c.id = s.client_id
       join lateral (
@@ -149,8 +125,21 @@ export async function listarOtimizacoes(db: Queryable): Promise<Otimizacao[]> {
      where s.archived_at is null
        and e.total > 30
        and e.ultimo < now() - make_interval(days => $3::int)
-
-    order by 9, 12 desc
+    )
+    -- O acompanhamento entra por LEFT JOIN: acrescenta situação a um sinal que
+    -- existe, e nunca cria linha. Um registro cujo sinal sumiu simplesmente não
+    -- aparece — a ausência do sinal é a prova de que acabou.
+    select o.id, sinais.site_id, sinais.site, sinais.cliente, sinais.url, sinais.tipo,
+           sinais.titulo, sinais.evidencia, sinais.prioridade,
+           coalesce(o.status, 'pendente') as status,
+           sinais.proxima_acao, sinais.detectado_em
+      from sinais
+      left join optimizations o
+        on o.site_id = sinais.site_id
+       and o.tipo    = sinais.tipo
+       and coalesce(o.url, '') = coalesce(sinais.url, '')
+       and o.titulo  = sinais.titulo
+    order by sinais.prioridade, sinais.detectado_em desc
     `,
     [DESEMPENHO_RUIM, DIAS_ANALISE_VENCIDA, DIAS_SEM_EVENTO],
   );
@@ -169,4 +158,34 @@ export async function listarOtimizacoes(db: Queryable): Promise<Otimizacao[]> {
     proximaAcao: l.proxima_acao,
     detectadoEm: l.detectado_em,
   }));
+}
+
+/**
+ * Registra o acompanhamento de um sinal.
+ *
+ * A guarda de dono não é redundante com a RLS. A política de `optimizations`
+ * casa por `account_id`, e o valor gravado vem de `app.current_account_id()`:
+ * o de quem escreve. A conta A conseguiria gravar uma linha apontando para um
+ * site da conta B — a política aprova, porque a linha É da conta A. Com o
+ * índice único por sinal, isso trancaria o dono legítimo contra um registro que
+ * ele nem enxerga. Mesma armadilha de `site_features`, já no CLAUDE.md: o
+ * índice garante integridade, não autorização.
+ */
+export async function marcarOtimizacao(
+  db: Queryable,
+  sinal: ChaveDoSinal,
+  status: StatusManual,
+  proximaAcao: string,
+): Promise<void> {
+  const dono = await db.one<{ id: string }>('select id from sites where id = $1', [sinal.siteId]);
+  if (!dono) throw new Error('Site não encontrado nesta conta.');
+
+  await db.query(
+    `insert into optimizations
+       (account_id, site_id, url, tipo, titulo, prioridade, status, proxima_acao, atualizado_em)
+     values (app.current_account_id(), $1, $2, $3, $4, 2, $5, $6, now())
+     on conflict (site_id, tipo, coalesce(url, ''), titulo) do update
+        set status = excluded.status, atualizado_em = now()`,
+    [sinal.siteId, sinal.url, sinal.tipo, sinal.titulo, status, proximaAcao],
+  );
 }

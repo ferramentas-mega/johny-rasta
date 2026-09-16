@@ -245,7 +245,11 @@ log que eu não lia, e o processo anterior continuava respondendo — com chunks
 disco, dando 400 e impedindo a hidratação. Se a tela parecer "sem JavaScript", confira o log do
 servidor **antes** de procurar defeito no componente.
 
-**`server-only` quebra o build quando um componente cliente importa o módulo.** Foi por isso que as
+**`server-only` quebra o build quando um componente cliente importa o módulo.** Aconteceu de novo
+com as otimizações: o seletor de situação é componente cliente e importava de
+`server/qualidade/otimizacoes.ts`. O erro do webpack não nomeia a causa — só mostra um rastro de
+importação. A saída é sempre a mesma: a parte pura vai para `src/lib` (`otimizacoes.ts`,
+`recursos.ts`), e o módulo do servidor a reexporta. Foi por isso que as
 regras puras de configuração saíram para `src/lib/recursos.ts`: os rótulos e o indicador de progresso
 vivem na tela. O efeito colateral bom é que a derivação virou testável sem subir banco.
 

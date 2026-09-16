@@ -1,0 +1,38 @@
+-- Acompanhamento de otimização: uma linha por SINAL, não uma por marcação.
+--
+-- ─── O que estava quebrado ───────────────────────────────────────────────────
+--
+-- A tabela `optimizations` existia inteira — com `status`, `check` de cinco
+-- valores, `proxima_acao`, `detectado_em` — e **nada no projeto escrevia nela**.
+-- Nem insert, nem update, em lugar nenhum. A tela mostrava a coluna "Situação"
+-- sempre em "Pendente", e os outros quatro status eram inalcançáveis.
+--
+-- ─── Por que um índice único ─────────────────────────────────────────────────
+--
+-- O acompanhamento se prende a um SINAL derivado (nota baixa naquela URL,
+-- análise vencida naquela URL, site que parou de coletar). O sinal não tem id
+-- próprio: ele é recalculado a cada consulta. A identidade dele é o que o
+-- descreve — site, tipo, URL e título.
+--
+-- Sem o índice, marcar o mesmo item duas vezes criaria duas linhas, e a segunda
+-- marcação não substituiria a primeira: a tela passaria a mostrar duas
+-- situações para o mesmo problema, e nenhuma delas confiável.
+--
+-- `coalesce(url,'')` porque o sinal de coleta vale para o site inteiro e tem
+-- `url` nula — e em índice único NULL não colide com NULL, então duas linhas
+-- "site parou de coletar" do mesmo site conviveriam sem conflito.
+--
+-- ─── A armadilha que este índice cria, e que o código fecha ──────────────────
+--
+-- É a mesma de `site_features`, já registrada no CLAUDE.md: a política de RLS
+-- casa por `account_id`, e o valor gravado vem de `app.current_account_id()` —
+-- o de quem escreve. Então a conta A consegue gravar uma linha apontando para
+-- um site da conta B: a política aprova, porque a linha é da conta A. Com o
+-- índice único, isso trancaria o dono legítimo contra um registro que ele nem
+-- enxerga.
+--
+-- Por isso toda escrita passa por `exigirSiteDaConta` antes. O índice é a
+-- integridade; a guarda é a autorização. Uma não substitui a outra.
+
+create unique index optimizations_sinal
+  on optimizations (site_id, tipo, coalesce(url, ''), titulo);
