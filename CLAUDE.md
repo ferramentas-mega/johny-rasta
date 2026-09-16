@@ -227,6 +227,19 @@ nenhum: com tudo brilhando, nada se destaca. Fica no `h1` (um por tela) e no nú
 — nunca no indicador normal, onde o verde da marca já basta. E nunca em texto pequeno: `--glow` tem
 18px de borrão, desenhado para um título de 28px; em 11,5px ele borra a letra.
 
+**Conteúdo gerado por CSS entra no nome acessível — e isso esconde defeito de acessibilidade.** A
+barra lateral recolhida tira o rótulo da TELA com `clip-path`, nunca com `display: none`, para o link
+continuar tendo nome. O teste que provava isso passava mesmo com `display: none`, porque o `::after`
+da dica (`content: attr(data-rotulo)`) fornecia o nome por outro caminho. Dois mecanismos, e o teste
+não isolava o certo — apoiar acessibilidade em conteúdo gerado é depender de detalhe de pintura. Hoje
+o teste afirma as duas coisas: que o nome acessível existe **e** que o rótulo não está
+`display: none`. Só com a segunda o controle negativo dispara.
+
+**`git checkout <arquivo>` descarta trabalho não comitado, e eu já perdi assim.** Ao restaurar um
+arquivo depois de um controle negativo, use a cópia que você mesmo fez (`cp` para `/tmp` antes,
+`cp` de volta depois). `git checkout` volta para o ÚLTIMO COMMIT — e num arquivo com uma hora de
+mudanças novas isso apaga tudo, sem aviso e sem lixeira.
+
 **Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
 não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
 eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou

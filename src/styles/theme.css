@@ -815,9 +815,49 @@ select option {
  * O realce usa `--hover`, o degrau mais alto da escala de superfície. Sutil de
  * propósito: linha realçada não pode competir com o dado que ela carrega.
  */
+/*
+ * ENTRADA ESCALONADA das linhas.
+ *
+ * Adaptado de um componente que usa `framer-motion` com `staggerChildren: 0.25`
+ * e 0,5s por linha. A ideia — as linhas assentando uma após a outra — é boa; os
+ * números, não: seis linhas levariam 1,5s até a última aparecer, e numa
+ * ferramenta de operação isso é lentidão vestida de polimento. Quem abre a tela
+ * quer LER a tabela.
+ *
+ * Aqui o passo é 35ms e a duração vem de `--mov-medio`: a cascata continua
+ * perceptível e a última linha chega em menos de meio segundo. O escalonamento
+ * é por posição em CSS, não por índice em JavaScript — que exigiria a linha
+ * saber quantas irmãs tem, e transformaria a tabela em componente cliente.
+ *
+ * `both` garante o estado final mesmo com duração quase nula, e o bloco
+ * `prefers-reduced-motion` no topo zera tudo: quem pede menos movimento vê a
+ * tabela pronta, nunca uma tabela vazia.
+ */
+@keyframes linha-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .tabela-linha {
+  animation: linha-entra var(--mov-medio) var(--curva-saida) both;
   transition: background-color var(--mov-rapido) ease;
 }
+
+/* Sete degraus. Da oitava linha em diante todas entram juntas: uma cascata de
+   trinta linhas viraria espera, e o ganho de percepção acaba bem antes disso. */
+.tabela-linha:nth-child(2) { animation-delay: 35ms; }
+.tabela-linha:nth-child(3) { animation-delay: 70ms; }
+.tabela-linha:nth-child(4) { animation-delay: 105ms; }
+.tabela-linha:nth-child(5) { animation-delay: 140ms; }
+.tabela-linha:nth-child(6) { animation-delay: 175ms; }
+.tabela-linha:nth-child(7) { animation-delay: 210ms; }
+.tabela-linha:nth-child(n + 8) { animation-delay: 245ms; }
 .tabela-linha:hover {
   background: var(--hover);
 }
@@ -886,7 +926,22 @@ select option {
   min-height: 100vh;
 }
 
+/*
+ * ─── BARRA LATERAL RECOLHÍVEL ───
+ *
+ * Adaptado de um componente que expandia ao passar o MOUSE. Aqui é por BOTÃO, e
+ * a escolha persiste — num sistema de operação, uma barra que abre e fecha
+ * sozinha desloca o conteúdo toda vez que o ponteiro a cruza sem intenção, e
+ * passagem de mouse não existe para quem navega por teclado.
+ *
+ * A transição é `width` em CSS, não `framer-motion`: animar uma largura não
+ * justifica a dependência. O bloco `prefers-reduced-motion` já zera a duração.
+ *
+ * Abaixo de 860px nada disto vale: lá a navegação vira a barra INFERIOR, ao
+ * alcance do polegar — decisão registrada e com teste de navegador.
+ */
 .lateral {
+  transition: flex-basis var(--mov-medio) var(--curva-saida);
   flex: 0 0 248px;
   min-width: 0;
   background: var(--side);
@@ -895,6 +950,129 @@ select option {
   flex-direction: column;
   gap: 18px;
   padding: 20px 14px 24px;
+}
+
+/* A marca e o botão dividem a linha; o botão só existe no desktop. */
+.lateral-marca {
+  position: relative;
+}
+
+.botao-recolher {
+  position: absolute;
+  top: 50%;
+  right: -6px;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid var(--bd);
+  border-radius: var(--raio-pilula);
+  background: var(--elev);
+  color: var(--tx2);
+  font-size: var(--tipo-legenda);
+  line-height: 1;
+  transition:
+    color var(--mov-rapido) ease,
+    border-color var(--mov-rapido) ease;
+}
+.botao-recolher:hover {
+  color: var(--gold-tx);
+  border-color: var(--gold-bd);
+}
+
+@media (max-width: 860px) {
+  .botao-recolher {
+    display: none;
+  }
+}
+
+/* ── Estado recolhido ── */
+
+[data-menu='recolhido'] .lateral {
+  flex-basis: 64px;
+  padding-left: var(--esp-2);
+  padding-right: var(--esp-2);
+}
+
+/* O rótulo sai da TELA, nunca da árvore de acessibilidade: o item continua
+   sendo um link COM NOME. `display: none` tiraria o nome junto, e o leitor de
+   tela anunciaria seis links sem rótulo. */
+[data-menu='recolhido'] .item-menu .rotulo-menu {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+[data-menu='recolhido'] .item-menu {
+  justify-content: center;
+  gap: 0;
+  position: relative;
+}
+
+/* A contagem vira selo sobre o ícone — sem isto ela sumiria junto com o
+   rótulo, e "Clientes 2" perderia o 2, que é metade da informação. */
+[data-menu='recolhido'] .contagem-menu {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  margin: 0;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: var(--raio-pilula);
+  background: var(--ok-bg);
+  border: 1px solid var(--gold-bd);
+  color: var(--gold-tx);
+  text-align: center;
+  line-height: 14px;
+}
+
+/* A dica responde a ponteiro E a foco. Só no ponteiro excluiria quem navega
+   por teclado — e é justamente recolhida que o rótulo some da tela. */
+[data-menu='recolhido'] .item-menu::after {
+  content: attr(data-rotulo);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  padding: var(--esp-1) var(--esp-2);
+  border-radius: var(--raio-p);
+  background: var(--elev);
+  border: 1px solid var(--bd);
+  color: var(--tx);
+  font-size: var(--tipo-apoio);
+  box-shadow: var(--sombra-2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--mov-rapido) ease;
+  z-index: 30;
+}
+[data-menu='recolhido'] .item-menu:hover::after,
+[data-menu='recolhido'] .item-menu:focus-visible::after {
+  opacity: 1;
+}
+
+/* A marca encolhe para o símbolo, e o nome da conta some. O "Sair" NÃO some:
+   esconder a saída da conta atrás de outra tela é o tipo de coisa que ninguém
+   percebe até precisar. */
+[data-menu='recolhido'] .lateral-marca .marca-texto,
+[data-menu='recolhido'] .lateral-rodape-texto {
+  display: none;
+}
+
+/* Recolhida, o rodapé empilha: avatar em cima, "Sair" embaixo — lado a lado
+   não cabe em 64px. */
+[data-menu='recolhido'] .lateral-rodape {
+  flex-direction: column;
+  gap: var(--esp-2);
+  align-items: center;
 }
 
 .lateral-nav {

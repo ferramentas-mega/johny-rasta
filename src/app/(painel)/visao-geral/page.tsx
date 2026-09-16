@@ -4,6 +4,7 @@ import { contextoPainel, type ParametrosBusca } from '@/server/contexto';
 import { getCarteira, totalizarCarteira, type LinhaCarteira } from '@/server/metrics/queries';
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { num, pct } from '@/lib/formato';
+import { Avatar } from '@/components/Avatar';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso, CartaoNumero } from '@/components/Cartoes';
 import { CartaoProgresso } from '@/components/CartaoProgresso';
@@ -83,7 +84,12 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
   const colunas: Coluna<LinhaCarteira>[] = [
     {
       chave: 'cliente', titulo: 'Cliente', total: () => 'Total',
-      render: (l) => <Link href={`/clientes/${l.clienteId}?periodo=${ctx.periodoInput.key}`}>{l.cliente}</Link>,
+      render: (l) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--esp-2)' }}>
+          <Avatar nome={l.cliente} />
+          <Link href={`/clientes/${l.clienteId}?periodo=${ctx.periodoInput.key}`}>{l.cliente}</Link>
+        </span>
+      ),
     },
     {
       chave: 'sites', titulo: 'Sites', alinhamento: 'direita', mono: true,

@@ -232,6 +232,48 @@ tinha folga de 0,03 sobre o mínimo. Escurecer o **texto** (#607064 → #56655a)
 
 ---
 
+## Barra lateral recolhível
+
+Adaptada de um componente que expandia ao passar o MOUSE. Aqui é por **botão**, e a escolha
+persiste. Três motivos concretos:
+
+1. Uma barra que abre e fecha sozinha desloca todo o conteúdo à direita sempre que o ponteiro a
+   cruza sem intenção — e este é um sistema onde se passa o dia.
+2. Passagem de mouse não existe para quem navega por teclado.
+3. Quem trabalha recolhido continua recolhido amanhã. O estado é aplicado pelo script inline do
+   `layout.tsx` **antes da primeira pintura**, como o tema: senão a barra nasce aberta e encolhe.
+
+Recolhida são 64px. O que acontece com cada parte:
+
+| Parte | Recolhida |
+|---|---|
+| Rótulo | sai da TELA por `clip-path`, **nunca** `display: none` — o link precisa continuar tendo nome |
+| Contagem (Clientes 2) | vira selo sobre o ícone — sumiria junto com o rótulo, e o 2 é metade da informação |
+| Dica | `::after` com o rótulo, respondendo a ponteiro **e a foco** |
+| Marca | encolhe para o glifo |
+| Nome da conta | some |
+| **Sair** | **fica** — esconder a saída da conta atrás de outra tela ninguém percebe até precisar |
+
+Sem `framer-motion`: animar uma largura é `transition`. Abaixo de 860px nada disto vale — lá a
+navegação é a barra inferior, ao alcance do polegar.
+
+---
+
+## Entrada escalonada das linhas
+
+A referência usa `staggerChildren: 0.25` com 0,5s por linha. A ideia — as linhas assentando uma após
+a outra — é boa; os números, não: **seis linhas levariam 1,5s** até a última aparecer, e numa
+ferramenta de operação isso é lentidão vestida de polimento.
+
+Aqui o passo é 35ms e a duração vem de `--mov-medio`: a cascata continua perceptível e a última
+linha chega em menos de meio segundo. Sete degraus; da oitava linha em diante todas entram juntas,
+porque uma cascata de trinta linhas vira espera.
+
+O escalonamento é por posição em CSS, não por índice em JavaScript — que exigiria a linha saber
+quantas irmãs tem, e transformaria a tabela em componente cliente.
+
+---
+
 ## Componentes
 
 | Componente | Papel |

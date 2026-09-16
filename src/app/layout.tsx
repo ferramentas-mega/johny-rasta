@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Aplica tema e efeitos ANTES da primeira pintura.
+ * Aplica tema, efeitos e estado da barra lateral ANTES da primeira pintura.
  *
  * Sem isto a página nasce escura e pisca para o claro (ou o contrário) quando o
  * React hidrata. O script é minúsculo e roda síncrono de propósito.
@@ -37,14 +37,19 @@ const PREFERENCIAS = `
   try {
     var tema = localStorage.getItem('painel:tema');
     var fx = localStorage.getItem('painel:fx');
+    var menu = localStorage.getItem('painel:menu');
     var reduz = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.documentElement.dataset.tema = tema === 'claro' ? 'claro' : 'escuro';
     // Quem pede movimento reduzido no sistema começa sem efeitos, a menos que
     // tenha ligado explicitamente antes.
     document.documentElement.dataset.fx = (fx === null ? !reduz : fx === 'on') ? 'on' : 'off';
+    // Barra lateral recolhida. Entra aqui pelo mesmo motivo do tema: sem isto
+    // ela nasce expandida e encolhe na cara de quem já a tinha recolhido.
+    document.documentElement.dataset.menu = menu === 'recolhido' ? 'recolhido' : 'aberto';
   } catch (e) {
     document.documentElement.dataset.tema = 'escuro';
     document.documentElement.dataset.fx = 'off';
+    document.documentElement.dataset.menu = 'aberto';
   }
 })();
 `;
@@ -84,6 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang="pt-BR"
       data-tema="escuro"
       data-fx="off"
+      data-menu="aberto"
       suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >

@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { Marca } from '@/components/Marca';
 import { Icone, type IconeNome } from '@/components/icones';
 import { TextoMatrix } from '@/components/TextoMatrix';
+import { BotaoRecolher } from '@/components/BotaoRecolher';
+import { Avatar } from '@/components/Avatar';
 import { MenuInferior } from '@/components/MenuInferior';
 
 /**
@@ -82,12 +84,6 @@ export function MenuLateral({
     // transformaria o menu num letreiro.
   }, [itemAtivo]);
 
-  const iniciais = usuarioNome
-    .split(' ')
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('');
-
   const contagemDe = (href: string) =>
     href === '/clientes' ? contagens.clientes
     : href === '/sites' ? contagens.sites
@@ -101,6 +97,7 @@ export function MenuLateral({
     <aside className="lateral">
       <div className="lateral-marca">
         <Marca />
+        <BotaoRecolher />
       </div>
 
       <nav aria-label="Seções do painel" className="lateral-nav">
@@ -113,6 +110,10 @@ export function MenuLateral({
               key={item.href}
               href={`${item.href}${busca}`}
               aria-current={on ? 'page' : undefined}
+              // Alimenta a dica (`::after`) quando a barra está recolhida. O
+              // rótulo continua no DOM e no nome acessível; o que some é a
+              // pintura dele.
+              data-rotulo={item.label}
               // O visual (incluindo o realce ao passar o mouse) vive em
               // `.item-menu`, no CSS: `:hover` não existe em estilo inline, e
               // era por isso que os itens não reagiam ao ponteiro.
@@ -123,10 +124,12 @@ export function MenuLateral({
               onFocus={() => decodificar(item.href)}
             >
               <Icone nome={item.icone} />
-              <TextoMatrix texto={item.label} disparo={disparos[item.href] ?? 0} />
+              <span className="rotulo-menu">
+                <TextoMatrix texto={item.label} disparo={disparos[item.href] ?? 0} />
+              </span>
               {contagem !== null && (
                 <span
-                  className="mono"
+                  className="mono contagem-menu"
                   style={{
                     marginLeft: 'auto',
                     fontSize: 'var(--tipo-micro)',
@@ -143,27 +146,21 @@ export function MenuLateral({
       </nav>
 
       <div className="lateral-rodape">
-        <span
-          className="mono"
-          aria-hidden="true"
-          style={{
-            flex: 'none',
-            width: 30,
-            height: 30,
-            borderRadius: '50%',
-            background: 'var(--elev)',
-            border: '1px solid var(--bd)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 'var(--tipo-apoio)',
-            color: 'var(--gold-tx)',
-          }}
-        >
-          {iniciais || '·'}
-        </span>
+        {/* Iniciais do USUÁRIO, ao lado do nome da CONTA. São duas informações
+            diferentes: o texto diz em que conta você está, o avatar diz quem
+            você é — e trocar por iniciais da conta repetiria o texto e perderia
+            a única pista de identidade que este rodapé tem. */}
+        <Avatar nome={usuarioNome} tamanho={30} />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 'var(--tipo-apoio)', fontWeight: 500, whiteSpace: 'nowrap' }}>{contaNome}</div>
+          {/* Só o NOME some quando a barra recolhe. O "Sair" continua, porque
+              esconder a saída da conta atrás de outra tela é o tipo de coisa
+              que ninguém percebe até precisar. */}
+          <div
+            className="lateral-rodape-texto"
+            style={{ fontSize: 'var(--tipo-apoio)', fontWeight: 500, whiteSpace: 'nowrap' }}
+          >
+            {contaNome}
+          </div>
           <form action="/api/sair" method="post">
             <button
               type="submit"

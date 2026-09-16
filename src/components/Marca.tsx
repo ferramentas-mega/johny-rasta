@@ -40,7 +40,7 @@ export function Marca({ compacto = false }: { compacto?: boolean }) {
         &gt;_
       </span>
       {!compacto && (
-        <div style={{ minWidth: 0 }}>
+        <div className="marca-texto" style={{ minWidth: 0 }}>
           <div style={{ fontSize: 'var(--tipo-secao)', fontWeight: 600, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
             Painel de Sites
           </div>

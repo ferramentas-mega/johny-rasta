@@ -276,3 +276,54 @@ test('no celular, sair da conta continua possível — pelas Configurações', a
   await page.waitForURL('**/entrar**');
   await expect(page.locator('input[name=email]')).toBeVisible();
 });
+
+test.describe('barra lateral recolhível', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('recolher persiste entre recarregamentos, e o menu continua navegável só pelo teclado', async ({ page }) => {
+    await entrar(page);
+    await page.goto('/visao-geral');
+
+    const barra = page.locator('aside.lateral');
+    expect((await barra.boundingBox())!.width).toBeGreaterThan(200);
+
+    await page.getByRole('button', { name: 'Recolher menu' }).click();
+    await expect.poll(async () => (await barra.boundingBox())!.width).toBeLessThan(80);
+
+    // A preferência sobrevive ao recarregamento, e é aplicada ANTES da pintura:
+    // se ela dependesse da hidratação, a barra nasceria aberta e encolheria.
+    await page.reload();
+    await expect.poll(async () => (await barra.boundingBox())!.width).toBeLessThan(80);
+
+    // Recolhida, o rótulo sai da TELA mas continua no nome acessível — senão o
+    // leitor de tela anunciaria seis links sem rótulo.
+    //
+    // `toHaveAccessibleName` e não `getByRole(...).toBeVisible()`: a primeira
+    // versão deste teste usava a segunda e PASSOU com `display: none` no
+    // rótulo, que é exatamente o defeito que ela deveria pegar. Um seletor que
+    // encontra o elemento por outro caminho não prova nome acessível nenhum.
+    const linkClientes = page.locator('aside.lateral .item-menu[data-rotulo="Clientes"]');
+    await expect(linkClientes).toHaveAccessibleName(/Clientes/);
+
+    // E o nome precisa vir do RÓTULO, não do `::after` da dica.
+    //
+    // Medido: com `display: none` no rótulo o teste acima continuava passando,
+    // porque conteúdo gerado (`content: attr(data-rotulo)`) entra no cálculo do
+    // nome acessível. São dois mecanismos, e depender do segundo seria apoiar
+    // acessibilidade num detalhe de pintura — o dia em que a dica mudar de
+    // técnica, seis links ficam sem nome e nada acusa.
+    await expect(linkClientes.locator('.rotulo-menu')).not.toHaveCSS('display', 'none');
+
+    // E a saída da conta continua alcançável: escondê-la atrás de outra tela é
+    // o tipo de coisa que ninguém percebe até precisar.
+    await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible();
+
+    // Navegação por teclado com a barra recolhida.
+    await page.getByRole('link', { name: /Sites/ }).focus();
+    await page.keyboard.press('Enter');
+    await page.waitForURL(/\/sites/);
+
+    await page.getByRole('button', { name: 'Expandir menu' }).click();
+    await expect.poll(async () => (await barra.boundingBox())!.width).toBeGreaterThan(200);
+  });
+});
