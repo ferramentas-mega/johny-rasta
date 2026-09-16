@@ -123,6 +123,41 @@ test('as correções elegíveis aparecem, separadas do que é só informação',
   expect(corpo).toMatch(/As economias não se somam/i);
 });
 
+test('a evidência mostra a série, e o buraco não vira queda', async ({ page }) => {
+  /*
+   * `lighthouse_results` e `crux_snapshots` gravam linha nova a cada coleta de
+   * propósito, com o comentário dizendo que é para poder comparar a evolução —
+   * e TODA consulta do projeto lia `distinct on (…)`. O histórico era guardado
+   * para uma comparação que nenhuma tela fazia.
+   *
+   * A massa traz cinco medições da home no celular, uma delas SEM nota. É o
+   * caso que decide: com o buraco desenhado como zero, a linha desceria até a
+   * base e voltaria — contando um colapso que nunca houve.
+   */
+  await page.goto('/sites');
+  const site = await page
+    .locator('.cartao-site', { hasText: 'alfa.teste' })
+    .locator('a[href*="/desempenho"]')
+    .first()
+    .getAttribute('href');
+  await page.goto(`/sites/${site!.split('/')[2]}/qualidade`);
+
+  const painel = page.locator('section', { hasText: 'Evidências de desempenho' }).first();
+  await expect(painel).toBeVisible();
+
+  const cartao = painel.locator('[data-serie="https://alfa.teste/|mobile|nota"]');
+  await expect(cartao).toContainText('5 medição(ões)');
+  await expect(cartao).toContainText('1 sem valor');
+  // De 22 a 34: a régua é a faixa da própria série, não 0–100.
+  await expect(cartao).toContainText('22/100 – 34/100');
+
+  // A linha está PARTIDA: dois traços, não um só atravessando o buraco.
+  await expect(cartao.locator('svg path')).toHaveCount(2);
+
+  // E a comparação é entre a primeira e a última COM valor.
+  await expect(cartao).toContainText('+12 da primeira à última medição');
+});
+
 test('sem análise, a tela diz que não há — e não mostra nota zerada', async ({ page }) => {
   await page.goto('/sites');
   const href = await page.locator('.cartao-site a[href*="/desempenho"]').first().getAttribute('href');

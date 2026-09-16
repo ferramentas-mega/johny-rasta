@@ -3,6 +3,8 @@ import { withAccount } from '@/server/db';
 import { exigirSessao } from '@/server/contexto';
 import { obterSite, listarSites } from '@/server/services/sites';
 import {
+  historicoDeAnalises,
+  historicoDeCampo,
   ultimasAnalises,
   ultimasAuditorias,
   ultimosCrux,
@@ -16,9 +18,19 @@ import { Painel, Aviso } from '@/components/Cartoes';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { SeletorSiteRota } from '@/components/filtros';
 import { Correcoes } from '@/components/Correcoes';
+import { Evidencias, type SerieDeEvidencia } from '@/components/Evidencias';
 import { PainelDeAnalise } from './PainelDeAnalise';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Quantas medições cada série mostra.
+ *
+ * Teto para a tela não crescer sem limite num site monitorado há meses — e a
+ * própria série diz "12 de 37" quando corta, porque lista cortada em silêncio
+ * parece completa.
+ */
+const MEDICOES_NA_EVIDENCIA = 12;
 
 type UrlMonitorada = { id: string; url: string; prioritaria: boolean };
 type Job = { id: string; url: string; strategy: string; status: string; erro: string | null; criado_em: Date };
@@ -43,13 +55,16 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
   if (!site) notFound();
   const sites = await listarSites(usuario.accountId);
 
-  const { urls, analises, auditorias, fila, campo } = await withAccount(usuario.accountId, async (db) => ({
+  const { urls, analises, auditorias, historico, campoHistorico, fila, campo } =
+    await withAccount(usuario.accountId, async (db) => ({
     urls: await db.query<UrlMonitorada>(
       'select id, url, prioritaria from monitored_urls where site_id = $1 order by prioritaria desc, url',
       [siteId],
     ),
     analises: await ultimasAnalises(db, siteId),
     auditorias: await ultimasAuditorias(db, siteId),
+    historico: await historicoDeAnalises(db, siteId, MEDICOES_NA_EVIDENCIA),
+    campoHistorico: await historicoDeCampo(db, siteId, MEDICOES_NA_EVIDENCIA),
     campo: await ultimosCrux(db, siteId),
     fila: await db.query<Job>(
       `select id, url, strategy, status, erro, criado_em from audit_jobs
@@ -94,6 +109,91 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
         </span>
       ) },
   ];
+
+  /**
+   * As séries de laboratório, uma por (URL, dispositivo) e por métrica.
+   *
+   * Nota e LCP viram séries separadas porque a direção de cada uma é oposta:
+   * nota subindo é melhora, LCP subindo é piora. Uma série só, com as duas,
+   * teria de escolher uma direção e mentir sobre a outra.
+   */
+  const dePar = new Map<string, typeof historico.pontos>();
+  for (const p of historico.pontos) {
+    const chave = `${p.url_solicitada}|${p.strategy}`;
+    dePar.set(chave, [...(dePar.get(chave) ?? []), p]);
+  }
+
+  const caminho = (url: string) => url.replace(/^https?:\/\/[^/]+/, '') || '/';
+  const aparelho = (s: string) => (s === 'mobile' ? 'celular' : 'computador');
+
+  const seriesLaboratorio: SerieDeEvidencia[] = [...dePar.entries()].flatMap(([chave, pontos]) => {
+    const [url, strategy] = chave.split('|') as [string, string];
+    const total = historico.totais.get(chave);
+    const base = { subtitulo: `${caminho(url)} · ${aparelho(strategy)}`, total };
+    return [
+      {
+        ...base,
+        chave: `${chave}|nota`,
+        titulo: 'Desempenho',
+        unidade: 'nota' as const,
+        maiorEhMelhor: true,
+        // `paraCem` e não `* 100` solto: a conversão de 0–1 para 0–100 mora num
+        // lugar só, e ela devolve null quando não há nota.
+        pontos: pontos.map((p) => ({
+          valor: p.performance === null ? null : paraCem(Number(p.performance)),
+          em: p.medido_em,
+        })),
+      },
+      {
+        ...base,
+        chave: `${chave}|lcp`,
+        titulo: 'LCP (laboratório)',
+        unidade: 'ms' as const,
+        maiorEhMelhor: false,
+        pontos: pontos.map((p) => ({
+          valor: p.lcp_ms === null ? null : Number(p.lcp_ms),
+          em: p.medido_em,
+        })),
+      },
+    ];
+  });
+
+  /** As de campo, separadas das de laboratório — e nunca no mesmo painel. */
+  const deAlvo = new Map<string, typeof campoHistorico>();
+  for (const p of campoHistorico) {
+    const chave = `${p.alvo}|${p.escopo}|${p.form_factor}`;
+    deAlvo.set(chave, [...(deAlvo.get(chave) ?? []), p]);
+  }
+
+  const seriesCampo: SerieDeEvidencia[] = [...deAlvo.entries()].flatMap(([chave, pontos]) => {
+    const primeiro = pontos[0]!;
+    const escopo = primeiro.escopo === 'url' ? 'esta página' : 'origem — site inteiro';
+    const base = {
+      subtitulo: `${caminho(primeiro.alvo)} · ${primeiro.form_factor === 'PHONE' ? 'celular' : 'computador'} · ${escopo}`,
+      maiorEhMelhor: false,
+      unidade: 'ms' as const,
+    };
+    return [
+      {
+        ...base,
+        chave: `${chave}|lcp`,
+        titulo: 'LCP (campo, p75)',
+        pontos: pontos.map((p) => ({
+          valor: p.lcp_p75_ms === null ? null : Number(p.lcp_p75_ms),
+          em: p.coletado_em,
+        })),
+      },
+      {
+        ...base,
+        chave: `${chave}|inp`,
+        titulo: 'INP (campo, p75)',
+        pontos: pontos.map((p) => ({
+          valor: p.inp_p75_ms === null ? null : Number(p.inp_p75_ms),
+          em: p.coletado_em,
+        })),
+      },
+    ];
+  });
 
   const colunasFila: Coluna<Job>[] = [
     { chave: 'url', titulo: 'URL', render: (j) => <span className="mono" style={{ fontSize: 12 }}>{j.url.replace(/^https?:\/\/[^/]+/, '') || '/'}</span> },
@@ -143,6 +243,40 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
             Uma análise da Home não representa as demais páginas: monitore cada URL que importa.
           </p>
         </Painel>
+
+        <Painel
+          titulo="Evidências de desempenho"
+          subtitulo="A série de medições por trás de cada afirmação — laboratório"
+        >
+          <Evidencias series={seriesLaboratorio} />
+          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 12, lineHeight: 1.6 }}>
+            Cada linha é a sequência de análises daquela página naquele dispositivo, do mais antigo
+            para o mais recente. <strong>Medição ausente interrompe a linha</strong> em vez de descer
+            até o chão: falta de medição não é desempenho zero.
+            A régua vertical é a faixa da própria série, não 0–100 — é o que torna visível uma
+            diferença de quatro pontos, e é por isso que os extremos vêm escritos embaixo.
+            Uma medição só não tem variação: a resposta é &quot;sem base comparável&quot;, nunca 0.
+            E a série <strong>não explica</strong> o que mudou entre duas medições — ela mostra que
+            mudou, e quando.
+          </p>
+        </Painel>
+
+        {seriesCampo.length > 0 && (
+          <Painel
+            titulo="Evidências de experiência real"
+            subtitulo="A mesma série, do lado do campo — e nunca misturada com a de laboratório"
+          >
+            <Evidencias series={seriesCampo} />
+            <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 12, lineHeight: 1.6 }}>
+              Painel separado de propósito: neste projeto a mesma página deu LCP de 12,0 s no
+              laboratório e 3,2 s no campo, e os dois estão certos. Pôr as duas séries no mesmo
+              gráfico faria uma parecer correção da outra.
+              Cada ponto é uma janela de cerca de 28 dias do CrUX, então pontos vizinhos
+              <strong> compartilham visitantes</strong> — a linha se move mais devagar que a de
+              laboratório, e isso é da medição, não do site.
+            </p>
+          </Painel>
+        )}
 
         <Painel
           titulo="Correções elegíveis"

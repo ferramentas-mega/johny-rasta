@@ -359,6 +359,43 @@ export async function prepararBancoDeTeste(): Promise<void> {
     );
   }
 
+  /**
+   * A SÉRIE de medições da mesma página — a evidência.
+   *
+   * Quatro análises da mesma (URL, dispositivo), da mais antiga para a mais
+   * recente, e uma delas **sem nota**: é o caso que a tela existe para desenhar
+   * direito, porque medição ausente tem de interromper a linha em vez de descer
+   * até o chão. Sem um buraco na massa, o desenho certo e o errado produzem a
+   * mesma figura e o teste de navegador não decide nada.
+   *
+   * A última continua sendo a de `semearAuditorias` (0,34 há dois dias), então
+   * o sinal de Otimizações não muda.
+   */
+  async function semearSerieDeDesempenho(accountId: string, siteId: string) {
+    /*
+     * O buraco fica no MEIO, com dois pontos de cada lado, para a série partir
+     * em dois traços. Posto na segunda posição, o primeiro trecho teria um
+     * ponto só e viraria um círculo isolado — comportamento correto, mas que
+     * não exercita a quebra da linha, que é o que a tela precisa acertar.
+     */
+    const pontos: [nota: number | null, lcp: number | null, diasAtras: number][] = [
+      [0.22, 15400, 30],
+      [0.25, 14700, 23],
+      [null, null, 16],
+      [0.28, 13100, 9],
+    ];
+    for (const [nota, lcp, dias] of pontos) {
+      await db.query(
+        `insert into lighthouse_results
+           (account_id, site_id, url_solicitada, url_final, strategy, lighthouse_version,
+            performance, lcp_ms, medido_em)
+         values ($1, $2, 'https://alfa.teste/', 'https://alfa.teste/', 'mobile', '13.4.1',
+                 $3, $4, now() - make_interval(days => $5::int))`,
+        [accountId, siteId, nota, lcp, dias],
+      );
+    }
+  }
+
   async function criarCliente(accountId: string, nome: string) {
     const id = randomUUID();
     await db.query('insert into clients (id, account_id, name) values ($1, $2, $3)', [id, accountId, nome]);
@@ -444,6 +481,7 @@ export async function prepararBancoDeTeste(): Promise<void> {
   await semear(agencia, clienteDois, beta, SESSOES_BETA);
   await semearResolvidaPorVerificacao(agencia, alfa);
   await semearAuditorias(agencia, alfa);
+  await semearSerieDeDesempenho(agencia, alfa);
 
   const rival = await criarConta(CONTAS.rival.nome, CONTAS.rival.email);
   const clienteRival = await criarCliente(rival, 'Cliente Rival');

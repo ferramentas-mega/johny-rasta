@@ -336,6 +336,93 @@ export async function ultimasAuditorias(
   );
 }
 
+/**
+ * A SÉRIE de medições de cada (URL, dispositivo) — a evidência, não o último número.
+ *
+ * `lighthouse_results` grava uma linha nova a cada análise de propósito, e o
+ * comentário de `registrarSucesso` diz por quê. Só que toda consulta do projeto
+ * lia `distinct on (…)`: o histórico era guardado para uma comparação que
+ * nenhuma tela fazia.
+ *
+ * O teto por par existe para a tela não crescer sem limite, e quem chama
+ * DEVOLVE o total junto — uma lista cortada em silêncio parece completa. É o
+ * mesmo motivo pelo qual as auditorias informativas aparecem contadas em vez de
+ * sumirem.
+ */
+export type PontoDeAnalise = {
+  url_solicitada: string;
+  strategy: Estrategia;
+  performance: string | null;
+  lcp_ms: string | null;
+  tbt_ms: string | null;
+  cls: string | null;
+  medido_em: Date;
+};
+
+export async function historicoDeAnalises(
+  db: Queryable,
+  siteId: string,
+  porPar: number,
+): Promise<{ pontos: PontoDeAnalise[]; totais: Map<string, number> }> {
+  const pontos = await db.query<PontoDeAnalise & { posicao: string }>(
+    `select url_solicitada, strategy, performance, lcp_ms, tbt_ms, cls, medido_em
+       from (
+         select *, row_number() over (
+                     partition by url_solicitada, strategy order by medido_em desc
+                   ) as posicao
+           from lighthouse_results
+          where site_id = $1
+       ) t
+      where posicao <= $2::int
+      order by url_solicitada, strategy, medido_em`,
+    [siteId, porPar],
+  );
+
+  const contagens = await db.query<{ url_solicitada: string; strategy: Estrategia; total: string }>(
+    `select url_solicitada, strategy, count(*) as total
+       from lighthouse_results
+      where site_id = $1
+      group by url_solicitada, strategy`,
+    [siteId],
+  );
+
+  return {
+    pontos,
+    totais: new Map(contagens.map((c) => [`${c.url_solicitada}|${c.strategy}`, Number(c.total)])),
+  };
+}
+
+/** A série de campo. Mesmo desenho, e nunca misturada com a de laboratório. */
+export type PontoDeCampo = {
+  alvo: string;
+  escopo: 'url' | 'origem';
+  form_factor: string;
+  lcp_p75_ms: string | null;
+  inp_p75_ms: string | null;
+  cls_p75: string | null;
+  coletado_em: Date;
+};
+
+export async function historicoDeCampo(
+  db: Queryable,
+  siteId: string,
+  porAlvo: number,
+): Promise<PontoDeCampo[]> {
+  return db.query<PontoDeCampo>(
+    `select alvo, escopo, form_factor, lcp_p75_ms, inp_p75_ms, cls_p75, coletado_em
+       from (
+         select *, row_number() over (
+                     partition by alvo, escopo, form_factor order by coletado_em desc
+                   ) as posicao
+           from crux_snapshots
+          where site_id = $1
+       ) t
+      where posicao <= $2::int
+      order by alvo, escopo, form_factor, coletado_em`,
+    [siteId, porAlvo],
+  );
+}
+
 // ───────────────────────────── experiência real (CrUX) ─────────────────────────────
 
 export type SnapshotCrux = {

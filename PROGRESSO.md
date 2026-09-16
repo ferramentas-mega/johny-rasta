@@ -19,7 +19,7 @@ Quem continuar: leia isto antes do `CLAUDE.md`.
 | 8 | Inventário de tags e botões | **feito** — estados por botão, ação sugerida e detecção de tag duplicada |
 | 9 | Automação de otimização | **feito** — fechamento por medição, reanálise enfileirada, varredura diária |
 | 10 | Correções elegíveis | **feito** — auditorias do Lighthouse por URL e dispositivo |
-| 11 | Evidências de desempenho | não iniciado |
+| 11 | Evidências de desempenho | **feito** — série por URL e dispositivo, laboratório e campo |
 | 12 | UI/UX | parcial — celular, cartões, navegação e funil de leads feitos |
 | 13 | Replay/heatmap (futuro) | não iniciado, por último |
 | 14 | Testes exigidos | parcial |

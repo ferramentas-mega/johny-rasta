@@ -118,6 +118,18 @@ mais importante da página. E auditoria sem NOTA é informativa, não pendência
 dado e não emite veredito; ela fica fora da lista, com a contagem à vista, porque descartar em
 silêncio faria a lista parecer completa.
 
+**Histórico guardado que ninguém lê é histórico que não existe.** `lighthouse_results` e
+`crux_snapshots` gravam linha nova a cada coleta de propósito — e por muito tempo TODA consulta do
+projeto leu `distinct on (…)`: a última de cada par, e nada mais. As evidências
+(`src/lib/evidencias.ts`) mostram a série. Três regras ali: **buraco é buraco, nunca zero** (medição
+ausente interrompe a linha; ligada ao ponto seguinte, desenharia uma queda até o chão que não houve,
+e gráfico é lido pela forma); **um ponto não tem variação** (sem base comparável, nunca 0%); e a
+**direção depende da métrica** — nota subindo é melhora, LCP subindo é piora, e quem chama informa
+qual é o caso, porque inferir pelo nome da coluna erra em silêncio no dia em que a coluna mudar. A
+régua vertical é a faixa da própria série, não 0–100: contra 0–100 uma diferença de quatro pontos
+some, e é justamente ela que a evidência existe para mostrar. Laboratório e campo ficam em painéis
+separados, pela regra de sempre.
+
 **Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
 não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
 eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou
