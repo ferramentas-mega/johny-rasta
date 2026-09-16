@@ -178,6 +178,31 @@ textos**: faltava `--neg-bg`, e era justamente por isso que os componentes escre
 mão. Ao acrescentar conferência a um verificador, pergunte primeiro o que ele **já deveria** estar
 pegando e não pega.
 
+**Analise o HTML ENTREGUE, não o CSS da ferramenta que o gerou.** Errei isto uma vez e custou uma
+rodada inteira: chegou o pacote publicado de uma landing page para extrair o design, e eu analisei o
+CSS do **aplicativo no-code** que a empacotou — achei os tokens de fábrica do shadcn, acromáticos, e
+conclui que "a paleta não era nada". Era verdade sobre o editor e irrelevante sobre a página. Num
+pacote exportado, o `index.html` é o documento; `assets/*.css` pode ser o editor inteiro. Medida a
+página de verdade, a linguagem estava lá: peso 300 dominante, trilha fechada no grande, caixa-alta
+espaçada, pílula em tudo, raio generoso, superfície levantada, borda de acento em alfa baixo.
+Traduzida para cá, virou `--peso-leve` no `h1` e nos números, `--trilha-fechada`, `--raio-g`,
+`--lustro` e a classe `.cartao` com a **costura** (filete de luz de 1px na metade central da borda
+superior, num `::before` contido por `overflow: hidden`). `--card` NÃO mudou: os valores vêm do
+protótipo, e o levantamento entra por cima.
+
+**Peso leve só em tamanho GRANDE, e o verificador não pega isso.** Peso fino reduz o contraste
+PERCEBIDO, e a WCAG não desconta — a medição passa e o olho reprova. Vale para `--tipo-display`,
+`--tipo-numero` e `--tipo-heroico`; legenda e corpo continuam no peso normal. Conferido por controle
+negativo: pôr `--peso-leve` num `--tipo-legenda` não acusa nada. É regra de revisão, não de
+ferramenta, e está escrita em vez de fingir cobertura.
+
+**Quem procura componente não encontra o que não é componente.** O cartão de número estava
+DESENHADO À MÃO dentro de três páginas — quatro `div` com o mesmo padding/raio/borda/fundo. Quando o
+tratamento de cartão mudou, ele ficou de fora, e a tela que o usuário abre primeiro foi justamente a
+que não mudou. É a regra de "recurso sem porta na tela" aplicada ao visual: se o padrão se repete em
+mais de um lugar, ele é componente (`CartaoNumero`), e o que não é componente escapa de toda
+mudança futura.
+
 **Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
 não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
 eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou

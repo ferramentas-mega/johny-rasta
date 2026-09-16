@@ -22,7 +22,7 @@ o sistema visual inteiro. Já aconteceu duas vezes nesta base (um funil e uma
 chuva Matrix): nas duas, aproveitar a ideia em SVG com os tokens do tema custou
 menos e não trouxe dependência.
 
-O sistema inteiro são **27 tokens**, definidos duas vezes em
+O sistema de COR são **35 tokens**, definidos duas vezes em
 `src/styles/theme.css` — uma por tema:
 
 | Grupo | Tokens |
@@ -32,6 +32,8 @@ O sistema inteiro são **27 tokens**, definidos duas vezes em
 | Texto | `--tx` `--tx2` `--tx3` |
 | Marca | `--gold` `--gold-fill` `--gold-tx` `--on-gold` |
 | Estado | `--pos` `--neg` `--pos-tx` `--neg-tx` `--ok-bg` `--ok-tx` `--soft-bg` `--soft-tx` `--warn-bg` `--warn-tx` |
+| Estado (cont.) | `--neg-bg` |
+| Elevação | `--sombra-1` `--sombra-2` `--sombra-cartao` `--lustro` `--costura` `--gold-bd` |
 | Fundos compostos | `--header-bg` `--brand-bg` |
 
 Os valores são os do protótipo, preservados de propósito — com as duas exceções
@@ -105,8 +107,8 @@ proposital, e é melhor que ela esteja escrita aqui do que pareça descuido.
 ## Contraste: 4,5:1, medido
 
 Veio de uma skill de UI genérica, e é o único critério dela que dá para
-**medir** em vez de opinar. O verificador confere 22 pares texto-sobre-fundo em
-cada tema, compondo fundo com alfa sobre `--bg` antes de calcular — `rgba(…,
+**medir** em vez de opinar. O verificador confere os pares texto-sobre-fundo em
+cada tema (23 pares), compondo fundo com alfa sobre `--bg` antes de calcular — `rgba(…,
 .12)` sobre preto não é a cor que se vê.
 
 Medido antes de a conferência existir: o tema **claro reprovava em sete pares**.
@@ -141,7 +143,7 @@ mesma coisa com pesos diferentes, sem que dê para apontar o quê. O caso mais
 claro era a sobrelinha caixa-alta — `11px/.1em` no cabeçalho de página,
 `10,5px/.12em` no de painel. Mesmo papel, quatro valores.
 
-Hoje são 9 tamanhos, 3 trilhas e 3 raios, em `:root` (não mudam com o tema:
+Hoje são 9 tamanhos, 4 trilhas, 4 raios e 3 pesos, em `:root` (não mudam com o tema:
 descrevem forma, não cor). **Valor cru reprova, e token fora do conjunto também**
 — `var(--tipo-medio)` não existe no CSS, o navegador ignora **em silêncio**, e o
 tamanho fica o herdado.
@@ -151,8 +153,23 @@ for papel novo, vira token com nome e comentário — foi assim que entrou
 `--tipo-heroico`, o `clamp` do número da tela de erro, usado num lugar só.
 Escala sem quem a defenda dura até a próxima tela.
 
-Componente: `Sobrelinha` (`src/components/Sobrelinha.tsx`) é o papel, com um
-tamanho só. O que varia é o tom — `marca` para página, `discreto` para painel.
+Duas exceções, e são a mesma ideia — não é valor de escala, é outra coisa que
+por acaso mora na mesma propriedade: `borderRadius: '50%'` (geometria) e
+`letterSpacing: 'normal'` (RESET, um filho desfazendo a trilha fechada que
+herdou do pai).
+
+**Peso leve SÓ em tamanho grande** (`--tipo-display`, `--tipo-numero`,
+`--tipo-heroico`). Peso fino reduz o contraste PERCEBIDO, e a WCAG não desconta
+isso: a medição passa e o olho reprova. **O verificador NÃO pega isto** —
+conferido por controle negativo. É regra de revisão, e está escrita em vez de
+fingir cobertura.
+
+Componentes que existem para o papel não se repetir:
+`Sobrelinha` (rótulo caixa-alta, um tamanho, tom `marca` ou `discreto`),
+`CartaoNumero` (rótulo + número + a nota que diz o que ele não é) e a classe
+`.cartao`. O `CartaoNumero` nasceu de um achado: ele estava DESENHADO À MÃO
+dentro de três páginas, e por isso ficou de fora quando o tratamento de cartão
+mudou — **quem procura componente não encontra o que não é componente.**
 
 ---
 
@@ -182,43 +199,30 @@ estilo inline — inline vence classe.
 
 ---
 
-## Ao analisar um site "sofisticado" trazido de fora
+## Ao analisar um site trazido de fora
 
-Já aconteceu: chegou o pacote publicado de uma landing page (`signal-ai.aura.build`)
-com o pedido de extrair um sistema visual dela. O que a análise achou vale como
-método, porque a conclusão foi o oposto da expectativa.
+Já aconteceu duas vezes, e a primeira foi **errada** — o registro do erro vale mais que a conclusão.
 
-**A paleta não era nada.** Os tokens de tema eram o **padrão do shadcn**, sem
-alteração: `--background: 0 0% 100%`, `--primary: 0 0% 9%`, `--radius: .5rem`.
-Acromático inteiro, saturação zero em tudo menos no destrutivo. Não havia
-identidade de cor para copiar — havia a ausência dela.
+**O erro:** chegou o pacote publicado de uma landing page. Analisei o CSS do **aplicativo** que a
+empacotou (o editor no-code), achei os tokens padrão do shadcn — acromáticos, `--radius: .5rem` — e
+conclui que "a paleta não era nada". Era verdade sobre o editor e **irrelevante** sobre a página.
+Resultado: entreguei higiene estrutural e nenhuma mudança de aparência, que não era o pedido.
 
-**A sofisticação estava na forma**, e foi medível pela frequência das classes:
-`font-light` (248 usos) e `font-extralight` (46) em tamanhos grandes;
-`uppercase` + `tracking-widest` (62/56) nos rótulos minúsculos; `rounded-full`
-(126); bordas de um pixel em vez de preenchimento; `leading-relaxed`. Mais
-animações de ENTRADA (`blur-up`, `aura-modal-card-in`: desfoque + deslocamento +
-opacidade) e sombras **empilhadas com lábio `inset`**.
+**A regra que sai disso: analise o HTML ENTREGUE, não o CSS da ferramenta que o gerou.** Num pacote
+exportado, o `index.html` é o documento; `assets/*.css` pode ser o editor inteiro.
 
-O que veio para cá: a disciplina do conjunto pequeno de papéis, a entrada como
-desaceleração, e a sombra empilhada (adaptada — ver elevação acima).
+**O acerto**, medindo a página por frequência de classe: `font-light` 248× e `font-extralight` 46×
+contra 1 de `semibold`; `tracking-widest` 56×; `rounded-full` 126×; `leading-relaxed` 62×;
+superfícies `bg-zinc-900/50`; bordas de acento em `-500/20`. E duas receitas literais — o número
+(`text-7xl font-light tracking-tighter text-emerald-400` + `drop-shadow` verde) e o cartão
+(`rounded-2xl` + sombra interna funda + hairline em gradiente no topo).
 
-O que **não** veio, e o motivo:
+A coincidência que tornou a adaptação natural: **o número de destaque dela já era verde com
+brilho**, que é o que este projeto sempre teve. Faltava peso, trilha e raio — não cor.
 
-- **A paleta acromática e a Inter em peso 200.** Trocaria a identidade do
-  produto por uma que o zip nem tinha de propósito.
-- **`font-light`/`extralight` em texto pequeno.** Peso fino reduz o contraste
-  percebido, e a WCAG não desconta isso — o par passaria na medição e falharia
-  no olho. Este painel é feito de legenda pequena.
-- **`backdrop-filter: blur()` sobre dado.** O verificador compõe fundo com alfa
-  sobre `--bg` para medir contraste; um fundo borrado torna a composição
-  imprevisível, e a medição deixa de valer.
-- **Tailwind e shadcn.** Não existem aqui, e a CSP recusa script de CDN.
-
-A pergunta que essa análise deixa, e que serve para o próximo pacote: **o que
-neste material é medível, e o que é só a impressão que ele causa?** Frequência
-de classe, contagem de valores distintos e razão de contraste são medíveis.
-"Parece sofisticado" não é.
+O método, para o próximo pacote: **o que aqui é medível, e o que é só a impressão que causa?**
+Frequência de classe, contagem de valores distintos e razão de contraste são medíveis. "Parece
+sofisticado" não é.
 
 ---
 

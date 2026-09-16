@@ -34,8 +34,26 @@ export function CartaoIndicador({
 
   const conteudo = (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--tx2)', fontSize: 'var(--tipo-corpo)' }}>
-        <Icone nome={icone} tamanho={15} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--tx2)', fontSize: 'var(--tipo-corpo)' }}>
+        {/* Ladrilho, e não ícone solto. Na referência todo ícone vive num
+            quadrado com preenchimento e borda de acento em alfa baixo — é o que
+            dá peso ao canto do cartão sem competir com o número. */}
+        <span
+          style={{
+            flex: 'none',
+            width: 26,
+            height: 26,
+            borderRadius: 'var(--raio-p)',
+            background: 'var(--ok-bg)',
+            border: '1px solid var(--gold-bd)',
+            color: 'var(--gold-tx)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icone nome={icone} tamanho={14} />
+        </span>
         <span>{rotulo}</span>
         <span
           title={ajuda}
@@ -68,7 +86,20 @@ export function CartaoIndicador({
       <div
         className="mono"
         data-testid={`kpi-valor-${chave}`}
-        style={{ fontSize: 'var(--tipo-numero)', fontWeight: 500, letterSpacing: 'var(--trilha-justa)', margin: '10px 0 6px', color: 'var(--tx)' }}
+        /* A receita literal da referência:
+             text-7xl font-light tracking-tighter text-emerald-400 leading-none
+             drop-shadow-[0_0_12px_rgba(52,211,153,.6)]
+           Peso 300 com trilha fechada — em peso leve a letra solta desmancha o
+           número. O verde com brilho já era nosso; o que faltava era o peso. */
+        style={{
+          fontSize: 'var(--tipo-numero)',
+          fontWeight: 'var(--peso-leve)',
+          letterSpacing: 'var(--trilha-fechada)',
+          lineHeight: 1,
+          margin: '14px 0 8px',
+          color: 'var(--gold-tx)',
+          textShadow: 'var(--glow)',
+        }}
       >
         {valor}
       </div>
@@ -81,31 +112,78 @@ export function CartaoIndicador({
   const estilo = {
     display: 'block',
     padding: '18px 18px 16px',
-    borderRadius: 'var(--raio-m)',
-    border: `1px solid ${destaque ? 'var(--gold)' : 'var(--bdc)'}`,
+    // Raio e borda vêm da classe `.cartao`; o destaque só REFORÇA a borda.
+    ...(destaque ? { border: '1px solid var(--gold)' } : null),
     // `var(--gold-fill)`, e não a cor escrita à mão que estava aqui
     // (`rgba(112,255,139,.10)`): aquele é o verde do tema ESCURO, e ele não
     // trocava no claro — o cartão de destaque puxava para um verde que não é o
     // da paleta clara. Não dava erro, e o verificador não pegava: ele conferia
     // hexadecimal, e isto é `rgba`. Hoje confere os dois.
-    background: destaque
-      ? 'linear-gradient(180deg, var(--gold-fill), var(--card) 62%)'
-      : 'var(--card)',
+    ...(destaque
+      ? { background: 'linear-gradient(180deg, var(--gold-fill), var(--card) 62%)' }
+      : null),
     textDecoration: 'none',
     color: 'inherit',
-    boxShadow: 'var(--sombra-1)',
   } as const;
 
   // A classe existe só pelo que estilo inline não faz: `:hover`. O cartão que
   // LEVA a algum lugar sobe ao nível 2 quando apontado; o que não leva fica
   // parado, porque movimento sem destino promete clique que não existe.
   return href ? (
-    <Link href={href} className="cartao-elevado" data-testid={`kpi-${chave}`} style={estilo}>
+    <Link href={href} className="cartao cartao-elevado" data-testid={`kpi-${chave}`} style={estilo}>
       {conteudo}
     </Link>
   ) : (
-    <div data-testid={`kpi-${chave}`} style={estilo}>
+    <div className="cartao" data-testid={`kpi-${chave}`} style={estilo}>
       {conteudo}
+    </div>
+  );
+}
+
+/**
+ * Cartão de número simples: rótulo, valor e uma nota que diz o que ele NÃO é.
+ *
+ * Existia desenhado à mão dentro das páginas — quatro `div` com o mesmo
+ * `padding/raio/borda/fundo` repetidos —, e foi exatamente por isso que ele
+ * ficou de fora quando o tratamento de cartão mudou: quem procura componente
+ * não encontra o que não é componente. É o mesmo defeito que este projeto já
+ * registrou para Server Action sem porta na tela, aplicado ao visual.
+ *
+ * A nota não é enfeite. "clique não é conversa iniciada" é o que impede o
+ * número de ser lido como outra coisa, e há prova de navegador exigindo essas
+ * frases.
+ */
+export function CartaoNumero({
+  rotulo,
+  valor,
+  nota,
+  tom = 'neutro',
+}: {
+  rotulo: string;
+  valor: string;
+  nota: string;
+  tom?: 'neutro' | 'atencao';
+}) {
+  return (
+    <div className="cartao" style={{ padding: '16px 18px' }}>
+      <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{rotulo}</div>
+      {/* A receita do número da referência: peso leve, trilha fechada, verde
+          com brilho. */}
+      <div
+        className="mono"
+        style={{
+          fontSize: 'var(--tipo-numero)',
+          fontWeight: 'var(--peso-leve)',
+          letterSpacing: 'var(--trilha-fechada)',
+          lineHeight: 1,
+          margin: '10px 0 6px',
+          color: tom === 'atencao' ? 'var(--warn-tx)' : 'var(--gold-tx)',
+          textShadow: 'var(--glow)',
+        }}
+      >
+        {valor}
+      </div>
+      <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{nota}</div>
     </div>
   );
 }
@@ -124,18 +202,7 @@ export function Painel({
   children: React.ReactNode;
 }) {
   return (
-    <section
-      style={{
-        border: '1px solid var(--bd)',
-        borderRadius: 'var(--raio-m)',
-        background: 'var(--card)',
-        padding: '18px 18px 20px',
-        // Elevação de repouso. No escuro é um filete de luz na borda de cima;
-        // no claro, sombra empilhada com lábio na base. Os dois vivem no mesmo
-        // token porque o PAPEL é um só — "esta superfície está acima do fundo".
-        boxShadow: 'var(--sombra-1)',
-      }}
-    >
+    <section className="cartao" style={{ padding: '18px 18px 20px' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
         <div style={{ minWidth: 0 }}>
           {kicker && <Sobrelinha tom="discreto">{kicker}</Sobrelinha>}
@@ -162,6 +229,10 @@ export function Aviso({ children, tom = 'soft' }: { children: React.ReactNode; t
         padding: '8px 12px',
         borderRadius: 'var(--raio-pilula)',
         background: fundo,
+        /* A pílula da referência tem SEMPRE borda de acento em alfa baixo
+           (`border-<cor>-500/20`) por cima do preenchimento. Preenchimento
+           sozinho vira mancha; a borda é o que dá a aresta. */
+        border: `1px solid ${tom === 'ok' ? 'var(--gold-bd)' : 'var(--bd)'}`,
         color: cor,
         fontSize: 'var(--tipo-legenda)',
         letterSpacing: 'var(--trilha-media)',

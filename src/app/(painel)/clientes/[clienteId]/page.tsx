@@ -8,7 +8,7 @@ import { ESTADO_LABEL, ESTADO_TOM } from '@/server/services/sites';
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { num, pct } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
-import { Painel, Aviso } from '@/components/Cartoes';
+import { Painel, Aviso, CartaoNumero } from '@/components/Cartoes';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { SeletorPeriodo } from '@/components/filtros';
 import { parsePeriodParams, type PeriodKey } from '@/lib/periodo';
@@ -148,11 +148,7 @@ export default async function PaginaCliente({
 
         <div className="grade-cartoes">
           {cartoes.map((c) => (
-            <div key={c.rotulo} style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
-              <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{c.rotulo}</div>
-              <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>{c.valor}</div>
-              <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{c.nota}</div>
-            </div>
+            <CartaoNumero key={c.rotulo} rotulo={c.rotulo} valor={c.valor} nota={c.nota} />
           ))}
         </div>
 

@@ -76,11 +76,12 @@ Hoje o conjunto é **fechado** e `npm run design` reprova o que estiver fora del
 | `--tipo-secao` | 16px | título de painel |
 | `--tipo-titulo` | 20px | título de bloco |
 | `--tipo-display` | 28px | `h1` de página |
-| `--tipo-numero` | 32px | o número de um indicador |
+| `--tipo-numero` | 40px | o número de um indicador |
 | `--tipo-heroico` | `clamp(4.5rem, 22vw, 9rem)` | código de tela de erro, e só |
 
-Mais `--trilha-ampla` · `--trilha-media` · `--trilha-justa`, e `--raio-p` · `--raio-m` ·
-`--raio-pilula`.
+Mais `--trilha-ampla` · `--trilha-media` · `--trilha-justa` · `--trilha-fechada`, e `--raio-p` ·
+`--raio-m` · `--raio-g` · `--raio-pilula`. Peso também é token: `--peso-leve` · `--peso-medio` ·
+`--peso-forte`.
 
 Três decisões que não são arredondamento:
 
@@ -125,6 +126,79 @@ parecer que **parou**, em vez de ter sido interrompida.
 
 O bloco `prefers-reduced-motion` no topo do `theme.css` continua zerando todas — e há prova de
 navegador que falha se um efeito novo ignorar isso.
+
+---
+
+## O vocabulário extraído da referência
+
+A escala fechada (acima) resolveu **consistência**. Isto resolve **aparência** — e veio de uma
+página de referência (`signal-ai`), medida por frequência de classe, não por impressão.
+
+Um registro de erro antes: na primeira tentativa analisei o CSS do **aplicativo** que empacotou a
+página, e não a página. Achei os tokens padrão do shadcn (acromáticos, `--radius: .5rem`) e conclui
+que "a paleta não era nada". Era verdade sobre o editor e irrelevante sobre o documento. **Ao
+analisar um site exportado, analise o HTML entregue — não o CSS da ferramenta que o gerou.**
+
+O que a página de fato usa:
+
+| Traço | Evidência | O que virou aqui |
+|---|---|---|
+| Peso leve domina | `font-light` 248× · `extralight` 46× · `semibold` 1× | `--peso-leve` no `h1` e nos números |
+| Trilha fechada no grande | `tracking-tight` 36× · `tighter` 7× | `--trilha-justa` · `--trilha-fechada` |
+| Rótulo caixa-alta espaçado | `tracking-widest` 56× | `Sobrelinha`, com brilho tênue |
+| Pílula em tudo | `rounded-full` 126× | `--raio-pilula` em selo e aviso |
+| Raio generoso no cartão | `rounded-2xl` · `[20px]` · `[32px]` | `--raio-g` (16px) |
+| Superfície levantada | `bg-zinc-900/50` + `backdrop-blur` | `--lustro` sobre `--card` |
+| Borda de acento em alfa baixo | `border-<cor>-500/20` | `--gold-bd` |
+| Leitura folgada | `leading-relaxed` 62× | `line-height: 1.6` no corpo |
+
+### As duas receitas literais
+
+**O número.** Na referência:
+
+```
+text-7xl font-light tracking-tighter text-emerald-400 leading-none
+drop-shadow-[0_0_12px_rgba(52,211,153,.6)]
+```
+
+A coincidência que tornou isto natural: **o número de destaque dela já era verde com brilho.** Nós
+já tínhamos `--gold-tx` e `--glow`. O que faltava não era cor — era peso e trilha. Hoje o número é
+`--tipo-numero` (40px) em `--peso-leve` com `--trilha-fechada`, verde, com brilho.
+
+**O cartão.** Na referência:
+
+```
+bg-zinc-900/50 rounded-2xl border border-zinc-800
+shadow-[inset_0_1px_10px_rgba(0,0,0,1), 0_1px_0_rgba(255,255,255,.05)]
++ hairline em gradiente atravessando o topo, sumindo nas pontas
+```
+
+Virou a classe `.cartao`: raio 16, `--sombra-cartao` (profundidade por dentro), e a **costura** —
+um filete de luz de 1px cobrindo a metade central da borda superior, num `::before`, com
+`overflow: hidden` para não vazar pelas quinas. Medido no navegador: 134,75px sobre um cartão de
+271,5px, gradiente verde sumindo nas duas pontas.
+
+`--card` **não mudou**. Os valores vêm do protótipo, e trocá-los mudaria toda superfície de uma vez;
+o levantamento entra por cima, num gradiente que morre em 45%.
+
+### A regra de peso, e o que ela não cobre
+
+**Peso leve só em tamanho grande** — `--tipo-display`, `--tipo-numero`, `--tipo-heroico`. Peso fino
+reduz o contraste **percebido**, e a WCAG não desconta isso: a medição passa e o olho reprova. Este
+painel é feito de legenda pequena.
+
+**`npm run design` NÃO pega a violação dessa regra** — verificado por controle negativo: pôr
+`--peso-leve` num `--tipo-legenda` não acusa nada. É regra de revisão, não de ferramenta, e está
+escrita aqui em vez de fingir cobertura.
+
+### O que ficou de fora da referência
+
+- **A paleta acromática e a Inter em peso 200** — trocaria a identidade por uma que a referência nem
+  tinha de propósito (os tokens dela eram os de fábrica).
+- **Peso fino em texto pequeno** — pela regra acima.
+- **`backdrop-filter` sobre dado** — o verificador compõe alfa sobre `--bg` para medir contraste, e
+  fundo borrado torna a composição imprevisível.
+- **Tailwind e shadcn** — não existem aqui, e a CSP recusa script de CDN.
 
 ---
 

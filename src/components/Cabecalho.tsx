@@ -43,7 +43,23 @@ export function Cabecalho({
           <Sobrelinha>{kicker}</Sobrelinha>
           <h1
             className="mono"
-            style={{ fontWeight: 600, fontSize: 'var(--tipo-display)', lineHeight: 1.2, margin: '2px 0 0', color: 'var(--tx)', textShadow: 'var(--glow)', wordBreak: 'break-word' }}
+            /* Peso LEVE, e é a mudança de identidade mais visível desta rodada.
+               A referência abre com `text-7xl font-extralight tracking-tight
+               leading-[1.1]`; aqui o peso cai de 600 para 300 e a trilha fecha.
+               A monoespaçada e o verde ficam: muda o peso, não a fonte nem a
+               cor. Título de PAINEL continua em 600 — se ele afinasse junto,
+               os dois competiriam, e hierarquia é o que sobra quando o peso
+               some. */
+            style={{
+              fontWeight: 'var(--peso-leve)',
+              fontSize: 'var(--tipo-display)',
+              letterSpacing: 'var(--trilha-justa)',
+              lineHeight: 1.1,
+              margin: '4px 0 0',
+              color: 'var(--tx)',
+              textShadow: 'var(--glow)',
+              wordBreak: 'break-word',
+            }}
           >
             {titulo}
           </h1>

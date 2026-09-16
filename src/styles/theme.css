@@ -50,6 +50,28 @@
      componentes escreviam este rgba à mão, com o valor do tema ESCURO, que
      não trocava no claro. */
   --neg-bg: rgba(255, 133, 133, 0.14);
+  /*
+   * ─── Vocabulário extraído da referência ───
+   *
+   * `--lustro` é o brilho que LEVANTA o cartão. A referência usa painel
+   * translúcido mais claro que o fundo (`bg-zinc-900/50`); aqui ele entra por
+   * cima de `--card`, num gradiente que morre em 45%, em vez de alterar o
+   * token — os valores de `--card` vêm do protótipo, e mexer neles trocaria
+   * toda superfície do produto de uma vez.
+   */
+  --lustro: rgba(255, 255, 255, 0.035);
+  /* Borda de acento em alfa baixo (`border-emerald-500/20` na referência).
+     Borda colorida discreta, nunca preenchimento. */
+  --gold-bd: rgba(112, 255, 139, 0.22);
+  /* A receita do cartão: sombra interna funda + filete de luz na borda de
+     cima. No escuro a profundidade vem de dentro, porque projetar sombra sobre
+     preto não desenha nada. */
+  --sombra-cartao:
+    inset 0 1px 10px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  /* A COSTURA: filete em gradiente no topo do cartão, sumindo nas duas pontas.
+     É o detalhe mais reconhecível da referência — uma linha de luz atravessando
+     a borda superior, como uma fresta. */
+  --costura: linear-gradient(90deg, transparent, var(--gold), transparent);
   --header-bg:
     linear-gradient(rgba(34, 59, 41, 0.45) 1px, transparent 1px) 0 0 / 44px 44px,
     linear-gradient(90deg, rgba(34, 59, 41, 0.45) 1px, transparent 1px) 0 0 / 44px 44px,
@@ -102,6 +124,14 @@
   --warn-bg: rgba(160, 120, 20, 0.14);
   --warn-tx: #7a5c10;
   --neg-bg: rgba(168, 50, 50, 0.12);
+  /* No claro o lustro é tinta, não luz: o cartão é branco sobre fundo
+     acinzentado, e quem o levanta é a sombra projetada, não o brilho. */
+  --lustro: rgba(14, 23, 16, 0.02);
+  --gold-bd: rgba(31, 143, 67, 0.28);
+  --sombra-cartao:
+    0 1px 2px rgba(14, 23, 16, 0.05), 0 4px 10px rgba(14, 23, 16, 0.05),
+    inset 0 -1px 0 rgba(14, 23, 16, 0.05);
+  --costura: linear-gradient(90deg, transparent, var(--gold), transparent);
   --header-bg:
     linear-gradient(rgba(14, 23, 16, 0.07) 1px, transparent 1px) 0 0 / 44px 44px,
     linear-gradient(90deg, rgba(14, 23, 16, 0.07) 1px, transparent 1px) 0 0 / 44px 44px,
@@ -165,7 +195,7 @@
   --tipo-display: 28px;
   /* O NÚMERO de um indicador. Maior que o `h1` de propósito: numa tela de
      métrica, o número é o assunto, e o título é onde ele fica. */
-  --tipo-numero: 32px;
+  --tipo-numero: 40px;
   /* O código de uma tela de erro (404, 500), e só ele. É o único tamanho
      FLUIDO do sistema: `clamp` faz o número acompanhar a largura sem media
      query nenhuma e sem estourar no celular. Fica como token, e não como valor
@@ -178,11 +208,34 @@
   --trilha-media: 0.04em;
   /* Número grande fecha um pouco: o espaçamento padrão foi desenhado para
      texto, e em 32px ele abre demais. */
-  --trilha-justa: -0.01em;
+  --trilha-justa: -0.02em;
+  /* Mais fechada ainda, para o número de indicador em peso leve. A referência
+     usa `tracking-tighter` exatamente aí: em peso 300 as letras já ficam
+     arejadas sozinhas, e sem fechar a trilha o número se desfaz. */
+  --trilha-fechada: -0.04em;
 
   --raio-p: 8px;
   --raio-m: 12px;
+  /* Cartão e painel. A referência usa 16px (`rounded-2xl`) nos cartões e chega
+     a 20 e 32 nos blocos grandes — raio generoso é metade da assinatura dela.
+     16 é o quanto dá para subir aqui sem a tabela densa parecer um brinquedo. */
+  --raio-g: 16px;
   --raio-pilula: 999px;
+
+  /*
+   * PESO. A marca registrada da referência: `font-light` em 248 usos e
+   * `font-extralight` em 46, contra 1 de `semibold`. Número grande em peso 300
+   * com trilha fechada é o que faz a peça parecer cara — o contrário do
+   * negrito, que é o reflexo de quem quer dar ênfase sem hierarquia.
+   *
+   * REGRA: peso leve só em tamanho GRANDE (display, número, heroico). Peso fino
+   * reduz o contraste PERCEBIDO, e a WCAG não desconta isso — a medição passa e
+   * o olho reprova. Este painel é feito de legenda pequena, e ali o peso
+   * continua sendo o normal.
+   */
+  --peso-leve: 300;
+  --peso-medio: 500;
+  --peso-forte: 600;
 
   /* Movimento. As durações eram literais espalhadas; o bloco
      `prefers-reduced-motion` abaixo continua zerando todas. */
@@ -200,7 +253,8 @@ body {
   color: var(--tx);
   font-family: var(--fonte-ui), system-ui, sans-serif;
   font-size: var(--tipo-corpo);
-  line-height: 1.55;
+  /* `leading-relaxed` da referência: 62 usos. Texto corrido respira. */
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -229,7 +283,7 @@ textarea {
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: var(--raio-p);
 }
 
 select option {
@@ -355,7 +409,7 @@ select option {
 
 .cartao-vidro {
   position: relative;
-  border-radius: 16px;
+  border-radius: var(--raio-g);
   padding: 26px 22px;
   background: color-mix(in srgb, var(--card) 76%, transparent);
   backdrop-filter: blur(16px);
@@ -382,7 +436,7 @@ select option {
 .feixes {
   position: absolute;
   inset: 0;
-  border-radius: 16px;
+  border-radius: var(--raio-g);
   overflow: hidden;
   pointer-events: none;
 }
@@ -488,7 +542,7 @@ select option {
   width: 100%;
   background: var(--elev);
   border: 1px solid var(--bd);
-  border-radius: 10px;
+  border-radius: var(--raio-m);
   padding: 12px 12px 12px 36px;
   font-size: var(--tipo-corpo);
   color: var(--tx);
@@ -515,7 +569,7 @@ select option {
   width: 30px;
   height: 30px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--raio-p);
   background: transparent;
   color: var(--tx3);
   cursor: pointer;
@@ -569,7 +623,7 @@ select option {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--raio-p);
   font-weight: 500;
   font-size: var(--tipo-corpo);
   text-decoration: none;
@@ -650,6 +704,47 @@ select option {
 
 .pagina > * {
   animation: entrada-suave var(--mov-lento) var(--curva-saida) both;
+}
+
+/*
+ * O CARTÃO — a receita da referência, traduzida.
+ *
+ * Lá:  bg-zinc-900/50 · rounded-2xl · border border-zinc-800
+ *      shadow-[inset_0_1px_10px_rgba(0,0,0,1), 0_1px_0_rgba(255,255,255,.05)]
+ *      + um hairline em gradiente atravessando o topo, sumindo nas pontas.
+ *
+ * Três razões para isto ser classe e não estilo inline: `::before` (a costura),
+ * `overflow` que a contém, e o fato de o tratamento ser UM — repetido inline em
+ * cada componente, ele divergiria na primeira correção feita só num.
+ *
+ * O lustro entra POR CIMA de `--card`, e não no lugar dele: os valores de
+ * `--card` vêm do protótipo, e trocá-los mudaria toda superfície de uma vez.
+ */
+.cartao {
+  position: relative;
+  border: 1px solid var(--bd);
+  border-radius: var(--raio-g);
+  background: linear-gradient(180deg, var(--lustro), transparent 45%), var(--card);
+  box-shadow: var(--sombra-cartao);
+  /* Contém a costura: sem isto ela vaza pelas quinas arredondadas. */
+  overflow: hidden;
+}
+
+/*
+ * A COSTURA. Uma linha de luz atravessando a borda de cima, como uma fresta.
+ * Metade da largura, centrada, sumindo nas duas pontas — a ponta dura seria um
+ * traço; a que some é luz.
+ */
+.cartao::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25%;
+  width: 50%;
+  height: 1px;
+  background: var(--costura);
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 /* Elevação ao apontar.
@@ -883,7 +978,7 @@ select option {
   z-index: 1;
   width: 44px;
   height: 3px;
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
   background: var(--gold);
   box-shadow: 0 0 14px 2px var(--gold);
 }
@@ -990,7 +1085,7 @@ select option {
     left: 13px;
     min-width: 16px;
     padding: 0 4px;
-    border-radius: 999px;
+    border-radius: var(--raio-pilula);
     background: var(--gold);
     color: var(--on-gold);
     font-size: var(--tipo-micro);
@@ -1041,7 +1136,7 @@ select option {
   min-width: 0;
   padding: 16px 18px;
   border: 1px solid var(--bd);
-  border-radius: 12px;
+  border-radius: var(--raio-m);
   background: var(--card);
   transition:
     border-color 0.18s ease,
@@ -1076,7 +1171,7 @@ select option {
 .cartao-site-estado {
   flex: none;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
   font-size: var(--tipo-micro);
   white-space: nowrap;
 }
@@ -1112,14 +1207,14 @@ select option {
 
 .cartao-site-barra {
   height: 4px;
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
   background: var(--elev);
   overflow: hidden;
 }
 .cartao-site-barra > span {
   display: block;
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--raio-pilula);
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

@@ -127,7 +127,7 @@ export default async function PaginaComportamento({
         ) : (
           <>
             <div className="grade-cartoes">
-              <div style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
+              <div className="cartao" style={{ padding: '16px 18px' }}>
                 <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>Páginas por sessão</div>
                 <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>
                   {comportamento.paginasPorSessao !== null
@@ -137,7 +137,7 @@ export default async function PaginaComportamento({
                 <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>média no período</div>
               </div>
 
-              <div style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
+              <div className="cartao" style={{ padding: '16px 18px' }}>
                 <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>Sessões sem interação</div>
                 <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>
                   {num(comportamento.sessoesDeUmaPagina)}
@@ -147,7 +147,7 @@ export default async function PaginaComportamento({
                 </div>
               </div>
 
-              <div style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
+              <div className="cartao" style={{ padding: '16px 18px' }}>
                 <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>Sessões analisadas</div>
                 <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>{num(totalSessoes)}</div>
                 <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{periodo.label}</div>

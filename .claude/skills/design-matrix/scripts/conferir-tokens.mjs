@@ -242,8 +242,8 @@ for (const [tema, tokens] of [['escuro', escuro], ['claro', claro]]) {
 // silêncio**, deixando o tamanho herdado no lugar.
 const ESCALA = {
   fontSize: ['micro', 'legenda', 'apoio', 'corpo', 'secao', 'titulo', 'display', 'numero', 'heroico'].map((n) => `--tipo-${n}`),
-  letterSpacing: ['ampla', 'media', 'justa'].map((n) => `--trilha-${n}`),
-  borderRadius: ['p', 'm', 'pilula'].map((n) => `--raio-${n}`),
+  letterSpacing: ['ampla', 'media', 'justa', 'fechada'].map((n) => `--trilha-${n}`),
+  borderRadius: ['p', 'm', 'g', 'pilula'].map((n) => `--raio-${n}`),
 };
 
 for (const arquivo of arquivos(join(RAIZ, 'src'))) {
@@ -253,8 +253,16 @@ for (const arquivo of arquivos(join(RAIZ, 'src'))) {
     for (const [prop, permitidos] of Object.entries(ESCALA)) {
       // Valor cru: número, ou string que não é `var(--token)`.
       const cru = linha.match(new RegExp(`${prop}: (?!'var\\()([0-9][\\w.%]*|'[^']*')`));
-      // `borderRadius: '50%'` é geometria (círculo), não escala — fica de fora.
-      if (cru && !(prop === 'borderRadius' && /^'\d+%'$/.test(cru[1]))) {
+      // Duas exceções, e as duas são a MESMA ideia: não é valor de escala, é
+      // outra coisa que por acaso mora na mesma propriedade.
+      //   · `borderRadius: '50%'` é geometria (círculo).
+      //   · `letterSpacing: 'normal'` é RESET — um filho desfazendo a trilha
+      //     fechada que herdou do pai. Sem ele, o denominador de "2/4" herdaria
+      //     o aperto que foi escolhido para o numerador grande.
+      const reset =
+        (prop === 'borderRadius' && /^'\d+%'$/.test(cru?.[1] ?? '')) ||
+        (prop === 'letterSpacing' && cru?.[1] === "'normal'");
+      if (cru && !reset) {
         problemas.push(`${rel}:${i + 1} usa ${prop}: ${cru[1]} — a escala é fechada; use ${permitidos.join(' · ')}.`);
       }
       const token = linha.match(new RegExp(`${prop}: 'var\\((--[\\w-]+)\\)'`));

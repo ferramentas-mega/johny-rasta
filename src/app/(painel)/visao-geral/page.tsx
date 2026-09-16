@@ -5,7 +5,7 @@ import { getCarteira, totalizarCarteira, type LinhaCarteira } from '@/server/met
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { num, pct } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
-import { Painel, Aviso } from '@/components/Cartoes';
+import { Painel, Aviso, CartaoNumero } from '@/components/Cartoes';
 import { CartaoProgresso } from '@/components/CartaoProgresso';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { SeletorPeriodo } from '@/components/filtros';
@@ -156,7 +156,14 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
     { rotulo: 'Sessões', valor: num(totais.sessoes), nota: 'somadas entre os sites' },
     { rotulo: 'Cliques no WhatsApp', valor: num(totais.cliquesWhatsapp), nota: 'clique não é conversa iniciada' },
     { rotulo: 'Leads', valor: num(totais.leads), nota: 'contatos registrados' },
-    { rotulo: 'Precisam de atenção', valor: num(precisamAtencao), nota: 'com motivo declarado na tabela' },
+    {
+      rotulo: 'Precisam de atenção',
+      valor: num(precisamAtencao),
+      nota: 'com motivo declarado na tabela',
+      // Âmbar só quando há o que atender: pintar de alerta um zero afirmaria
+      // problema onde a medição diz que não há.
+      tom: precisamAtencao > 0 ? ('atencao' as const) : ('neutro' as const),
+    },
   ];
 
   return (
@@ -186,11 +193,7 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
             />
           ))}
           {cartoes.map((c) => (
-            <div key={c.rotulo} style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
-              <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{c.rotulo}</div>
-              <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>{c.valor}</div>
-              <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{c.nota}</div>
-            </div>
+            <CartaoNumero key={c.rotulo} rotulo={c.rotulo} valor={c.valor} nota={c.nota} tom={c.tom} />
           ))}
         </div>
 

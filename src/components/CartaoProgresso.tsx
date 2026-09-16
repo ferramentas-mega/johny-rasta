@@ -50,22 +50,36 @@ export function CartaoProgresso({
   const cor = tom === 'atencao' ? 'var(--warn-tx)' : 'var(--gold)';
 
   return (
-    <div
-      style={{
-        padding: '16px 18px',
-        borderRadius: 'var(--raio-m)',
-        border: '1px solid var(--bd)',
-        background: 'var(--card)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-      }}
-    >
+    <div className="cartao" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
       <div style={{ minWidth: 0, flex: '1 1 auto' }}>
         <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{rotulo}</div>
-        <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>
+        {/* A receita do número da referência: peso leve, trilha fechada, verde
+            com brilho. O denominador fica em texto terciário e peso normal —
+            ele é contexto, não o assunto. */}
+        <div
+          className="mono"
+          style={{
+            fontSize: 'var(--tipo-numero)',
+            fontWeight: 'var(--peso-leve)',
+            letterSpacing: 'var(--trilha-fechada)',
+            lineHeight: 1,
+            margin: '10px 0 6px',
+            color: tom === 'atencao' ? 'var(--warn-tx)' : 'var(--gold-tx)',
+            textShadow: 'var(--glow)',
+          }}
+        >
           {num(valor)}
-          <span style={{ fontSize: 'var(--tipo-secao)', color: 'var(--tx3)' }}>/{num(total)}</span>
+          <span
+            style={{
+              fontSize: 'var(--tipo-secao)',
+              color: 'var(--tx3)',
+              fontWeight: 'var(--peso-medio)',
+              letterSpacing: 'normal',
+              textShadow: 'none',
+            }}
+          >
+            /{num(total)}
+          </span>
         </div>
         <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{nota}</div>
       </div>

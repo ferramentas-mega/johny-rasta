@@ -33,6 +33,10 @@ export function Sobrelinha({
         letterSpacing: 'var(--trilha-ampla)',
         textTransform: 'uppercase',
         color: tom === 'marca' ? 'var(--gold-tx)' : 'var(--tx3)',
+        /* `drop-shadow-[0_0_2px_rgba(16,185,129,.5)]` na referência: um brilho
+           quase imperceptível, que só faz o rótulo parecer aceso. Só no tom de
+           marca — no discreto seria ruído. */
+        textShadow: tom === 'marca' ? 'var(--glow)' : undefined,
         lineHeight: 1.4,
       }}
     >
