@@ -56,7 +56,7 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
       render: (l) => (
         <span style={{ display: 'inline-flex', gap: 10, alignItems: 'baseline' }}>
           {l.nome}
-          <Link href={`/clientes?editar=${l.id}`} style={{ fontSize: 11.5 }}>
+          <Link href={`/clientes?editar=${l.id}`} style={{ fontSize: 'var(--tipo-legenda)' }}>
             editar
           </Link>
         </span>
@@ -94,7 +94,7 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
           }
         >
           <Tabela colunas={colunas} linhas={linhas} vazio="Nenhum cliente cadastrado ainda." />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
             Clientes sem site aparecem como "Indisponível": não há o que medir antes de existir um site com
             rastreamento. O vínculo cliente → site é validado no servidor e no banco.
           </p>

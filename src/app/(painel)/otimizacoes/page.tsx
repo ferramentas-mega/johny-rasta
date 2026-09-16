@@ -31,11 +31,11 @@ const RESOLVIDAS_NA_TELA = 20;
 function Pagina({ url, dispositivo }: { url: string; dispositivo: Dispositivo | null }) {
   return (
     <>
-      <span className="mono" style={{ fontSize: 11.5 }}>
+      <span className="mono" style={{ fontSize: 'var(--tipo-legenda)' }}>
         {url.replace(/^https?:\/\/[^/]+/, '') || '/'}
       </span>
       {dispositivo && (
-        <span style={{ display: 'block', fontSize: 11, color: 'var(--tx3)' }}>
+        <span style={{ display: 'block', fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>
           no {DISPOSITIVO_LABEL[dispositivo]}
         </span>
       )}
@@ -44,7 +44,7 @@ function Pagina({ url, dispositivo }: { url: string; dispositivo: Dispositivo | 
 }
 
 function SiteInteiro() {
-  return <span style={{ color: 'var(--tx3)', fontSize: 11.5 }}>site inteiro</span>;
+  return <span style={{ color: 'var(--tx3)', fontSize: 'var(--tipo-legenda)' }}>site inteiro</span>;
 }
 
 export default async function PaginaOtimizacoes({
@@ -76,7 +76,7 @@ export default async function PaginaOtimizacoes({
       render: (o) => (
         <>
           <Link href={`/sites/${o.siteId}/qualidade`}>{o.site}</Link>
-          <span style={{ display: 'block', fontSize: 11, color: 'var(--tx3)' }}>{o.cliente}</span>
+          <span style={{ display: 'block', fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{o.cliente}</span>
         </>
       ),
     },
@@ -89,10 +89,10 @@ export default async function PaginaOtimizacoes({
     },
     { chave: 'tipo', titulo: 'Tipo', render: (o) => <Etiqueta texto={TIPO_LABEL[o.tipo]} tom={TOM[o.tipo] ?? 'soft'} /> },
     { chave: 'problema', titulo: 'Problema', render: (o) => o.titulo },
-    { chave: 'evidencia', titulo: 'Evidência', render: (o) => <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{o.evidencia}</span> },
-    { chave: 'acao', titulo: 'Próxima ação', render: (o) => <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{o.proximaAcao}</span> },
+    { chave: 'evidencia', titulo: 'Evidência', render: (o) => <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)' }}>{o.evidencia}</span> },
+    { chave: 'acao', titulo: 'Próxima ação', render: (o) => <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)' }}>{o.proximaAcao}</span> },
     { chave: 'status', titulo: 'Situação', quebraLinha: true, render: (o) => <Situacao item={o} /> },
-    { chave: 'quando', titulo: 'Desde', render: (o) => <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{dataHora(o.detectadoEm)}</span> },
+    { chave: 'quando', titulo: 'Desde', render: (o) => <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{dataHora(o.detectadoEm)}</span> },
   ];
 
   const colunasResolvidas: Coluna<ResolvidaPorVerificacao>[] = [
@@ -104,7 +104,7 @@ export default async function PaginaOtimizacoes({
     { chave: 'problema', titulo: 'Problema', render: (r) => r.titulo },
     {
       chave: 'antes', titulo: 'Quando foi marcado',
-      render: (r) => <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{r.antes ?? '—'}</span>,
+      render: (r) => <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)' }}>{r.antes ?? '—'}</span>,
     },
     {
       chave: 'depois', titulo: 'Na medição que fechou', mono: true,
@@ -112,20 +112,20 @@ export default async function PaginaOtimizacoes({
       // para o site inteiro e não tem nota nenhuma a mostrar. Zero afirmaria
       // uma medição que não houve.
       render: (r) => (r.notaDepois === null
-        ? <span style={{ color: 'var(--tx3)', fontSize: 11.5 }}>sem nota</span>
+        ? <span style={{ color: 'var(--tx3)', fontSize: 'var(--tipo-legenda)' }}>sem nota</span>
         : <span style={{ color: 'var(--pos-tx)' }}>{r.notaDepois}/100</span>),
     },
     {
       chave: 'quando', titulo: 'Fechado em',
       render: (r) => (
         <>
-          <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{dataHora(r.resolvidoEm)}</span>
+          <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{dataHora(r.resolvidoEm)}</span>
           {/* "nova medição" e "varredura diária" não são a mesma afirmação: a
               primeira diz que uma análise daquele site mostrou a ausência; a
               segunda, que a ausência foi NOTADA naquele dia — o dado pode ter
               mudado antes. Guardar a diferença e esconder seria inútil. */}
           {r.resolvidoPor && (
-            <span style={{ display: 'block', fontSize: 11, color: 'var(--tx3)' }}>
+            <span style={{ display: 'block', fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>
               por {r.resolvidoPor}
             </span>
           )}
@@ -160,7 +160,7 @@ export default async function PaginaOtimizacoes({
                 href={f.chave ? `/otimizacoes?tipo=${f.chave}` : '/otimizacoes'}
                 aria-current={on ? 'page' : undefined}
                 style={{
-                  fontSize: 12.5, padding: '6px 11px', borderRadius: 999,
+                  fontSize: 'var(--tipo-apoio)', padding: '6px 11px', borderRadius: 'var(--raio-pilula)',
                   border: `1px solid ${on ? 'var(--gold)' : 'var(--bd)'}`,
                   color: on ? 'var(--gold-tx)' : 'var(--tx2)', textDecoration: 'none',
                   background: on ? 'var(--elev)' : 'transparent',
@@ -178,7 +178,7 @@ export default async function PaginaOtimizacoes({
             linhas={itens}
             vazio={tipoFiltro ? 'Nenhum item deste tipo.' : 'Nenhuma pendência encontrada.'}
           />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
             A lista não conclui que o rastreamento quebrou porque um site ficou sem eventos: site de pouco
             tráfego passa dias sem visita, e isso é normal. O aviso de coleta só aparece em site que já
             coletava com regularidade e parou. Também não afirma que lentidão causou queda de conversão —
@@ -195,12 +195,12 @@ export default async function PaginaOtimizacoes({
           >
             <Tabela colunas={colunasResolvidas} linhas={resolvidas.itens} vazio="" />
             {resolvidas.total > resolvidas.itens.length && (
-              <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+              <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
                 Mostrando {num(resolvidas.itens.length)} de {num(resolvidas.total)} — a tela mostra
                 as mais recentes.
               </p>
             )}
-            <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
               Estas saíram da lista acima porque a <strong>próxima medição não encontrou mais o
               problema</strong> — não porque alguém declarou resolvido. As duas notas são as duas
               medições: a de quando o item foi marcado e a que fechou. O painel guarda o par e a

@@ -45,6 +45,89 @@ Para aplicar a monoespaçada, use a classe `.mono`.
 
 ---
 
+## A escala fechada
+
+Cor este projeto sempre teve sob controle. **Forma, não.**
+
+Medido antes desta seção existir:
+
+| O quê | Quantos valores distintos | Em quantos usos |
+|---|---|---|
+| Tamanho de fonte | **19** | 291 |
+| Trilha (`letter-spacing`) | 8 | 8 |
+| Raio de borda | 6 | 60 |
+
+Os dezenove tamanhos eram 10 · 10,5 · 11 · 11,5 · 12 · 12,5 · 13 · 13,5 · 14 · 14,5 · 15 · 16 · 17 ·
+18 · 19 · 26 · 28 · 32. **Quinze deles num intervalo de nove pixels.** Ninguém enxerga a diferença
+entre 12 e 12,5 — o que se enxerga é o resultado: duas telas que dizem a mesma coisa com pesos
+visuais diferentes, e ninguém consegue apontar o que está errado.
+
+A sobrelinha caixa-alta era o caso mais claro: `11px/.1em` no cabeçalho de página, `10,5px/.12em` no
+de painel. Mesmo papel, quatro valores, dois componentes.
+
+Hoje o conjunto é **fechado** e `npm run design` reprova o que estiver fora dele:
+
+| Token | Valor | Papel |
+|---|---|---|
+| `--tipo-micro` | 10,5px | selo, crachá, índice |
+| `--tipo-legenda` | 11,5px | legenda, ressalva, sobrelinha |
+| `--tipo-apoio` | 12,5px | texto secundário, célula |
+| `--tipo-corpo` | 14px | corpo e rótulo de campo — o mesmo do `body` |
+| `--tipo-secao` | 16px | título de painel |
+| `--tipo-titulo` | 20px | título de bloco |
+| `--tipo-display` | 28px | `h1` de página |
+| `--tipo-numero` | 32px | o número de um indicador |
+| `--tipo-heroico` | `clamp(4.5rem, 22vw, 9rem)` | código de tela de erro, e só |
+
+Mais `--trilha-ampla` · `--trilha-media` · `--trilha-justa`, e `--raio-p` · `--raio-m` ·
+`--raio-pilula`.
+
+Três decisões que não são arredondamento:
+
+- **`--tipo-corpo` é 14px, não 13,5.** Os 13,5 apareciam em 22 lugares, mas encolher o texto de
+  leitura para fechar uma escala é pagar legibilidade por simetria. Subiram eles.
+- **Os degraus de baixo sobem ~8%, não os 20% da razão clássica.** Esta é uma interface densa: são
+  quatro papéis de texto secundário com significados diferentes dentro da mesma tabela. Do
+  `--tipo-secao` para cima os degraus abrem (1,19 · 1,25 · 1,4), porque ali o salto é de hierarquia.
+- **`--tipo-numero` é maior que `--tipo-display`.** Numa tela de métrica o número é o assunto; o
+  título é só onde ele fica.
+
+---
+
+## Elevação
+
+Dois níveis, e eles **não são a mesma técnica nos dois temas** — é a parte que não dá para copiar de
+um sistema claro e colar aqui.
+
+| | Escuro | Claro |
+|---|---|---|
+| `--sombra-1` | filete de luz na borda de cima | sombra curta + lábio `inset` na base |
+| `--sombra-2` | filete mais forte **+** sombra funda | três camadas empilhadas + lábio |
+
+**No escuro, sombra projetada é invisível:** preto sobre preto não separa nada. Quem separa é a luz —
+um `inset` claro na borda superior, como a quina de um objeto real iluminado de frente. No claro a
+lógica inverte, e a sombra é empilhada em camadas curtas e longas em vez de um borrão só, que é como
+a luz real se comporta.
+
+O mesmo token nos dois casos, porque o **papel** é um: "esta superfície está acima do fundo".
+
+`.cartao-elevado` sobe ao nível 2 ao apontar — e só o cartão que **leva** a algum lugar recebe a
+classe. Cartão sem destino que reage ao ponteiro promete um clique que não existe.
+
+---
+
+## Movimento como token
+
+`--mov-rapido` (140ms) · `--mov-medio` (240ms) · `--mov-lento` (420ms) · `--curva-saida`.
+
+A curva é uma desaceleração forte: rápida no início, assentando no fim. É o que faz a entrada
+parecer que **parou**, em vez de ter sido interrompida.
+
+O bloco `prefers-reduced-motion` no topo do `theme.css` continua zerando todas — e há prova de
+navegador que falha se um efeito novo ignorar isso.
+
+---
+
 ## Componentes
 
 | Componente | Papel |

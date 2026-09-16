@@ -186,10 +186,10 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
             />
           ))}
           {cartoes.map((c) => (
-            <div key={c.rotulo} style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--bd)', background: 'var(--card)' }}>
-              <div style={{ fontSize: 12.5, color: 'var(--tx2)' }}>{c.rotulo}</div>
-              <div className="mono" style={{ fontSize: 28, fontWeight: 500, margin: '8px 0 4px' }}>{c.valor}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{c.nota}</div>
+            <div key={c.rotulo} style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
+              <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{c.rotulo}</div>
+              <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>{c.valor}</div>
+              <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{c.nota}</div>
             </div>
           ))}
         </div>
@@ -199,7 +199,7 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
           subtitulo={`Um cliente por linha, somando os sites dele${busca ? ` · busca: "${busca}"` : ''}`}
         >
           <Tabela colunas={colunas} linhas={linhas} vazio={busca ? 'Nenhum cliente com esse nome.' : 'Nenhum cliente cadastrado.'} />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
             A conversão da linha Total é a soma das sessões convertidas dividida pela soma das sessões — não a
             média das taxas dos clientes, que daria outro número quando os volumes são diferentes.
             Comparações com menos de {MIN_SESSOES_PARA_COMPARAR} sessões são marcadas como volume baixo: é

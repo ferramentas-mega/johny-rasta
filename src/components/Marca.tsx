@@ -11,7 +11,7 @@ export function Marca({ compacto = false }: { compacto?: boolean }) {
       style={{
         position: 'relative',
         overflow: 'hidden',
-        borderRadius: 10,
+        borderRadius: 'var(--raio-m)',
         border: '1px solid var(--bd)',
         padding: compacto ? '12px 8px' : '14px 14px',
         background: 'var(--brand-bg)',
@@ -28,11 +28,11 @@ export function Marca({ compacto = false }: { compacto?: boolean }) {
           width: 28,
           height: 28,
           border: '1px solid var(--gold)',
-          borderRadius: 6,
+          borderRadius: 'var(--raio-p)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 13,
+          fontSize: 'var(--tipo-corpo)',
           color: 'var(--gold-tx)',
           textShadow: 'var(--glow)',
         }}
@@ -41,10 +41,10 @@ export function Marca({ compacto = false }: { compacto?: boolean }) {
       </span>
       {!compacto && (
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 'var(--tipo-secao)', fontWeight: 600, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
             Painel de Sites
           </div>
-          <div style={{ fontSize: 11, color: 'var(--tx2)' }}>Análise de desempenho</div>
+          <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)' }}>Análise de desempenho</div>
         </div>
       )}
     </div>

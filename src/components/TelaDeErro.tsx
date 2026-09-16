@@ -81,10 +81,10 @@ export function TelaDeErro({
         <h1
           className="mono"
           style={{
-            fontSize: 'clamp(4.5rem, 22vw, 9rem)',
+            fontSize: 'var(--tipo-heroico)',
             lineHeight: 0.9,
             fontWeight: 700,
-            letterSpacing: '-0.04em',
+            letterSpacing: 'var(--trilha-justa)',
             color: 'var(--gold-tx)',
             textShadow: 'var(--glow)',
           }}
@@ -101,8 +101,8 @@ export function TelaDeErro({
           </div>
 
           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 600 }}>{titulo}</h2>
-            <div style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.6 }}>{descricao}</div>
+            <h2 style={{ fontSize: 'var(--tipo-secao)', fontWeight: 600 }}>{titulo}</h2>
+            <div style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.6 }}>{descricao}</div>
             {detalhe}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>{acoes}</div>
           </div>

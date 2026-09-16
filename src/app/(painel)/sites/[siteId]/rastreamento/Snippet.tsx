@@ -64,7 +64,7 @@ export function Snippet({ codigo, rotulo }: { codigo: string; rotulo: string }) 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-        <span style={{ fontSize: 12, color: 'var(--tx2)' }}>{rotulo}</span>
+        <span style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{rotulo}</span>
         <button
           type="button"
           onClick={copiar}
@@ -82,9 +82,9 @@ export function Snippet({ codigo, rotulo }: { codigo: string; rotulo: string }) 
           style={{
             marginLeft: 'auto',
             cursor: 'pointer',
-            fontSize: 11.5,
+            fontSize: 'var(--tipo-legenda)',
             padding: '5px 10px',
-            borderRadius: 7,
+            borderRadius: 'var(--raio-p)',
             background: 'var(--elev)',
             border: '1px solid var(--bd)',
             color: estado === 'ocioso' ? 'var(--tx2)' : 'var(--gold-tx)',
@@ -99,11 +99,11 @@ export function Snippet({ codigo, rotulo }: { codigo: string; rotulo: string }) 
         style={{
           margin: 0,
           padding: '12px 14px',
-          borderRadius: 8,
+          borderRadius: 'var(--raio-p)',
           border: '1px solid var(--bd)',
           background: 'var(--bg)',
           color: 'var(--tx)',
-          fontSize: 12,
+          fontSize: 'var(--tipo-apoio)',
           lineHeight: 1.6,
           overflowX: 'auto',
           whiteSpace: 'pre',

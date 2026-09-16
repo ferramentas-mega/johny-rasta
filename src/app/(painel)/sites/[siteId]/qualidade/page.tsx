@@ -76,7 +76,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
   const configurada = !!process.env.PAGESPEED_API_KEY;
 
   const colunas: Coluna<(typeof analises)[number]>[] = [
-    { chave: 'url', titulo: 'URL', render: (a) => <span className="mono" style={{ fontSize: 12 }}>{a.url_solicitada.replace(/^https?:\/\/[^/]+/, '') || '/'}</span> },
+    { chave: 'url', titulo: 'URL', render: (a) => <span className="mono" style={{ fontSize: 'var(--tipo-apoio)' }}>{a.url_solicitada.replace(/^https?:\/\/[^/]+/, '') || '/'}</span> },
     { chave: 'dispositivo', titulo: 'Dispositivo', render: (a) => <Etiqueta texto={a.strategy === 'mobile' ? 'Celular' : 'Computador'} tom="soft" /> },
     { chave: 'perf', titulo: 'Desempenho', alinhamento: 'direita', mono: true, render: (a) => <Nota valor={a.performance} /> },
     { chave: 'aces', titulo: 'Acessibilidade', alinhamento: 'direita', mono: true, render: (a) => <Nota valor={a.acessibilidade} /> },
@@ -84,14 +84,14 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
     { chave: 'seo', titulo: 'SEO', alinhamento: 'direita', mono: true, render: (a) => <Nota valor={a.seo} /> },
     { chave: 'lcp', titulo: 'LCP', alinhamento: 'direita', mono: true, render: (a) => ms(a.lcp_ms) },
     { chave: 'tbt', titulo: 'TBT', alinhamento: 'direita', mono: true, render: (a) => ms(a.tbt_ms) },
-    { chave: 'quando', titulo: 'Medido em', render: (a) => <span style={{ fontSize: 12, color: 'var(--tx2)' }}>{dataHora(a.medido_em, site.timezone)}</span> },
+    { chave: 'quando', titulo: 'Medido em', render: (a) => <span style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{dataHora(a.medido_em, site.timezone)}</span> },
   ];
 
   const colunasCampo: Coluna<SnapshotCrux>[] = [
     { chave: 'alvo', titulo: 'Alvo', render: (c) => (
         <>
-          <span className="mono" style={{ fontSize: 11.5 }}>{c.alvo.replace(/^https?:\/\/[^/]+/, '') || c.alvo}</span>
-          <span style={{ display: 'block', fontSize: 10.5, color: 'var(--tx3)' }}>
+          <span className="mono" style={{ fontSize: 'var(--tipo-legenda)' }}>{c.alvo.replace(/^https?:\/\/[^/]+/, '') || c.alvo}</span>
+          <span style={{ display: 'block', fontSize: 'var(--tipo-micro)', color: 'var(--tx3)' }}>
             {c.escopo === 'url' ? 'esta página' : 'origem — média do site inteiro'}
           </span>
         </>
@@ -102,7 +102,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
     { chave: 'cls', titulo: 'CLS (p75)', alinhamento: 'direita', mono: true,
       render: (c) => (c.cls_p75 === null ? <span style={{ color: 'var(--tx3)' }}>—</span> : Number(c.cls_p75).toFixed(3)) },
     { chave: 'janela', titulo: 'Janela medida', render: (c) => (
-        <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>
+        <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)' }}>
           {c.janela_inicio && c.janela_fim
             ? `${new Date(c.janela_inicio).toLocaleDateString('pt-BR')} – ${new Date(c.janela_fim).toLocaleDateString('pt-BR')}`
             : 'Não informada'}
@@ -197,7 +197,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
   });
 
   const colunasFila: Coluna<Job>[] = [
-    { chave: 'url', titulo: 'URL', render: (j) => <span className="mono" style={{ fontSize: 12 }}>{j.url.replace(/^https?:\/\/[^/]+/, '') || '/'}</span> },
+    { chave: 'url', titulo: 'URL', render: (j) => <span className="mono" style={{ fontSize: 'var(--tipo-apoio)' }}>{j.url.replace(/^https?:\/\/[^/]+/, '') || '/'}</span> },
     { chave: 'disp', titulo: 'Dispositivo', render: (j) => (j.strategy === 'mobile' ? 'Celular' : 'Computador') },
     { chave: 'status', titulo: 'Situação', render: (j) => (
         <Etiqueta
@@ -205,8 +205,8 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
           tom={j.status === 'sucesso' ? 'ok' : j.status === 'erro' ? 'warn' : 'soft'}
         />
       ) },
-    { chave: 'erro', titulo: 'Detalhe', render: (j) => <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{j.erro ?? '—'}</span> },
-    { chave: 'quando', titulo: 'Pedida em', render: (j) => <span style={{ fontSize: 12, color: 'var(--tx2)' }}>{dataHora(j.criado_em, site.timezone)}</span> },
+    { chave: 'erro', titulo: 'Detalhe', render: (j) => <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{j.erro ?? '—'}</span> },
+    { chave: 'quando', titulo: 'Pedida em', render: (j) => <span style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{dataHora(j.criado_em, site.timezone)}</span> },
   ];
 
   return (
@@ -222,7 +222,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
       <div className="pagina">
         {!configurada && (
           <Painel titulo="Análise técnica não configurada" subtitulo="Falta a chave do Google neste servidor">
-            <p style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.6 }}>
               Defina <span className="mono">PAGESPEED_API_KEY</span> nas variáveis de ambiente da hospedagem.
               Enquanto não estiver definida, o botão de executar fica desligado — esta tela não exibe nota
               estimada nem resultado de exemplo.
@@ -237,7 +237,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
           subtitulo="Celular e computador são medições distintas; uma não substitui a outra"
         >
           <Tabela colunas={colunas} linhas={analises} vazio="Nenhuma análise executada ainda." />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
             As notas vêm do Lighthouse, em teste sintético — não da experiência dos seus visitantes.
             <strong> TBT não é INP</strong>: o INP real só existe em dado de campo, que depende da API do CrUX.
             A nota de SEO do Lighthouse é uma checagem técnica, não posição no Google nem auditoria completa.
@@ -250,7 +250,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
           subtitulo="A série de medições por trás de cada afirmação — laboratório"
         >
           <Evidencias series={seriesLaboratorio} />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 12, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 12, lineHeight: 1.6 }}>
             Cada linha é a sequência de análises daquela página naquele dispositivo, do mais antigo
             para o mais recente. <strong>Medição ausente interrompe a linha</strong> em vez de descer
             até o chão: falta de medição não é desempenho zero.
@@ -268,7 +268,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
             subtitulo="A mesma série, do lado do campo — e nunca misturada com a de laboratório"
           >
             <Evidencias series={seriesCampo} />
-            <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 12, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 12, lineHeight: 1.6 }}>
               Painel separado de propósito: neste projeto a mesma página deu LCP de 12,0 s no
               laboratório e 3,2 s no campo, e os dois estão certos. Pôr as duas séries no mesmo
               gráfico faria uma parecer correção da outra.
@@ -290,7 +290,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
               auditorias: a.auditorias,
             }))}
           />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 12, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 12, lineHeight: 1.6 }}>
             <strong>As economias não se somam.</strong> Cada estimativa é o ganho daquela correção
             sozinha, contra esta mesma execução — corrigir duas coisas não economiza a soma das
             duas, porque elas disputam o mesmo caminho crítico. Por isso o resumo mostra a maior
@@ -308,14 +308,14 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
           subtitulo="Dado de campo do Chrome, independente das notas acima"
         >
           {campo.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.6 }}>
               Nenhuma leitura ainda. A experiência real é buscada junto com a análise técnica —
               execute uma análise para coletá-la.
             </p>
           ) : (
             <Tabela colunas={colunasCampo} linhas={campo} vazio="Sem leitura." />
           )}
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
             Estes números vêm de visitantes reais do Chrome, não de teste sintético — e por isso o
             <strong> INP só aparece aqui</strong>: o Lighthouse não o mede.
             A janela é a que o Google devolveu (cerca de 28 dias corridos) e <strong>não muda</strong> com o
@@ -329,7 +329,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
         {fila.length > 0 && (
           <Painel titulo="Fila" subtitulo="As dez solicitações mais recentes deste site">
             <Tabela colunas={colunasFila} linhas={fila} vazio="Nenhuma solicitação." />
-            <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+            <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
               Uma análise que falha não apaga a anterior: a última medição válida continua na tabela acima,
               com a data em que foi feita.
             </p>

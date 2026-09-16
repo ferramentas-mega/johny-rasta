@@ -33,10 +33,10 @@ function Linha({ correcao }: { correcao: Correcao }) {
         borderTop: '1px solid var(--bd)',
       }}
     >
-      <span style={{ flex: '1 1 260px', fontSize: 12.5, color: 'var(--tx)' }}>
+      <span style={{ flex: '1 1 260px', fontSize: 'var(--tipo-apoio)', color: 'var(--tx)' }}>
         {correcao.titulo}
         {correcao.valorExibido && (
-          <span className="mono" style={{ color: 'var(--tx3)', fontSize: 11.5 }}>
+          <span className="mono" style={{ color: 'var(--tx3)', fontSize: 'var(--tipo-legenda)' }}>
             {' · '}
             {correcao.valorExibido}
           </span>
@@ -46,9 +46,9 @@ function Linha({ correcao }: { correcao: Correcao }) {
           estimativa não é economia zero — pode ser a correção mais importante
           da página, só não quantificada. */}
       {correcao.economiaMs === null ? (
-        <span style={{ fontSize: 11, color: 'var(--tx3)' }}>sem estimativa</span>
+        <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>sem estimativa</span>
       ) : (
-        <span className="mono" style={{ fontSize: 12.5, color: 'var(--gold-tx)' }}>
+        <span className="mono" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--gold-tx)' }}>
           −{duracaoMs(correcao.economiaMs)}
         </span>
       )}
@@ -63,7 +63,7 @@ export function Correcoes({ analises }: { analises: AnaliseParaCorrecoes[] }) {
 
   if (grupos.length === 0) {
     return (
-      <p style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.6 }}>
+      <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.6 }}>
         Nenhuma análise com auditorias guardadas ainda. As correções aparecem aqui depois da
         primeira análise técnica desta página.
       </p>
@@ -79,13 +79,13 @@ export function Correcoes({ analises }: { analises: AnaliseParaCorrecoes[] }) {
             key={`${g.url}|${g.dispositivo}`}
             style={{
               border: '1px solid var(--bd)',
-              borderRadius: 10,
+              borderRadius: 'var(--raio-m)',
               background: 'var(--card)',
               padding: '10px 14px',
             }}
           >
-            <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--tx)' }}>
-              <span className="mono" style={{ fontSize: 12 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 'var(--tipo-corpo)', color: 'var(--tx)' }}>
+              <span className="mono" style={{ fontSize: 'var(--tipo-apoio)' }}>
                 {g.url.replace(/^https?:\/\/[^/]+/, '') || '/'}
               </span>
               <span style={{ color: 'var(--tx3)' }}>
@@ -95,14 +95,14 @@ export function Correcoes({ analises }: { analises: AnaliseParaCorrecoes[] }) {
                 {num(g.correcoes.length)} correção(ões)
               </span>
               {maior !== null && (
-                <span className="mono" style={{ color: 'var(--gold-tx)', fontSize: 12 }}>
+                <span className="mono" style={{ color: 'var(--gold-tx)', fontSize: 'var(--tipo-apoio)' }}>
                   {' · '}maior estimativa −{duracaoMs(maior)}
                 </span>
               )}
             </summary>
 
             {g.correcoes.length === 0 ? (
-              <p style={{ fontSize: 12, color: 'var(--tx2)', margin: '10px 0 0' }}>
+              <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', margin: '10px 0 0' }}>
                 Nenhuma auditoria reprovada nesta medição.
               </p>
             ) : (
@@ -116,7 +116,7 @@ export function Correcoes({ analises }: { analises: AnaliseParaCorrecoes[] }) {
             {/* Dizer quantas ficaram de fora, e por quê. Descartar em silêncio
                 faria a lista parecer completa quando não é. */}
             {g.informativas > 0 && (
-              <p style={{ fontSize: 11, color: 'var(--tx3)', margin: '10px 0 0', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', margin: '10px 0 0', lineHeight: 1.5 }}>
                 Outras {num(g.informativas)} auditoria(s) desta medição são informativas: o
                 Lighthouse devolve o dado e não emite veredito, então não há correção a decidir.
               </p>

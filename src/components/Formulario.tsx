@@ -17,9 +17,9 @@ const ESTILO_CAMPO: React.CSSProperties = {
   width: '100%',
   background: 'var(--elev)',
   border: '1px solid var(--bd)',
-  borderRadius: 8,
+  borderRadius: 'var(--raio-p)',
   padding: '10px 12px',
-  fontSize: 13.5,
+  fontSize: 'var(--tipo-corpo)',
   color: 'var(--tx)',
 };
 
@@ -39,7 +39,7 @@ export function Campo({
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   const idErro = `${nome}-erro`;
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
       {rotulo}
       {children ?? (
         <input
@@ -50,9 +50,9 @@ export function Campo({
           {...resto}
         />
       )}
-      {dica && !erro && <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{dica}</span>}
+      {dica && !erro && <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{dica}</span>}
       {erro && (
-        <span id={idErro} role="alert" style={{ fontSize: 11.5, color: 'var(--neg-tx)' }}>
+        <span id={idErro} role="alert" style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--neg-tx)' }}>
           {erro}
         </span>
       )}
@@ -103,10 +103,10 @@ export function BotaoSubmeter({ children, ocupado }: { children: React.ReactNode
         background: 'var(--gold)',
         color: 'var(--on-gold)',
         border: 'none',
-        borderRadius: 8,
+        borderRadius: 'var(--raio-p)',
         padding: '10px 16px',
         fontWeight: 600,
-        fontSize: 13.5,
+        fontSize: 'var(--tipo-corpo)',
         opacity: pending ? 0.7 : 1,
       }}
     >
@@ -127,9 +127,9 @@ export function BotaoSecundario({
         background: 'var(--elev)',
         color: 'var(--tx2)',
         border: '1px solid var(--bd)',
-        borderRadius: 8,
+        borderRadius: 'var(--raio-p)',
         padding: '10px 14px',
-        fontSize: 13,
+        fontSize: 'var(--tipo-corpo)',
       }}
       {...resto}
     >
@@ -145,11 +145,11 @@ export function Retorno({ estado }: { estado: EstadoFormulario }) {
     <p
       role={erro ? 'alert' : 'status'}
       style={{
-        fontSize: 12.5,
+        fontSize: 'var(--tipo-apoio)',
         color: erro ? 'var(--neg-tx)' : 'var(--ok-tx)',
         background: erro ? 'transparent' : 'var(--ok-bg)',
         padding: erro ? 0 : '8px 12px',
-        borderRadius: 8,
+        borderRadius: 'var(--raio-p)',
       }}
     >
       {estado.erro ?? estado.mensagem}

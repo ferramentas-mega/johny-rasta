@@ -35,7 +35,7 @@ const CORES: Record<EstadoDaConfiguracao, { traco: string; texto: string; fundo:
   nao_iniciada: { traco: 'var(--tx3)', texto: 'var(--soft-tx)', fundo: 'var(--soft-bg)' },
   // Vermelho: alguma verificação falhou com motivo registrado. Vence a
   // pendência simples — é o que exige ação agora.
-  com_erro: { traco: 'var(--neg)', texto: 'var(--neg)', fundo: 'rgba(255,133,133,.12)' },
+  com_erro: { traco: 'var(--neg)', texto: 'var(--neg)', fundo: 'var(--neg-bg)' },
   // Âmbar: escolhido e esperando verificação.
   pendente: { traco: 'var(--warn-tx)', texto: 'var(--warn-tx)', fundo: 'var(--warn-bg)' },
   // Verde: tudo o que foi escolhido está verificado.

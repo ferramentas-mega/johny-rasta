@@ -24,24 +24,24 @@ function Barras({ titulo, linhas, total }: { titulo: string; linhas: Comportamen
   const maior = Math.max(1, ...linhas.map((l) => l.sessoes));
   return (
     <div>
-      <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{titulo}</h3>
+      <h3 style={{ fontSize: 'var(--tipo-corpo)', fontWeight: 600, marginBottom: 12 }}>{titulo}</h3>
       {linhas.length === 0 ? (
-        <p style={{ fontSize: 12.5, color: 'var(--tx2)' }}>Sem dados no período.</p>
+        <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>Sem dados no período.</p>
       ) : (
         <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 9 }}>
           {linhas.map((l) => (
-            <li key={l.rotulo} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5 }}>
+            <li key={l.rotulo} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--tipo-apoio)' }}>
               <span className="mono" style={{ flex: '0 0 86px', color: 'var(--tx2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.rotulo}>
                 {l.rotulo}
               </span>
-              <span style={{ flex: 1, height: 8, background: 'var(--elev)', borderRadius: 999, overflow: 'hidden' }}>
+              <span style={{ flex: 1, height: 8, background: 'var(--elev)', borderRadius: 'var(--raio-pilula)', overflow: 'hidden' }}>
                 <span
                   style={{
                     display: 'block',
                     height: '100%',
                     width: `${(l.sessoes / maior) * 100}%`,
                     background: 'var(--gold)',
-                    borderRadius: 999,
+                    borderRadius: 'var(--raio-pilula)',
                   }}
                 />
               </span>
@@ -119,7 +119,7 @@ export default async function PaginaComportamento({
             titulo="Sem sessões neste período"
             subtitulo={`Situação do rastreamento: ${ESTADO_LABEL[site.estado]}.`}
           >
-            <p style={{ fontSize: 13, color: 'var(--tx2)' }}>
+            <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)' }}>
               Nenhuma sessão foi registrada na janela selecionada. Experimente um período maior, ou verifique a
               instalação na aba Rastreamento.
             </p>
@@ -127,30 +127,30 @@ export default async function PaginaComportamento({
         ) : (
           <>
             <div className="grade-cartoes">
-              <div style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--bd)', background: 'var(--card)' }}>
-                <div style={{ fontSize: 12.5, color: 'var(--tx2)' }}>Páginas por sessão</div>
-                <div className="mono" style={{ fontSize: 28, fontWeight: 500, margin: '8px 0 4px' }}>
+              <div style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
+                <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>Páginas por sessão</div>
+                <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>
                   {comportamento.paginasPorSessao !== null
                     ? comportamento.paginasPorSessao.toFixed(2).replace('.', ',')
                     : '—'}
                 </div>
-                <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>média no período</div>
+                <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>média no período</div>
               </div>
 
-              <div style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--bd)', background: 'var(--card)' }}>
-                <div style={{ fontSize: 12.5, color: 'var(--tx2)' }}>Sessões sem interação</div>
-                <div className="mono" style={{ fontSize: 28, fontWeight: 500, margin: '8px 0 4px' }}>
+              <div style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
+                <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>Sessões sem interação</div>
+                <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>
                   {num(comportamento.sessoesDeUmaPagina)}
                 </div>
-                <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>
+                <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>
                   uma página e nenhum clique · {pct(totalSessoes > 0 ? comportamento.sessoesDeUmaPagina / totalSessoes : null, 0)}
                 </div>
               </div>
 
-              <div style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--bd)', background: 'var(--card)' }}>
-                <div style={{ fontSize: 12.5, color: 'var(--tx2)' }}>Sessões analisadas</div>
-                <div className="mono" style={{ fontSize: 28, fontWeight: 500, margin: '8px 0 4px' }}>{num(totalSessoes)}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{periodo.label}</div>
+              <div style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
+                <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>Sessões analisadas</div>
+                <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>{num(totalSessoes)}</div>
+                <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{periodo.label}</div>
               </div>
             </div>
 

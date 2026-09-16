@@ -26,7 +26,7 @@ export function FormularioSite({
 
   if (clientes.length === 0) {
     return (
-      <p style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
+      <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
         Cadastre um cliente antes: todo site pertence a um cliente.
       </p>
     );
@@ -45,7 +45,7 @@ export function FormularioSite({
         flexDirection: 'column',
         gap: 12,
         border: '1px solid var(--bd)',
-        borderRadius: 10,
+        borderRadius: 'var(--raio-m)',
         padding: 16,
         background: 'var(--elev)',
         minWidth: 300,
@@ -90,7 +90,7 @@ export function FormularioSite({
            * mesmo lugar, sem nada para clicar. Parecia que a edição não tinha
            * pegado.
            */
-          <Link href="/sites" style={{ fontSize: 13, color: 'var(--tx2)' }}>
+          <Link href="/sites" style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)' }}>
             {estado.ok ? 'Voltar para a lista' : 'Cancelar'}
           </Link>
         ) : (
@@ -135,7 +135,7 @@ function Arquivar({ site }: { site: SiteEditavel }) {
         onClick={() => setConfirmando(true)}
         style={{
           alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0,
-          fontSize: 12, color: 'var(--tx3)', cursor: 'pointer', textDecoration: 'underline',
+          fontSize: 'var(--tipo-apoio)', color: 'var(--tx3)', cursor: 'pointer', textDecoration: 'underline',
         }}
       >
         Arquivar este site
@@ -146,11 +146,11 @@ function Arquivar({ site }: { site: SiteEditavel }) {
   return (
     <div
       style={{
-        border: '1px solid var(--neg)', borderRadius: 8, padding: 12,
+        border: '1px solid var(--neg)', borderRadius: 'var(--raio-p)', padding: 12,
         display: 'flex', flexDirection: 'column', gap: 10,
       }}
     >
-      <p style={{ fontSize: 12.5, lineHeight: 1.7, margin: 0 }}>
+      <p style={{ fontSize: 'var(--tipo-apoio)', lineHeight: 1.7, margin: 0 }}>
         Arquivar <strong>{site.name}</strong>?
         <span style={{ display: 'block', color: 'var(--tx2)', marginTop: 4 }}>
           O histórico é preservado e nada é apagado. Mas a <strong>coleta para</strong>: o script
@@ -159,7 +159,7 @@ function Arquivar({ site }: { site: SiteEditavel }) {
         </span>
       </p>
       {estado.erro && (
-        <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)', margin: 0 }}>{estado.erro}</p>
+        <p role="alert" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--neg-tx)', margin: 0 }}>{estado.erro}</p>
       )}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         <button
@@ -171,8 +171,8 @@ function Arquivar({ site }: { site: SiteEditavel }) {
           name="id"
           value={site.id}
           style={{
-            background: 'var(--neg)', color: 'var(--card)', border: 'none', borderRadius: 8,
-            padding: '8px 12px', fontSize: 12.5, cursor: 'pointer',
+            background: 'var(--neg)', color: 'var(--card)', border: 'none', borderRadius: 'var(--raio-p)',
+            padding: '8px 12px', fontSize: 'var(--tipo-apoio)', cursor: 'pointer',
           }}
         >
           Arquivar mesmo assim
@@ -180,7 +180,7 @@ function Arquivar({ site }: { site: SiteEditavel }) {
         <button
           type="button"
           onClick={() => setConfirmando(false)}
-          style={{ background: 'none', border: 'none', fontSize: 12.5, color: 'var(--tx2)', cursor: 'pointer' }}
+          style={{ background: 'none', border: 'none', fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', cursor: 'pointer' }}
         >
           Manter o site
         </button>

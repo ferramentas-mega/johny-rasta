@@ -34,13 +34,13 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
 
       <div className="pagina">
         {busca.arquivado && (
-          <p role="status" style={{ fontSize: 12.5, color: 'var(--ok-tx)' }}>
+          <p role="status" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--ok-tx)' }}>
             Site arquivado. O histórico foi preservado, e a coleta dele parou.
           </p>
         )}
 
         {filtrado && (
-          <p style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
+          <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
             Filtrando por <strong>{filtrado.name}</strong>. <Link href="/sites">Ver todos os sites</Link>
           </p>
         )}
@@ -69,7 +69,7 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
           }
         >
           {ctx.sites.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--tx2)' }}>
+            <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)' }}>
               {ctx.clientes.length === 0
                 ? 'Cadastre um cliente primeiro, em Clientes.'
                 : 'Nenhum site cadastrado para este filtro.'}
@@ -81,7 +81,7 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
               ))}
             </div>
           )}
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 14, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 14, lineHeight: 1.6 }}>
             A cor da faixa é o estado da <strong>configuração</strong>: cinza não iniciada, âmbar com recurso
             escolhido esperando verificação, vermelho com erro registrado, verde tudo verificado. A etiqueta do
             rodapé é outra coisa — o <strong>rastreamento</strong>, derivado dos eventos recebidos. Cadastrar o

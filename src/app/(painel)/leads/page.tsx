@@ -87,7 +87,7 @@ export default async function PaginaLeads({ searchParams }: { searchParams: Prom
       render: (l) => (
         <span>
           <span style={{ display: 'block' }}>{l.nome ?? '—'}</span>
-          <span className="mono" style={{ fontSize: 11, color: 'var(--tx3)' }}>
+          <span className="mono" style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>
             {mascararEmail(l.email) }{l.telefone ? ` · ${l.telefone.replace(/\d(?=\d{4})/g, '*')}` : ''}
           </span>
         </span>
@@ -96,7 +96,7 @@ export default async function PaginaLeads({ searchParams }: { searchParams: Prom
       render: (l) => (
         <span>
           <span style={{ display: 'block' }}>{l.site}</span>
-          <span style={{ fontSize: 11, color: 'var(--tx3)' }}>{l.cliente}</span>
+          <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{l.cliente}</span>
         </span>
       ) },
     { chave: 'origem', titulo: 'Origem', render: (l) => l.origem ?? 'Não identificada' },
@@ -135,7 +135,7 @@ export default async function PaginaLeads({ searchParams }: { searchParams: Prom
           {/* A ressalva não é rodapé legal: é o erro de leitura mais provável
               desta tela. Ver queda entre duas etapas e concluir "o formulário
               está ruim" é justamente o que o painel não pode afirmar. */}
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 14, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 14, lineHeight: 1.5 }}>
             O funil conta quantas sessões chegaram a cada ponto. Ele não diz por que as outras
             pararam — para isso é preciso olhar as páginas, os botões e a qualidade técnica do site,
             que ficam em abas próprias.
@@ -152,7 +152,7 @@ export default async function PaginaLeads({ searchParams }: { searchParams: Prom
             linhas={linhas}
             vazio="Nenhum lead neste site e período."
           />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
             Contatos ficam mascarados nesta listagem. O total de envios pode ser maior que o número de leads: o
             mesmo contato enviando duas vezes continua sendo um lead só.
           </p>

@@ -131,7 +131,7 @@ export default async function PaginaDesempenho({
             titulo="Este site ainda não recebeu eventos"
             subtitulo={`Situação: ${ESTADO_LABEL[site.estado]}. Enquanto nenhum evento chegar, o painel não exibe números — nem zeros estimados.`}
           >
-            <p style={{ fontSize: 13, color: 'var(--tx2)' }}>
+            <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)' }}>
               Instale o script na aba <strong>Rastreamento</strong> e abra o site uma vez para validar a coleta.
             </p>
           </Painel>
@@ -160,7 +160,7 @@ export default async function PaginaDesempenho({
                 variacao={{ texto: `${num(atual.formularios)} envios ÷ ${num(atual.sessoes)} sessões`, tom: 'neutro' }} />
             </div>
 
-            <p style={{ fontSize: 12, color: 'var(--tx2)' }}>
+            <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
               Cliques e formulários não são somados: a mesma pessoa pode fazer as duas coisas.{' '}
               <strong>Sessões convertidas</strong> e <strong>envios por sessão</strong> são contas diferentes — a
               segunda pode passar de 100%, porque uma sessão pode enviar mais de um formulário.
@@ -172,7 +172,7 @@ export default async function PaginaDesempenho({
               subtitulo={`${periodo.label} · fonte: rastreamento próprio`}
             >
               <Grafico pontos={serie} periodo={periodo.label} />
-              <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+              <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
                 A soma da série de formulários é {num(soma(serie, (p) => p.formularios))}, exatamente o valor do
                 cartão de formulários recebidos. As duas leituras vêm da mesma consulta.
               </p>
@@ -183,7 +183,7 @@ export default async function PaginaDesempenho({
               subtitulo="Taxa e volumes por página visitada dentro do período"
             >
               <Tabela colunas={colunasPagina} linhas={paginas} />
-              <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+              <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
                 Uma sessão que visitou duas páginas aparece nas duas linhas. Por isso a coluna de sessões soma mais
                 que o total de sessões do período.
               </p>
@@ -192,7 +192,7 @@ export default async function PaginaDesempenho({
             <div className="grade-dupla">
               <Painel titulo="Desempenho dos botões" subtitulo="Passe o cursor sobre o nome para ver o identificador">
                 <Tabela colunas={colunasBotao} linhas={botoes} />
-                <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+                <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
                   Total de {num(soma(botoes, (l) => l.cliques))} cliques — o mesmo total da coluna "Cliques em CTA"
                   da tabela por página, porque as duas contam o mesmo conjunto de eventos.
                 </p>
@@ -200,7 +200,7 @@ export default async function PaginaDesempenho({
 
               <Painel titulo="Origem dos acessos" subtitulo="UTMs e referenciador da primeira página da sessão">
                 <Tabela colunas={colunasOrigem} linhas={origens} />
-                <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+                <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
                   "Não identificado" cobre acessos diretos e sessões sem UTM legível. Não atribuímos origem por
                   inferência.
                 </p>

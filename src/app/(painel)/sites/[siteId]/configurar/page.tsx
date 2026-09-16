@@ -170,7 +170,7 @@ export default async function PaginaConfigurar({
           data-testid="proxima-acao"
           style={{
             border: `1px solid ${acao.etapa === 'resumo' ? 'var(--gold)' : 'var(--warn-tx)'}`,
-            borderRadius: 12,
+            borderRadius: 'var(--raio-m)',
             background: acao.etapa === 'resumo' ? 'var(--ok-bg)' : 'var(--warn-bg)',
             padding: '14px 16px',
             display: 'flex',
@@ -180,16 +180,16 @@ export default async function PaginaConfigurar({
         >
           <span
             className="mono"
-            style={{ fontSize: 10.5, letterSpacing: '.12em', color: 'var(--tx3)' }}
+            style={{ fontSize: 'var(--tipo-micro)', letterSpacing: 'var(--trilha-ampla)', color: 'var(--tx3)' }}
           >
             {acao.etapa === 'resumo' ? 'CONFIGURAÇÃO VERIFICADA' : 'PRÓXIMA AÇÃO'}
           </span>
-          <strong style={{ fontSize: 14.5, lineHeight: 1.5 }}>{acao.frase}</strong>
-          <span style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.6 }}>{acao.motivo}</span>
+          <strong style={{ fontSize: 'var(--tipo-corpo)', lineHeight: 1.5 }}>{acao.frase}</strong>
+          <span style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', lineHeight: 1.6 }}>{acao.motivo}</span>
           {acao.etapa !== etapa && (
             <Link
               href={`/sites/${site.id}/configurar?etapa=${acao.etapa}`}
-              style={{ fontSize: 13, marginTop: 2 }}
+              style={{ fontSize: 'var(--tipo-corpo)', marginTop: 2 }}
             >
               Ir para {ETAPAS.find((e) => e.slug === acao.etapa)!.titulo.toLowerCase()} →
             </Link>
@@ -233,20 +233,20 @@ export default async function PaginaConfigurar({
               {/* A explicação vem ANTES do bloco de código, de propósito: um
                   paredão de código antes de dizer o que fazer com ele é o jeito
                   mais rápido de perder quem está instalando. */}
-              <p style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.7 }}>
+              <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.7 }}>
                 <strong>Onde vai:</strong> {instrucao.onde}
               </p>
-              <ol style={{ paddingLeft: 20, fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.9 }}>
+              <ol style={{ paddingLeft: 20, fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.9 }}>
                 {instrucao.passos.map((p) => (
                   <li key={p}>{p}</li>
                 ))}
               </ol>
-              <p style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.7 }}>
+              <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.7 }}>
                 <strong>Para publicar:</strong> {instrucao.publicar}
               </p>
 
               <Snippet codigo={snippet} rotulo={`Código deste site · endpoint ${endpoint}`} />
-              <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
+              <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.6 }}>
                 Copiar confirma a cópia, e só isso. A instalação é confirmada na etapa seguinte, por um evento que
                 chegue ao servidor.
               </p>
@@ -266,15 +266,15 @@ export default async function PaginaConfigurar({
               <details
                 style={{
                   border: '1px solid var(--bd)',
-                  borderRadius: 10,
+                  borderRadius: 'var(--raio-m)',
                   padding: '12px 14px',
                   background: 'var(--card)',
                 }}
               >
-                <summary style={{ cursor: 'pointer', fontSize: 13.5, color: 'var(--tx)' }}>
+                <summary style={{ cursor: 'pointer', fontSize: 'var(--tipo-corpo)', color: 'var(--tx)' }}>
                   Prefere que outra pessoa — ou o Claude Code — instale para você?
                 </summary>
-                <p style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.7, margin: '10px 0' }}>
+                <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', lineHeight: 1.7, margin: '10px 0' }}>
                   Copie o texto abaixo e cole numa sessão aberta no repositório do site. Ele manda
                   <strong> inspecionar antes de editar</strong>, não instalar duas vezes, preservar o banner de
                   consentimento e — se houver formulário — <strong>não substituir</strong> o destino atual.
@@ -289,7 +289,7 @@ export default async function PaginaConfigurar({
                   })}
                   rotulo="Instrução para colar no repositório do site"
                 />
-                <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6, marginTop: 10 }}>
+                <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.6, marginTop: 10 }}>
                   Só dado público vai neste texto: domínio, identificador do site e endereço do coletor. Nenhum
                   token, nenhuma senha. E instalar por este caminho também não conclui a etapa — quem conclui é a
                   verificação, na etapa seguinte.
@@ -297,11 +297,11 @@ export default async function PaginaConfigurar({
               </details>
 
               {instrucao.observacao && (
-                <p style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.7 }}>{instrucao.observacao}</p>
+                <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', lineHeight: 1.7 }}>{instrucao.observacao}</p>
               )}
 
               {site.totalEventos > 0 && (
-                <p role="status" style={{ fontSize: 13, color: 'var(--ok-tx)' }}>
+                <p role="status" style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--ok-tx)' }}>
                   Este site já recebeu {site.totalEventos} evento(s). O rastreamento está de pé — não instale de novo,
                   duas tags em lugares diferentes viram manutenção esquecida.
                 </p>
@@ -338,7 +338,7 @@ export default async function PaginaConfigurar({
 
           {etapa === 'qualidade' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <p style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.7 }}>
+              <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.7 }}>
                 Este caminho é <strong>independente do rastreamento</strong>: funciona com a URL pública, sem instalar
                 nada no site. Também não mede visitas nem leads — nota de desempenho não é audiência.
               </p>
@@ -368,7 +368,7 @@ export default async function PaginaConfigurar({
         </Painel>
 
         {etapa !== 'resumo' && (
-          <p style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
+          <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
             <Link href={`/sites/${site.id}/configurar?etapa=resumo`}>Ver o resumo da configuração</Link>
             {' · '}
             <Link href="/sites">Voltar à lista de sites</Link>
@@ -405,15 +405,15 @@ function Resumo({
             key={l.recurso}
             style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}
           >
-            <span style={{ flex: '1 1 240px', fontSize: 13.5 }}>{RECURSO_LABEL[l.recurso]}</span>
+            <span style={{ flex: '1 1 240px', fontSize: 'var(--tipo-corpo)' }}>{RECURSO_LABEL[l.recurso]}</span>
             <span style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
               <Etiqueta texto={ESTADO_RECURSO_LABEL[l.estado]} tom={ESTADO_RECURSO_TOM[l.estado]} />
               {l.verificadoEm && (
-                <span style={{ fontSize: 10.5, color: 'var(--tx3)' }}>
+                <span style={{ fontSize: 'var(--tipo-micro)', color: 'var(--tx3)' }}>
                   verificado em {dataHora(l.verificadoEm, fuso)}
                 </span>
               )}
-              {l.erro && <span style={{ fontSize: 11, color: 'var(--neg-tx)', maxWidth: 380 }}>{l.erro}</span>}
+              {l.erro && <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--neg-tx)', maxWidth: 380 }}>{l.erro}</span>}
             </span>
           </li>
         ))}
@@ -427,14 +427,14 @@ function Resumo({
       */}
       <p
         role="status"
-        style={{ fontSize: 13.5, color: completo ? 'var(--ok-tx)' : 'var(--warn-tx)', lineHeight: 1.7 }}
+        style={{ fontSize: 'var(--tipo-corpo)', color: completo ? 'var(--ok-tx)' : 'var(--warn-tx)', lineHeight: 1.7 }}
       >
         {completo
           ? 'Tudo o que você selecionou está verificado.'
           : 'Ainda há recursos selecionados sem verificação. Eles continuam na lista até funcionarem de verdade.'}
       </p>
 
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 13.5 }}>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 'var(--tipo-corpo)' }}>
         <Link href={`/sites/${siteId}/desempenho`}>Abrir painel do site →</Link>
         {!completo && <Link href={`/sites/${siteId}/configurar`}>Resolver pendências</Link>}
         <Link href="/sites">Voltar à lista de sites</Link>

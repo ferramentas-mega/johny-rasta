@@ -130,7 +130,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
       render: (b) => (
         <span>
           <span style={{ display: 'block' }}>{b.texto}</span>
-          <span className="mono" style={{ fontSize: 11, color: 'var(--tx3)' }}>{b.buttonId}</span>
+          <span className="mono" style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{b.buttonId}</span>
         </span>
       ),
     },
@@ -140,7 +140,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
       render: (b) => (
         <span>
           <span style={{ display: 'block' }}>{b.posicao ?? '—'}</span>
-          <span className="mono" style={{ fontSize: 11, color: 'var(--tx3)' }}>
+          <span className="mono" style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>
             {b.paginas > 1 ? `${num(b.paginas)} páginas` : (b.exemploPagina ?? '—')}
           </span>
         </span>
@@ -165,7 +165,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
           <Etiqueta texto={ESTADO_BOTAO_LABEL[b.estado]} tom={ESTADO_BOTAO_TOM[b.estado]} />
           {/* Estado sem próxima ação é só um rótulo bonito. */}
           {b.estado !== 'medindo' && b.estado !== 'novo' && (
-            <span style={{ fontSize: 11, color: 'var(--tx3)', lineHeight: 1.5 }}>
+            <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.5 }}>
               {ESTADO_BOTAO_ACAO[b.estado]}
             </span>
           )}
@@ -226,7 +226,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 11,
+                      fontSize: 'var(--tipo-legenda)',
                       border: `1px solid ${concluido ? 'var(--gold)' : atual ? 'var(--warn-tx)' : 'var(--bd)'}`,
                       background: concluido ? 'var(--gold-fill)' : 'transparent',
                       color: concluido ? 'var(--gold-tx)' : atual ? 'var(--warn-tx)' : 'var(--tx3)',
@@ -235,10 +235,10 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
                     {concluido ? '✓' : numero}
                   </span>
                   <span>
-                    <span style={{ fontSize: 13.5, color: concluido ? 'var(--tx)' : 'var(--tx2)' }}>
+                    <span style={{ fontSize: 'var(--tipo-corpo)', color: concluido ? 'var(--tx)' : 'var(--tx2)' }}>
                       {passo.titulo}
                     </span>
-                    <span style={{ display: 'block', fontSize: 11.5, color: 'var(--tx3)' }}>{passo.detalhe}</span>
+                    <span style={{ display: 'block', fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{passo.detalhe}</span>
                   </span>
                 </li>
               );
@@ -251,7 +251,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
           subtitulo="Uma linha, antes de fechar o </head> de todas as páginas do site"
         >
           <Snippet codigo={snippet} rotulo={`Endpoint configurado: ${endpoint}`} />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
             O script registra visualizações sozinho, e detecta cliques em links de WhatsApp, telefone e e-mail sem
             marcação adicional. Ele nunca lê campos de formulário.
           </p>
@@ -263,7 +263,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <EventoTeste publicId={site.publicId} />
-            <p style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
+            <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
               Ou abra a{' '}
               <Link href={`/teste/${site.publicId}`} target="_blank">
                 página de teste deste site
@@ -289,29 +289,29 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
               role="alert"
               style={{
                 border: '1px solid var(--neg)',
-                borderRadius: 10,
+                borderRadius: 'var(--raio-m)',
                 background: 'var(--card)',
                 padding: '12px 14px',
                 marginBottom: 14,
               }}
             >
-              <strong style={{ fontSize: 13.5, color: 'var(--neg-tx)' }}>
+              <strong style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--neg-tx)' }}>
                 Coletor instalado mais de uma vez
               </strong>
-              <p style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.7, margin: '6px 0' }}>
+              <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', lineHeight: 1.7, margin: '6px 0' }}>
                 Estas páginas registraram duas visualizações da mesma sessão separadas por menos de dois
                 segundos, nos últimos 7 dias. É o sintoma de duas tags na mesma página — e ele é caro em
                 silêncio: as visualizações dobram, páginas por sessão dobra, e a taxa de conversão cai pela
                 metade sem nada ter piorado no site. Ninguém desconfia de um número que só subiu.
               </p>
-              <ul className="mono" style={{ fontSize: 12, color: 'var(--tx2)', paddingLeft: 20 }}>
+              <ul className="mono" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', paddingLeft: 20 }}>
                 {duplicadas.map((d) => (
                   <li key={d.caminho}>
                     {d.caminho} — {num(d.ocorrencias)} ocorrência(s)
                   </li>
                 ))}
               </ul>
-              <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6, marginTop: 6 }}>
+              <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.6, marginTop: 6 }}>
                 Procure por <span className="mono">t.js</span> no HTML publicado. O caso comum é o script no
                 layout do tema E num plugin de inserção de código.
               </p>
@@ -321,7 +321,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
           {inventario.length > 0 && (
             <>
               <Tabela colunas={colunasBotoes} linhas={inventario} vazio="Nenhum botão clicado ainda." />
-              <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
                 Esta lista é construída a partir do que o coletor <strong>recebeu</strong>, e por isso tem um
                 limite que vale dizer: um botão que existe na página e nunca foi clicado não aparece aqui.
                 Ela responde &quot;de tudo o que já foi clicado, o que está bem marcado&quot; — não &quot;quantos
@@ -332,7 +332,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
 
           <div style={{ marginTop: inventario.length > 0 ? 16 : 0 }}>
             <Snippet codigo={exemploBotao} rotulo="Exemplo de CTA marcado" />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10 }}>
             Sem <span className="mono">data-track-id</span>, cliques em WhatsApp, telefone e e-mail ainda são
             contados — aparecem agrupados como <span className="mono">auto:whatsapp</span> e afins. Para abertura de
             formulário, chame <span className="mono">painel.evento(&apos;form_open&apos;)</span>: um clique que abre um
@@ -346,7 +346,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
           subtitulo="O envio é validado e gravado no servidor antes de qualquer confirmação"
         >
           <Snippet codigo={exemploFormulario} rotulo="Endpoint de formulários" />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
             O exemplo funciona como está: gera a chave de idempotência uma vez por formulário preenchido e só a
             renova depois de um envio confirmado pelo servidor. Visitante e idempotência são opcionais no
             endpoint — sem eles o contato ainda é aceito, porque recusar um lead legítimo por causa do analytics

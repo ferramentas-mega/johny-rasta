@@ -51,15 +51,54 @@ const FORA_DO_ALCANCE_DO_CSS = {
   'src/components/ChuvaMatrix.tsx': 'canvas: `ctx.fillStyle` não resolve `var(--token)`',
 };
 
+/**
+ * Lê os tokens de um bloco.
+ *
+ * Divide por DECLARAÇÃO (`;`), não por linha. A versão anterior lia linha a
+ * linha, e por isso não enxergava token nenhum cujo valor quebrasse em duas —
+ * `--header-bg`, `--brand-bg` e as sombras empilhadas. Eles nunca entraram na
+ * conferência de paridade: um deles podia faltar num tema e o script diria que
+ * está tudo certo. O sintoma que revelou isso foi o contrário e por sorte —
+ * `--sombra-1` acusado como ausente no claro, onde ele existia e só estava
+ * escrito em duas linhas.
+ *
+ * Valor de token aqui nunca contém `;`; se um dia contiver (uma `url()` com
+ * ponto e vírgula), esta divisão precisa passar a respeitar parênteses.
+ */
 function lerTokens(css, seletor) {
   const bloco = css.slice(css.indexOf(seletor));
-  const corpo = bloco.slice(bloco.indexOf('{') + 1, bloco.indexOf('}'));
+  // Comentários saem ANTES de qualquer divisão. Os comentários deste arquivo
+  // citam tokens ("--tx3 dava 3,78:1 sobre --elev: reprova…"), e um `--nome:`
+  // dentro de comentário é indistinguível de uma declaração para quem lê por
+  // expressão regular — o token citado entrava no lugar do declarado.
+  const corpo = bloco
+    .slice(bloco.indexOf('{') + 1, bloco.indexOf('}'))
+    .replace(/\/\*[\s\S]*?\*\//g, '');
   const tokens = new Map();
-  for (const linha of corpo.split('\n')) {
-    const m = linha.match(/^\s*(--[\w-]+)\s*:\s*(.+?);\s*$/);
-    if (m) tokens.set(m[1], m[2].trim());
+  for (const declaracao of corpo.split(';')) {
+    // `[\s\S]` em vez de `.`: o valor pode atravessar linhas.
+    const m = declaracao.match(/(--[\w-]+)\s*:\s*([\s\S]+)/);
+    if (m) tokens.set(m[1], m[2].trim().replace(/\s+/g, ' '));
   }
   return tokens;
+}
+
+/**
+ * Põe uma cor numa forma comparável, ou devolve null se não for cor.
+ *
+ * `rgba(112, 255, 139, 0.12)` e `rgba(112,255,139,.12)` são a MESMA cor escrita
+ * de dois jeitos — e é assim que a cópia escapa de uma comparação por texto.
+ * Espaço some, `.12` vira `0.12`, e alfa 1 vira a forma sem alfa.
+ */
+function normalizarCor(valor) {
+  const v = valor.trim().toLowerCase();
+  if (/^#[0-9a-f]{3,8}$/.test(v)) return v;
+  const m = /^rgba?\(([^)]+)\)$/.exec(v);
+  if (!m) return null;
+  const p = m[1].split(',').map((x) => x.trim());
+  if (p.length < 3) return null;
+  const alfa = p[3] === undefined ? 1 : parseFloat(p[3]);
+  return `rgba(${p[0]},${p[1]},${p[2]},${alfa})`;
 }
 
 function arquivos(dir, achados = []) {
@@ -94,23 +133,38 @@ for (const token of claro.keys()) {
 const porValor = new Map();
 for (const [tema, tokens] of [['escuro', escuro], ['claro', claro]]) {
   for (const [token, valor] of tokens) {
-    const hex = valor.trim().toLowerCase();
-    if (/^#[0-9a-f]{3,8}$/.test(hex)) {
-      porValor.set(hex, [...(porValor.get(hex) ?? []), `${token} (${tema})`]);
-    }
+    // Hexadecimal E `rgba()`. Antes só o hexadecimal entrava, e foi por essa
+    // fresta que passou o defeito real: `CartaoIndicador` trazia
+    // `rgba(112,255,139,.10)` escrito à mão — o verde do tema ESCURO — no
+    // gradiente do cartão de destaque. Ele não trocava no tema claro, e o
+    // cartão puxava para um verde fora da paleta clara. Nada quebrava.
+    const bruto = normalizarCor(valor);
+    if (bruto) porValor.set(bruto, [...(porValor.get(bruto) ?? []), `${token} (${tema})`]);
   }
 }
 
 for (const caminho of arquivos(join(RAIZ, 'src'))) {
   const rel = relative(RAIZ, caminho);
-  const conteudo = readFileSync(caminho, 'utf8');
+  // Comentário não é interface. Documentar o valor ANTIGO ao corrigir uma cor
+  // crua é justamente o que se quer que alguém faça — e sem isto o verificador
+  // reprovava a própria explicação do conserto.
+  // Trocar por espaços, e não apagar: o número da linha precisa continuar
+  // apontando para onde o defeito está.
+  const conteudo = readFileSync(caminho, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+    .replace(/\/\/[^\n]*/g, (c) => ' '.repeat(c.length));
   const linhas = conteudo.split('\n');
 
   linhas.forEach((linha, i) => {
-    for (const bruto of linha.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []) {
-      const hex = bruto.toLowerCase();
+    const crus = [
+      ...(linha.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []),
+      // `rgba()` conta como cor crua na mesma medida. Sem isto, escrever o
+      // valor de um token em rgba passava direto.
+      ...(linha.match(/rgba?\([\d\s.,]+\)/g) ?? []),
+    ];
+    for (const bruto of crus) {
       const motivo = FORA_DO_ALCANCE_DO_CSS[rel];
-      const igualA = porValor.get(hex);
+      const igualA = porValor.get(normalizarCor(bruto) ?? '');
 
       if (!motivo) {
         problemas.push(`${rel}:${i + 1} usa a cor crua ${bruto} — a interface lê o tema por var(--token).`);
@@ -133,6 +187,10 @@ const PARES = [
   ['--gold-tx', '--bg'], ['--gold-tx', '--card'], ['--gold-tx', '--elev'],
   ['--pos-tx', '--card'], ['--neg-tx', '--card'],
   ['--ok-tx', '--ok-bg'], ['--warn-tx', '--warn-bg'], ['--soft-tx', '--soft-bg'],
+  // O par novo. A família de estado tinha três fundos e quatro textos; o
+  // quarto fundo era escrito à mão nos componentes, e por isso nunca passou
+  // por esta medição.
+  ['--neg-tx', '--neg-bg'],
   ['--on-gold', '--gold'],
 ];
 const MINIMO = 4.5;
@@ -167,8 +225,51 @@ for (const [tema, tokens] of [['escuro', escuro], ['claro', claro]]) {
   }
 }
 
+// ── 5. A escala é um conjunto FECHADO ────────────────────────────────────────
+//
+// Medido antes desta conferência existir: 19 tamanhos de fonte distintos em 291
+// usos — 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 16, 17, 18, 19,
+// 26, 28, 32. Quinze deles num intervalo de nove pixels. E `.1em` convivendo com
+// `.12em` no MESMO papel, a sobrelinha, em dois componentes.
+//
+// Ninguém percebe 12 contra 12,5. O que se percebe é o resultado: duas telas que
+// dizem a mesma coisa com pesos visuais diferentes, sem que ninguém consiga
+// apontar o que está errado.
+//
+// Escala sem quem a defenda dura até a próxima tela. Por isso isto é conferência
+// e não convenção: valor cru reprova, e token fora do conjunto também — um
+// `var(--tipo-medio)` inventado não existe no CSS e o navegador o ignora **em
+// silêncio**, deixando o tamanho herdado no lugar.
+const ESCALA = {
+  fontSize: ['micro', 'legenda', 'apoio', 'corpo', 'secao', 'titulo', 'display', 'numero', 'heroico'].map((n) => `--tipo-${n}`),
+  letterSpacing: ['ampla', 'media', 'justa'].map((n) => `--trilha-${n}`),
+  borderRadius: ['p', 'm', 'pilula'].map((n) => `--raio-${n}`),
+};
+
+for (const arquivo of arquivos(join(RAIZ, 'src'))) {
+  if (!arquivo.endsWith('.tsx')) continue;
+  const rel = relative(RAIZ, arquivo);
+  readFileSync(arquivo, 'utf8').split('\n').forEach((linha, i) => {
+    for (const [prop, permitidos] of Object.entries(ESCALA)) {
+      // Valor cru: número, ou string que não é `var(--token)`.
+      const cru = linha.match(new RegExp(`${prop}: (?!'var\\()([0-9][\\w.%]*|'[^']*')`));
+      // `borderRadius: '50%'` é geometria (círculo), não escala — fica de fora.
+      if (cru && !(prop === 'borderRadius' && /^'\d+%'$/.test(cru[1]))) {
+        problemas.push(`${rel}:${i + 1} usa ${prop}: ${cru[1]} — a escala é fechada; use ${permitidos.join(' · ')}.`);
+      }
+      const token = linha.match(new RegExp(`${prop}: 'var\\((--[\\w-]+)\\)'`));
+      if (token && !permitidos.includes(token[1])) {
+        problemas.push(`${rel}:${i + 1} usa ${prop}: var(${token[1]}), que não é da escala — use ${permitidos.join(' · ')}.`);
+      }
+    }
+  });
+}
+
 console.log(`Tokens: ${escuro.size} no escuro, ${claro.size} no claro.`);
 console.log(`Contraste: ${PARES.length} pares conferidos por tema, mínimo ${MINIMO}:1.`);
+console.log(
+  `Escala fechada: ${ESCALA.fontSize.length} tamanhos, ${ESCALA.letterSpacing.length} trilhas, ${ESCALA.borderRadius.length} raios.`,
+);
 if (avisos.length) {
   console.log(`\nCópias vigiadas (${avisos.length}) — obrigatórias, e por isso rastreadas:`);
   for (const a of avisos) console.log(`  · ${a}`);

@@ -94,7 +94,7 @@ export default async function PaginaCliente({
       render: (l) => (
         <Link href={`/sites/${l.id}/desempenho?periodo=${periodoInput.key}`}>
           {l.nome}
-          <span style={{ display: 'block', fontSize: 11, color: 'var(--tx3)' }}>{l.dominio}</span>
+          <span style={{ display: 'block', fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{l.dominio}</span>
         </Link>
       ),
     },
@@ -142,23 +142,23 @@ export default async function PaginaCliente({
       />
 
       <div className="pagina">
-        <p style={{ fontSize: 12.5 }}>
+        <p style={{ fontSize: 'var(--tipo-apoio)' }}>
           <Link href={`/visao-geral?periodo=${periodoInput.key}`} style={{ color: 'var(--tx2)' }}>← Voltar para a carteira</Link>
         </p>
 
         <div className="grade-cartoes">
           {cartoes.map((c) => (
-            <div key={c.rotulo} style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--bd)', background: 'var(--card)' }}>
-              <div style={{ fontSize: 12.5, color: 'var(--tx2)' }}>{c.rotulo}</div>
-              <div className="mono" style={{ fontSize: 28, fontWeight: 500, margin: '8px 0 4px' }}>{c.valor}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{c.nota}</div>
+            <div key={c.rotulo} style={{ padding: '16px 18px', borderRadius: 'var(--raio-m)', border: '1px solid var(--bd)', background: 'var(--card)' }}>
+              <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{c.rotulo}</div>
+              <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>{c.valor}</div>
+              <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{c.nota}</div>
             </div>
           ))}
         </div>
 
         <Painel titulo="Sites" subtitulo="Os mesmos números que a tela de cada site mostra">
           <Tabela colunas={colunas} linhas={linhas} vazio="Este cliente não tem site cadastrado." />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
             Site sem rastreamento instalado aparece como "Indisponível", nunca como zero — zero afirmaria que
             medimos e não houve. A taxa do Total é a soma das sessões convertidas dividida pela soma das
             sessões, não a média das taxas dos sites.

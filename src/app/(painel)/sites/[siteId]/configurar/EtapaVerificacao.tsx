@@ -99,7 +99,7 @@ export function EtapaVerificacao({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <ol style={{ paddingLeft: 20, fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.9 }}>
+      <ol style={{ paddingLeft: 20, fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.9 }}>
         <li>Abra o link de diagnóstico abaixo — ele abre o seu site com o teste ligado.</li>
         <li>Navegue por mais uma página do site.</li>
         <li>Clique no botão que você quer medir (WhatsApp, telefone ou e-mail).</li>
@@ -111,7 +111,7 @@ export function EtapaVerificacao({
           <input type="hidden" name="siteId" value={siteId} />
           <input type="hidden" name="base" value={urlBase} />
           {vencido && (
-            <p role="status" style={{ fontSize: 12.5, color: 'var(--warn-tx)', lineHeight: 1.6 }}>
+            <p role="status" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--warn-tx)', lineHeight: 1.6 }}>
               O diagnóstico anterior venceu. Abrir outro gera um link novo — e o antigo para de marcar
               qualquer coisa como teste, que é o motivo de ele ter prazo.
             </p>
@@ -122,7 +122,7 @@ export function EtapaVerificacao({
             </BotaoSubmeter>
           </div>
           {inicio.erro && (
-            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>
+            <p role="alert" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--neg-tx)' }}>
               {inicio.erro}
             </p>
           )}
@@ -130,11 +130,11 @@ export function EtapaVerificacao({
       ) : (
         <div
           style={{
-            border: '1px solid var(--bdc)', borderRadius: 10, padding: 14,
+            border: '1px solid var(--bdc)', borderRadius: 'var(--raio-m)', padding: 14,
             background: 'var(--elev)', display: 'flex', flexDirection: 'column', gap: 10,
           }}
         >
-          <span style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.6 }}>
+          <span style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', lineHeight: 1.6 }}>
             Abra este endereço no navegador. O token sobrevive à navegação entre as páginas do site, então dá
             para percorrer o site inteiro sem repetir o link.
           </span>
@@ -142,7 +142,7 @@ export function EtapaVerificacao({
             <span
               className="mono"
               data-testid="prazo-diagnostico"
-              style={{ fontSize: 11.5, color: 'var(--warn-tx)' }}
+              style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--warn-tx)' }}
             >
               VÁLIDO POR MAIS {restantes} MIN
             </span>
@@ -152,12 +152,12 @@ export function EtapaVerificacao({
             href={url}
             target="_blank"
             rel="noreferrer"
-            style={{ fontSize: 12.5, wordBreak: 'break-all' }}
+            style={{ fontSize: 'var(--tipo-apoio)', wordBreak: 'break-all' }}
           >
             {url}
           </a>
           {/* Dizer o PORQUÊ do prazo evita que ele pareça burocracia. */}
-          <span style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
+          <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.6 }}>
             O prazo é de {MINUTOS_DE_DIAGNOSTICO} minutos porque este link marca como teste tudo o que
             chegar por ele. Sem vencimento, um endereço esquecido numa aba tiraria visitas reais dos
             relatórios sem ninguém notar.
@@ -174,13 +174,13 @@ export function EtapaVerificacao({
           </div>
 
           {conferencia.erro && (
-            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>
+            <p role="alert" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--neg-tx)' }}>
               {conferencia.erro}
             </p>
           )}
 
           {conferencia.conferidoEm && (
-            <div role="status" style={{ fontSize: 13, lineHeight: 1.7 }}>
+            <div role="status" style={{ fontSize: 'var(--tipo-corpo)', lineHeight: 1.7 }}>
               {eventos.length === 0 ? (
                 conferencia.diagnostico ? (
                   <Diagnostico diagnostico={conferencia.diagnostico} consoleTexto={conferencia.consoleTexto} />
@@ -209,13 +209,13 @@ export function EtapaVerificacao({
       )}
 
       {faltando.length > 0 && (
-        <p style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
+        <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
           Ainda sem verificação: <strong>{faltando.map((r) => RECURSO_LABEL[r]).join(', ')}</strong>. Faça o gesto
           correspondente no site com o diagnóstico aberto e confira de novo.
         </p>
       )}
 
-      <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
+      <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.6 }}>
         Tudo o que chega por este link nasce marcado como teste no servidor e fica fora dos relatórios comerciais —
         inclusive um envio de formulário feito durante o diagnóstico.
       </p>
@@ -264,10 +264,10 @@ function Diagnostico({
 
       {diagnostico.ofereceConsole && consoleTexto && (
         <details style={{ marginTop: 2 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--tx2)' }}>
+          <summary style={{ cursor: 'pointer', fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
             Conferir pelo navegador (descobre se a tag está lá e se ela roda)
           </summary>
-          <p style={{ fontSize: 12, color: 'var(--tx3)', lineHeight: 1.6, marginTop: 8 }}>
+          <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx3)', lineHeight: 1.6, marginTop: 8 }}>
             Abra o site do cliente, pressione F12, vá em <span className="mono">Console</span> e cole o
             texto abaixo. Ele só lê a página — não envia evento nenhum, então não suja o relatório.
             Rodar aí é o que distingue &quot;a tag não está na página&quot; de &quot;está e foi
@@ -277,11 +277,11 @@ function Diagnostico({
             className="mono"
             data-testid="conferencia-console"
             style={{
-              fontSize: 11.5,
+              fontSize: 'var(--tipo-legenda)',
               lineHeight: 1.5,
               background: 'var(--elev)',
               border: '1px solid var(--bd)',
-              borderRadius: 8,
+              borderRadius: 'var(--raio-p)',
               padding: 12,
               overflowX: 'auto',
               whiteSpace: 'pre',

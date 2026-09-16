@@ -97,7 +97,7 @@ export default async function PaginaConfiguracoes({ searchParams }: { searchPara
       render: (l) => (
         <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
           <Etiqueta texto={l.tom === 'ok' ? 'Em funcionamento' : l.tom === 'warn' ? 'Requer atenção' : 'Informativo'} tom={l.tom} />
-          <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{l.situacao}</span>
+          <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{l.situacao}</span>
         </span>
       ) },
     { chave: 'onde', titulo: 'Onde configurar', render: (l) => l.onde },
@@ -123,17 +123,17 @@ export default async function PaginaConfiguracoes({ searchParams }: { searchPara
           <dl style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {Object.values(METRICS).map((m) => (
               <div key={m.key}>
-                <dt style={{ fontSize: 13, fontWeight: 600, color: 'var(--tx)' }}>
+                <dt style={{ fontSize: 'var(--tipo-corpo)', fontWeight: 600, color: 'var(--tx)' }}>
                   {m.label}
-                  <span className="mono" style={{ fontSize: 10.5, color: 'var(--tx3)', marginLeft: 8 }}>
+                  <span className="mono" style={{ fontSize: 'var(--tipo-micro)', color: 'var(--tx3)', marginLeft: 8 }}>
                     {m.kind === 'percentual' ? 'PERCENTUAL' : 'CONTAGEM'}
                   </span>
                 </dt>
-                <dd style={{ fontSize: 12.5, color: 'var(--tx2)', marginTop: 3 }}>{m.help}</dd>
+                <dd style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', marginTop: 3 }}>{m.help}</dd>
               </div>
             ))}
           </dl>
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 14 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 14 }}>
             Estas definições são a mesma fonte usada pelas consultas: os textos vêm de{' '}
             <span className="mono">src/server/metrics/definitions.ts</span>, e as agregações que os implementam
             ficam ao lado, em <span className="mono">queries.ts</span>.
@@ -154,9 +154,9 @@ export default async function PaginaConfiguracoes({ searchParams }: { searchPara
                 cursor: 'pointer',
                 background: 'var(--elev)',
                 border: '1px solid var(--bd)',
-                borderRadius: 10,
+                borderRadius: 'var(--raio-m)',
                 padding: '11px 16px',
-                fontSize: 13.5,
+                fontSize: 'var(--tipo-corpo)',
                 color: 'var(--tx)',
               }}
             >

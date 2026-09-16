@@ -61,8 +61,8 @@ export function PainelDeAnalise({
   }
 
   const campo = {
-    background: 'var(--elev)', border: '1px solid var(--bd)', borderRadius: 8,
-    padding: '9px 11px', fontSize: 13, color: 'var(--tx)',
+    background: 'var(--elev)', border: '1px solid var(--bd)', borderRadius: 'var(--raio-p)',
+    padding: '9px 11px', fontSize: 'var(--tipo-corpo)', color: 'var(--tx)',
   } as const;
 
   const botao = (ativo: boolean) => ({
@@ -70,7 +70,7 @@ export function PainelDeAnalise({
     background: ativo ? 'var(--gold)' : 'var(--elev)',
     color: ativo ? 'var(--on-gold)' : 'var(--tx3)',
     border: ativo ? 'none' : '1px solid var(--bd)',
-    borderRadius: 8, padding: '9px 14px', fontWeight: 600, fontSize: 13,
+    borderRadius: 'var(--raio-p)', padding: '9px 14px', fontWeight: 600, fontSize: 'var(--tipo-corpo)',
   });
 
   return (
@@ -81,27 +81,27 @@ export function PainelDeAnalise({
           name="url" type="url" required placeholder={`https://${dominio}/planos`}
           aria-label="URL para monitorar" style={{ ...campo, flex: '1 1 260px' }}
         />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
           <input type="checkbox" name="prioritaria" defaultChecked /> Prioritária
         </label>
         <button type="submit" disabled={cadastrando} style={botao(!cadastrando)}>
           {cadastrando ? 'Salvando…' : 'Monitorar URL'}
         </button>
       </form>
-      {estadoCadastro.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)', marginTop: 8 }}>{estadoCadastro.erro}</p>}
-      {estadoCadastro.ok && <p role="status" style={{ fontSize: 12.5, color: 'var(--pos-tx)', marginTop: 8 }}>{estadoCadastro.ok}</p>}
+      {estadoCadastro.erro && <p role="alert" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--neg-tx)', marginTop: 8 }}>{estadoCadastro.erro}</p>}
+      {estadoCadastro.ok && <p role="status" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--pos-tx)', marginTop: 8 }}>{estadoCadastro.ok}</p>}
 
       <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {urls.length === 0 && (
-          <li style={{ fontSize: 12.5, color: 'var(--tx3)' }}>
+          <li style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx3)' }}>
             Nenhuma URL monitorada. Cadastre ao menos a Home e as landing pages que importam.
           </li>
         )}
         {urls.map((u) => (
           <li key={u.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
             borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
-            <span className="mono" style={{ fontSize: 12, flex: '1 1 220px', wordBreak: 'break-all' }}>{u.url}</span>
-            {u.prioritaria && <span style={{ fontSize: 10.5, color: 'var(--gold-tx)' }}>PRIORITÁRIA</span>}
+            <span className="mono" style={{ fontSize: 'var(--tipo-apoio)', flex: '1 1 220px', wordBreak: 'break-all' }}>{u.url}</span>
+            {u.prioritaria && <span style={{ fontSize: 'var(--tipo-micro)', color: 'var(--gold-tx)' }}>PRIORITÁRIA</span>}
             <form action={acaoRemocao} style={{ display: 'inline' }}>
               <input type="hidden" name="siteId" value={siteId} />
               <input type="hidden" name="url" value={u.url} />
@@ -110,7 +110,7 @@ export function PainelDeAnalise({
                 title="Deixar de monitorar esta URL"
                 style={{
                   background: 'none', border: 'none', padding: '6px 4px', cursor: 'pointer',
-                  fontSize: 12, color: 'var(--tx3)', textDecoration: 'underline',
+                  fontSize: 'var(--tipo-apoio)', color: 'var(--tx3)', textDecoration: 'underline',
                 }}
               >
                 Remover
@@ -121,7 +121,7 @@ export function PainelDeAnalise({
                 <input type="hidden" name="siteId" value={siteId} />
                 <input type="hidden" name="url" value={u.url} />
                 <input type="hidden" name="strategy" value={s} />
-                <button type="submit" disabled={!configurada || enfileirando} style={{ ...botao(configurada && !enfileirando), padding: '6px 10px', fontSize: 12 }}>
+                <button type="submit" disabled={!configurada || enfileirando} style={{ ...botao(configurada && !enfileirando), padding: '6px 10px', fontSize: 'var(--tipo-apoio)' }}>
                   {s === 'mobile' ? 'Celular' : 'Computador'}
                 </button>
               </form>
@@ -130,9 +130,9 @@ export function PainelDeAnalise({
         ))}
       </ul>
 
-      {estadoAnalise.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)', marginTop: 10 }}>{estadoAnalise.erro}</p>}
-      {estadoRemocao.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)', marginTop: 10 }}>{estadoRemocao.erro}</p>}
-      {estadoRemocao.ok && <p role="status" style={{ fontSize: 12.5, color: 'var(--pos-tx)', marginTop: 10 }}>{estadoRemocao.ok}</p>}
+      {estadoAnalise.erro && <p role="alert" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--neg-tx)', marginTop: 10 }}>{estadoAnalise.erro}</p>}
+      {estadoRemocao.erro && <p role="alert" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--neg-tx)', marginTop: 10 }}>{estadoRemocao.erro}</p>}
+      {estadoRemocao.ok && <p role="status" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--pos-tx)', marginTop: 10 }}>{estadoRemocao.ok}</p>}
 
       {/*
         O botão aparece nos DOIS casos: tarefa criada agora, e tarefa que já
@@ -142,17 +142,17 @@ export function PainelDeAnalise({
       */}
       {(estadoAnalise.ok || estadoAnalise.aviso) && (
         <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span role="status" style={{ fontSize: 12.5, color: estadoAnalise.ok ? 'var(--pos-tx)' : 'var(--warn-tx)' }}>
+          <span role="status" style={{ fontSize: 'var(--tipo-apoio)', color: estadoAnalise.ok ? 'var(--pos-tx)' : 'var(--warn-tx)' }}>
             {estadoAnalise.ok ?? estadoAnalise.aviso}
           </span>
-          <button type="button" onClick={processarAgora} disabled={processando} style={{ ...botao(!processando), padding: '7px 12px', fontSize: 12.5 }}>
+          <button type="button" onClick={processarAgora} disabled={processando} style={{ ...botao(!processando), padding: '7px 12px', fontSize: 'var(--tipo-apoio)' }}>
             {processando ? 'Executando…' : 'Executar agora'}
           </button>
         </div>
       )}
-      {resultado && <p style={{ fontSize: 12.5, color: 'var(--tx2)', marginTop: 8 }}>{resultado}</p>}
+      {resultado && <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', marginTop: 8 }}>{resultado}</p>}
 
-      <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 14, lineHeight: 1.6 }}>
+      <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', marginTop: 14, lineHeight: 1.6 }}>
         Cada análise leva de 10 a 50 segundos, dependendo do peso da página, e roda uma por vez.
         As URLs prioritárias são reanalisadas automaticamente a cada sete dias.
       </p>

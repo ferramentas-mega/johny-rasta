@@ -50,7 +50,7 @@ export default function ErroDaAplicacao({
       }
       detalhe={
         error.digest ? (
-          <p className="mono" style={{ fontSize: 11, color: 'var(--tx3)' }}>
+          <p className="mono" style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>
             Identificador desta ocorrência: {error.digest}
           </p>
         ) : undefined

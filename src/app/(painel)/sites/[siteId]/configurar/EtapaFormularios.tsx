@@ -51,11 +51,11 @@ export function EtapaFormularios({
 
         <fieldset
           style={{
-            border: '1px solid var(--bd)', borderRadius: 10, padding: 16,
+            border: '1px solid var(--bd)', borderRadius: 'var(--raio-m)', padding: 16,
             background: 'var(--elev)', display: 'flex', flexDirection: 'column', gap: 10,
           }}
         >
-          <legend style={{ padding: '0 6px', fontSize: 13, fontWeight: 600 }}>
+          <legend style={{ padding: '0 6px', fontSize: 'var(--tipo-corpo)', fontWeight: 600 }}>
             Como o formulário deste site funciona?
           </legend>
 
@@ -69,8 +69,8 @@ export function EtapaFormularios({
                 style={{ marginTop: 3, width: 16, height: 16, accentColor: 'var(--gold)' }}
               />
               <span>
-                <span style={{ fontSize: 13.5 }}>{MODO_FORMULARIO_LABEL[opcao]}</span>
-                <span style={{ display: 'block', fontSize: 11.5, color: 'var(--tx2)', marginTop: 2 }}>
+                <span style={{ fontSize: 'var(--tipo-corpo)' }}>{MODO_FORMULARIO_LABEL[opcao]}</span>
+                <span style={{ display: 'block', fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)', marginTop: 2 }}>
                   {opcao === 'proprio' && 'O HTML do formulário está no site e pode apontar para o painel.'}
                   {opcao === 'externo' && 'RD Station, HubSpot, Typeform e afins. Veja a limitação abaixo.'}
                   {opcao === 'sem' && 'O site não tem formulário. Esta etapa passa a não se aplicar.'}
@@ -88,7 +88,7 @@ export function EtapaFormularios({
 
       {modo === 'proprio' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.6 }}>
             <strong>Cole esta linha e pronto.</strong> Ela escuta o formulário que o site já tem e manda
             uma cópia dos campos de contato para o painel. Não renomeia campo, não troca o{' '}
             <span className="mono">action</span> e não cancela o envio — o que já funciona continua
@@ -96,7 +96,7 @@ export function EtapaFormularios({
             formulário que só aparece depois de um clique.
           </p>
           <Snippet codigo={automatico} rotulo="Coletor de formulários deste site" />
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.6 }}>
             Só saem daqui <strong>nome, e-mail, telefone e mensagem</strong>, reconhecidos pelo tipo e pelo
             nome do campo — nenhum campo desconhecido é enviado. Formulário que tenha campo de senha é
             ignorado por inteiro: login não é contato. Para excluir um formulário específico, ponha{' '}
@@ -104,24 +104,24 @@ export function EtapaFormularios({
           </p>
 
           <details style={{ marginTop: 6 }}>
-            <summary style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--tx2)' }}>
+            <summary style={{ cursor: 'pointer', fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
               Não tenho formulário neste site — me dê um pronto
             </summary>
-            <p style={{ fontSize: 12, color: 'var(--tx3)', lineHeight: 1.6, marginTop: 8 }}>
+            <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx3)', lineHeight: 1.6, marginTop: 8 }}>
               Este é um formulário completo, que já envia direto para o painel. Use só se a página ainda
               não tiver um: se já tiver, prefira a linha acima e <strong>não troque o destino</strong> do
               que existe.
             </p>
             <Snippet codigo={snippet} rotulo="Formulário completo, pronto para colar" />
           </details>
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.6 }}>
             O exemplo acima funciona como está — não há campo para preencher à mão. Ele gera a chave de
             idempotência uma vez por formulário preenchido (é ela que faz um reenvio não virar um segundo lead)
             e só a renova depois de um envio confirmado pelo servidor. O identificador de visitante vai junto
             quando o coletor está na página, e vai vazio quando não está: <strong>quem bloqueia analytics
             precisa conseguir mandar a mensagem do mesmo jeito.</strong>
           </p>
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.6 }}>
             Se o formulário do site já envia para um CRM, planilha ou e-mail, <strong>não troque o destino</strong>.
             O caminho é um envio adicional para este endereço, preservando o que já funciona.
           </p>
@@ -132,8 +132,8 @@ export function EtapaFormularios({
         <div
           role="alert"
           style={{
-            border: '1px solid var(--warn-tx)', borderRadius: 10, padding: 14,
-            background: 'var(--warn-bg)', fontSize: 13, lineHeight: 1.7,
+            border: '1px solid var(--warn-tx)', borderRadius: 'var(--raio-m)', padding: 14,
+            background: 'var(--warn-bg)', fontSize: 'var(--tipo-corpo)', lineHeight: 1.7,
           }}
         >
           <strong>Nenhum conector para serviço externo está implementado.</strong>
@@ -151,13 +151,13 @@ export function EtapaFormularios({
       )}
 
       {modo === 'sem' && (
-        <p style={{ fontSize: 13, color: 'var(--tx2)' }}>
+        <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)' }}>
           Sem formulário. Esta etapa aparece como <strong>Não se aplica</strong> no resumo, e não conta como pendência.
         </p>
       )}
 
       {verificado ? (
-        <p role="status" style={{ fontSize: 13, color: 'var(--ok-tx)' }}>
+        <p role="status" style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--ok-tx)' }}>
           Já recebemos um envio gravado por este site. O recebimento está verificado.
         </p>
       ) : (
@@ -204,13 +204,13 @@ function FaltaOEnvio({
   return (
     <div
       style={{
-        border: '1px solid var(--bdc)', borderRadius: 10, padding: 14,
+        border: '1px solid var(--bdc)', borderRadius: 'var(--raio-m)', padding: 14,
         display: 'flex', flexDirection: 'column', gap: 12,
       }}
     >
       <div>
-        <strong style={{ fontSize: 13.5 }}>Falta o principal: receber um envio.</strong>
-        <p style={{ fontSize: 12.5, color: 'var(--tx2)', marginTop: 6, lineHeight: 1.7 }}>
+        <strong style={{ fontSize: 'var(--tipo-corpo)' }}>Falta o principal: receber um envio.</strong>
+        <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', marginTop: 6, lineHeight: 1.7 }}>
           O modo está salvo, e isso é configuração — não é recebimento. Esta etapa só fecha quando o
           endpoint gravar uma submissão de verdade, porque &quot;alguém clicou em enviar&quot; e &quot;o
           servidor gravou um lead&quot; são fatos diferentes, e só o segundo vira contato.
@@ -225,12 +225,12 @@ function FaltaOEnvio({
             <BotaoSubmeter ocupado="Abrindo…">Abrir modo de diagnóstico</BotaoSubmeter>
           </div>
           {inicio.erro && (
-            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>{inicio.erro}</p>
+            <p role="alert" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--neg-tx)' }}>{inicio.erro}</p>
           )}
         </form>
       ) : (
         <>
-          <ol style={{ paddingLeft: 20, fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.9, margin: 0 }}>
+          <ol style={{ paddingLeft: 20, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', lineHeight: 1.9, margin: 0 }}>
             <li>Abra o site por este link (é ele que marca o envio como teste):</li>
           </ol>
           <a
@@ -238,13 +238,13 @@ function FaltaOEnvio({
             href={url}
             target="_blank"
             rel="noreferrer"
-            style={{ fontSize: 12, wordBreak: 'break-all' }}
+            style={{ fontSize: 'var(--tipo-apoio)', wordBreak: 'break-all' }}
           >
             {url}
           </a>
           <ol
             start={2}
-            style={{ paddingLeft: 20, fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.9, margin: 0 }}
+            style={{ paddingLeft: 20, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', lineHeight: 1.9, margin: 0 }}
           >
             <li>Preencha e envie o formulário do site.</li>
             <li>Volte aqui e confira.</li>
@@ -258,11 +258,11 @@ function FaltaOEnvio({
             </div>
 
             {conferencia.erro && (
-              <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>{conferencia.erro}</p>
+              <p role="alert" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--neg-tx)' }}>{conferencia.erro}</p>
             )}
 
             {conferencia.conferidoEm && (
-              <p role="status" style={{ fontSize: 12.5, lineHeight: 1.7 }}>
+              <p role="status" style={{ fontSize: 'var(--tipo-apoio)', lineHeight: 1.7 }}>
                 {(conferencia.formularios ?? 0) > 0 ? (
                   <span style={{ color: 'var(--ok-tx)' }}>
                     {conferencia.formularios} envio(s) gravado(s). O recebimento está verificado.

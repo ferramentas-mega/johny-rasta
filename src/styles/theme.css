@@ -15,6 +15,15 @@
   --bd: #1a6b2e;
   --bdc: #2fc957;
   --glow: 0 0 18px rgba(112, 255, 139, 0.28);
+  /*
+   * Elevação. No ESCURO, sombra projetada é invisível: preto sobre preto não
+   * separa nada. Quem separa é a luz de cima — um filete claro na borda
+   * superior, como a quina de um objeto real iluminado de frente. A sombra
+   * entra só no nível 2, e funda, para o cartão descolar do fundo.
+   */
+  --sombra-1: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --sombra-2:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 10px 28px rgba(0, 0, 0, 0.65);
   --tx: #eef8f0;
   --tx2: #a1b5a6;
   --tx3: #809887;
@@ -37,6 +46,10 @@
   --soft-tx: #a1b5a6;
   --warn-bg: rgba(235, 203, 116, 0.14);
   --warn-tx: #ebcb74;
+  /* O quarto membro da família de estado. Faltava — e por isso dois
+     componentes escreviam este rgba à mão, com o valor do tema ESCURO, que
+     não trocava no claro. */
+  --neg-bg: rgba(255, 133, 133, 0.14);
   --header-bg:
     linear-gradient(rgba(34, 59, 41, 0.45) 1px, transparent 1px) 0 0 / 44px 44px,
     linear-gradient(90deg, rgba(34, 59, 41, 0.45) 1px, transparent 1px) 0 0 / 44px 44px,
@@ -52,6 +65,17 @@
   --bd: #cbd9cd;
   --bdc: #1f8f43;
   --glow: none;
+  /*
+   * No CLARO a lógica inverte: a sombra projetada é que separa, e ela é
+   * EMPILHADA em vez de um borrão só — camadas curtas e longas juntas, como a
+   * luz real produz. O `inset` na base é o lábio inferior, que dá espessura à
+   * borda sem escurecer a superfície.
+   */
+  --sombra-1:
+    0 1px 2px rgba(14, 23, 16, 0.05), inset 0 -1px 0 rgba(14, 23, 16, 0.04);
+  --sombra-2:
+    0 1px 2px rgba(14, 23, 16, 0.05), 0 4px 8px rgba(14, 23, 16, 0.06),
+    0 12px 24px rgba(14, 23, 16, 0.08), inset 0 -1px 0 rgba(14, 23, 16, 0.06);
   --tx: #0e1710;
   --tx2: #4c5d50;
   /* #6b7d6f dava 3,78:1 sobre --elev: reprova para texto de corpo, e é
@@ -77,6 +101,7 @@
   --soft-tx: #4c5d50;
   --warn-bg: rgba(160, 120, 20, 0.14);
   --warn-tx: #7a5c10;
+  --neg-bg: rgba(168, 50, 50, 0.12);
   --header-bg:
     linear-gradient(rgba(14, 23, 16, 0.07) 1px, transparent 1px) 0 0 / 44px 44px,
     linear-gradient(90deg, rgba(14, 23, 16, 0.07) 1px, transparent 1px) 0 0 / 44px 44px,
@@ -90,12 +115,91 @@
   box-sizing: border-box;
 }
 
+/*
+ * ─── Escala tipográfica, trilha, raio e movimento ───────────────────────────
+ *
+ * Estes tokens NÃO mudam com o tema: descrevem forma, não cor. Ficam fora dos
+ * dois blocos acima de propósito — duplicá-los criaria a chance de divergirem.
+ *
+ * ── Por que a escala existe ──
+ *
+ * Medido antes de ela existir: **19 tamanhos de fonte distintos em 291 usos**,
+ * entre eles 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 16, 17, 18 e
+ * 19 — quinze valores num intervalo de 9 pixels. Ninguém distingue 12 de 12,5; o
+ * que se distingue é a AUSÊNCIA de sistema, e ela aparece como desalinho entre
+ * duas telas que deveriam dizer a mesma coisa do mesmo jeito.
+ *
+ * O mesmo valia para a trilha: `.1em` e `.12em` conviviam no MESMO papel (a
+ * sobrelinha), em componentes diferentes.
+ *
+ * O conjunto abaixo é FECHADO, e `npm run design` reprova valor fora dele. Não
+ * é rigor decorativo: sem o verificador, o vigésimo tamanho entra na próxima
+ * tela e o sistema volta a ser uma lista de números.
+ *
+ * ── Por que os degraus de baixo são apertados ──
+ *
+ * `--tipo-micro` a `--tipo-corpo` sobem ~8% por degrau, bem abaixo da razão
+ * clássica de 1,2. É deliberado: esta é uma interface DENSA, e são quatro
+ * papéis de texto secundário que carregam significado diferente numa mesma
+ * tabela. Do `--tipo-secao` para cima os degraus abrem (1,19 · 1,25 · 1,4),
+ * porque ali o salto é de hierarquia, não de densidade.
+ */
+:root {
+  /* Selo, crachá, índice de nota. O menor tamanho que ainda é legível aqui. */
+  --tipo-micro: 10.5px;
+  /* Legenda, ressalva sob painel, célula secundária. Também a sobrelinha
+     (caixa-alta), que usa este tamanho com `--trilha-ampla`. */
+  --tipo-legenda: 11.5px;
+  /* Texto de apoio: meta de cabeçalho, conteúdo de célula. */
+  --tipo-apoio: 12.5px;
+  /* Corpo e rótulo de campo. É o tamanho de leitura da interface, e o mesmo do
+     `body` — os 13,5px que apareciam em 22 lugares sobem para cá em vez de o
+     corpo descer, porque encolher o texto de leitura para fechar uma escala é
+     pagar legibilidade por simetria. */
+  --tipo-corpo: 14px;
+  /* Título de painel. */
+  --tipo-secao: 16px;
+  /* Título de bloco grande, fora do cabeçalho de página. */
+  --tipo-titulo: 20px;
+  /* `h1` de página. */
+  --tipo-display: 28px;
+  /* O NÚMERO de um indicador. Maior que o `h1` de propósito: numa tela de
+     métrica, o número é o assunto, e o título é onde ele fica. */
+  --tipo-numero: 32px;
+  /* O código de uma tela de erro (404, 500), e só ele. É o único tamanho
+     FLUIDO do sistema: `clamp` faz o número acompanhar a largura sem media
+     query nenhuma e sem estourar no celular. Fica como token, e não como valor
+     solto, porque um papel de tamanho fora do conjunto é o começo do vigésimo
+     tamanho — mesmo quando há um só lugar que o usa. */
+  --tipo-heroico: clamp(4.5rem, 22vw, 9rem);
+
+  /* Caixa-alta precisa de ar entre as letras; texto corrido, não. */
+  --trilha-ampla: 0.12em;
+  --trilha-media: 0.04em;
+  /* Número grande fecha um pouco: o espaçamento padrão foi desenhado para
+     texto, e em 32px ele abre demais. */
+  --trilha-justa: -0.01em;
+
+  --raio-p: 8px;
+  --raio-m: 12px;
+  --raio-pilula: 999px;
+
+  /* Movimento. As durações eram literais espalhadas; o bloco
+     `prefers-reduced-motion` abaixo continua zerando todas. */
+  --mov-rapido: 140ms;
+  --mov-medio: 240ms;
+  --mov-lento: 420ms;
+  /* Desaceleração forte: rápida no início, assentando no fim. É o que faz a
+     entrada parecer que PAROU, em vez de ter sido interrompida. */
+  --curva-saida: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 html,
 body {
   background: var(--bg);
   color: var(--tx);
   font-family: var(--fonte-ui), system-ui, sans-serif;
-  font-size: 14px;
+  font-size: var(--tipo-corpo);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
@@ -386,7 +490,7 @@ select option {
   border: 1px solid var(--bd);
   border-radius: 10px;
   padding: 12px 12px 12px 36px;
-  font-size: 14px;
+  font-size: var(--tipo-corpo);
   color: var(--tx);
   transition:
     border-color 0.2s ease,
@@ -467,7 +571,7 @@ select option {
   padding: 10px 12px;
   border-radius: 8px;
   font-weight: 500;
-  font-size: 13.5px;
+  font-size: var(--tipo-corpo);
   text-decoration: none;
   color: var(--tx2);
   background: transparent;
@@ -496,7 +600,7 @@ select option {
 
 .aba-site {
   padding: 11px 14px;
-  font-size: 13.5px;
+  font-size: var(--tipo-corpo);
   text-decoration: none;
   color: var(--tx2);
   border-bottom: 2px solid transparent;
@@ -545,7 +649,28 @@ select option {
 }
 
 .pagina > * {
-  animation: entrada-suave 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: entrada-suave var(--mov-lento) var(--curva-saida) both;
+}
+
+/* Elevação ao apontar.
+   Só o que LEVA a algum lugar sobe — cartão sem destino que reage ao ponteiro
+   promete um clique que não existe. Mora aqui, e não em estilo inline, pela
+   razão de sempre: `:hover` não existe em `style={{}}`.
+   A transição usa o token de duração; o bloco `prefers-reduced-motion` no topo
+   do arquivo zera as duas propriedades para quem pede menos movimento, e aí o
+   cartão troca de sombra sem deslizar. */
+.cartao-elevado {
+  transition:
+    box-shadow var(--mov-medio) var(--curva-saida),
+    transform var(--mov-medio) var(--curva-saida);
+}
+.cartao-elevado:hover {
+  /* `!important` não é desleixo: a sombra de repouso é estilo INLINE (a
+     convenção do projeto), e inline vence classe por especificidade. Sem ele o
+     `:hover` não pinta nada. A alternativa seria tirar a sombra de repouso do
+     inline e criar mais uma classe — mais arquivo para a mesma coisa. */
+  box-shadow: var(--sombra-2) !important;
+  transform: translateY(-2px);
 }
 .pagina > *:nth-child(2) {
   animation-delay: 0.04s;
@@ -868,7 +993,7 @@ select option {
     border-radius: 999px;
     background: var(--gold);
     color: var(--on-gold);
-    font-size: 10px;
+    font-size: var(--tipo-micro);
     line-height: 16px;
     font-weight: 600;
     text-align: center;
@@ -937,7 +1062,7 @@ select option {
 }
 
 .cartao-site-cliente {
-  font-size: 11.5px;
+  font-size: var(--tipo-legenda);
   color: var(--tx2);
   text-decoration: none;
   white-space: nowrap;
@@ -952,12 +1077,12 @@ select option {
   flex: none;
   padding: 3px 9px;
   border-radius: 999px;
-  font-size: 10.5px;
+  font-size: var(--tipo-micro);
   white-space: nowrap;
 }
 
 .cartao-site-nome {
-  font-size: 15px;
+  font-size: var(--tipo-secao);
   font-weight: 600;
   line-height: 1.3;
 }
@@ -971,7 +1096,7 @@ select option {
 
 .cartao-site-dominio {
   margin-top: 3px;
-  font-size: 11.5px;
+  font-size: var(--tipo-legenda);
   color: var(--tx3);
   /* Domínio longo quebra em vez de esticar o cartão e estourar a grade. */
   overflow-wrap: anywhere;
@@ -980,7 +1105,7 @@ select option {
 .cartao-site-progresso-rotulo {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--tipo-legenda);
   color: var(--tx2);
   margin-bottom: 5px;
 }
@@ -1000,7 +1125,7 @@ select option {
 
 .cartao-site-vazio,
 .cartao-site-falta {
-  font-size: 11.5px;
+  font-size: var(--tipo-legenda);
   line-height: 1.6;
   color: var(--tx2);
 }
@@ -1024,12 +1149,12 @@ select option {
 }
 
 .cartao-site-ultimo {
-  font-size: 10px;
+  font-size: var(--tipo-micro);
   color: var(--tx3);
 }
 
 .cartao-site-acao {
-  font-size: 12px;
+  font-size: var(--tipo-apoio);
   white-space: nowrap;
 }
 

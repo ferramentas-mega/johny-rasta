@@ -42,7 +42,7 @@ export default function PaginaEntrar() {
         <p
           className="mono"
           data-testid="carimbo-do-build"
-          style={{ marginTop: 12, textAlign: 'center', fontSize: 11, color: 'var(--tx2)' }}
+          style={{ marginTop: 12, textAlign: 'center', fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)' }}
         >
           {descricaoDoBuild()}
         </p>

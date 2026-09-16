@@ -105,13 +105,13 @@ export function FormularioDeLogin() {
       {/* O conteúdo sobe acima da trama e dos feixes. */}
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 600 }}>Entrar no painel</h1>
-          <p style={{ marginTop: 4, fontSize: 12.5, color: 'var(--tx2)' }}>
+          <h1 style={{ fontSize: 'var(--tipo-titulo)', fontWeight: 600 }}>Entrar no painel</h1>
+          <p style={{ marginTop: 4, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
             Acesso restrito à equipe.
           </p>
         </div>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
           E-mail
           <span className="campo-login">
             <IconeEnvelope />
@@ -126,7 +126,7 @@ export function FormularioDeLogin() {
           </span>
         </label>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
           Senha
           <span className="campo-login">
             <IconeCadeado />
@@ -155,7 +155,7 @@ export function FormularioDeLogin() {
         </label>
 
         {estado.erro && (
-          <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>
+          <p role="alert" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--neg-tx)' }}>
             {estado.erro}
           </p>
         )}
@@ -169,10 +169,10 @@ export function FormularioDeLogin() {
             background: 'var(--gold)',
             color: 'var(--on-gold)',
             border: 'none',
-            borderRadius: 10,
+            borderRadius: 'var(--raio-m)',
             padding: '12px 14px',
             fontWeight: 600,
-            fontSize: 14,
+            fontSize: 'var(--tipo-corpo)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

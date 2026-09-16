@@ -54,10 +54,10 @@ export function ControlesAparencia() {
         className="mono"
         style={{
           cursor: 'pointer',
-          fontSize: 11,
-          letterSpacing: '.06em',
+          fontSize: 'var(--tipo-legenda)',
+          letterSpacing: 'var(--trilha-media)',
           padding: '8px 11px',
-          borderRadius: 8,
+          borderRadius: 'var(--raio-p)',
           background: 'var(--elev)',
           border: '1px solid var(--bd)',
           color: fx ? 'var(--gold-tx)' : 'var(--tx3)',
@@ -77,7 +77,7 @@ export function ControlesAparencia() {
           width: 64,
           height: 32,
           padding: 3,
-          borderRadius: 999,
+          borderRadius: 'var(--raio-pilula)',
           cursor: 'pointer',
           background: 'var(--elev)',
           border: '1px solid var(--bd)',

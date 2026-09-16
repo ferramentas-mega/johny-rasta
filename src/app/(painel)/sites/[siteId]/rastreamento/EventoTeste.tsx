@@ -54,9 +54,9 @@ export function EventoTeste({ publicId }: { publicId: string }) {
           cursor: estado.tipo === 'enviando' ? 'progress' : 'pointer',
           background: 'var(--elev)',
           border: '1px solid var(--bd)',
-          borderRadius: 8,
+          borderRadius: 'var(--raio-p)',
           padding: '10px 14px',
-          fontSize: 13,
+          fontSize: 'var(--tipo-corpo)',
           color: 'var(--tx)',
         }}
       >
@@ -65,7 +65,7 @@ export function EventoTeste({ publicId }: { publicId: string }) {
       {estado.texto && (
         <span
           role="status"
-          style={{ fontSize: 12.5, color: estado.tipo === 'ok' ? 'var(--ok-tx)' : 'var(--neg-tx)' }}
+          style={{ fontSize: 'var(--tipo-apoio)', color: estado.tipo === 'ok' ? 'var(--ok-tx)' : 'var(--neg-tx)' }}
         >
           {estado.texto}
         </span>

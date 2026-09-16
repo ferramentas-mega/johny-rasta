@@ -35,8 +35,8 @@ export function BuscaCarteira({ valor }: { valor: string }) {
         placeholder="Buscar cliente…"
         aria-label="Buscar cliente"
         style={{
-          background: 'var(--elev)', border: '1px solid var(--bd)', borderRadius: 8,
-          padding: '7px 10px', fontSize: 12.5, color: 'var(--tx)', width: 160,
+          background: 'var(--elev)', border: '1px solid var(--bd)', borderRadius: 'var(--raio-p)',
+          padding: '7px 10px', fontSize: 'var(--tipo-apoio)', color: 'var(--tx)', width: 160,
         }}
       />
     </form>

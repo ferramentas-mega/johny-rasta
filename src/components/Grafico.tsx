@@ -87,9 +87,9 @@ export function Grafico({ pontos, periodo }: { pontos: DailyPoint[]; periodo: st
                 onClick={() => setMetrica(m)}
                 style={{
                   cursor: 'pointer',
-                  fontSize: 12,
+                  fontSize: 'var(--tipo-apoio)',
                   padding: '6px 11px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--raio-p)',
                   background: on ? 'var(--gold)' : 'var(--elev)',
                   color: on ? 'var(--on-gold)' : 'var(--tx2)',
                   border: `1px solid ${on ? 'var(--gold)' : 'var(--bd)'}`,
@@ -104,7 +104,7 @@ export function Grafico({ pontos, periodo }: { pontos: DailyPoint[]; periodo: st
 
       {/* A legenda diz a qual eixo cada linha pertence. Sem isso, duas escalas
           no mesmo desenho enganam mais do que informam. */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, fontSize: 11.5, color: 'var(--tx2)', marginBottom: 6 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)', marginBottom: 6 }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
           <svg width="22" height="8" aria-hidden="true">
             <line x1="0" y1="4" x2="22" y2="4" stroke="var(--gold)" strokeWidth="2.5" />

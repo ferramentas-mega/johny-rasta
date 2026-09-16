@@ -53,9 +53,9 @@ export function SeletorPeriodo({ atual }: { atual: PeriodKey }) {
             onClick={() => atualizar({ periodo: chave })}
             style={{
               cursor: 'pointer',
-              fontSize: 12.5,
+              fontSize: 'var(--tipo-apoio)',
               padding: '8px 12px',
-              borderRadius: 8,
+              borderRadius: 'var(--raio-p)',
               background: on ? 'var(--gold)' : 'var(--elev)',
               color: on ? 'var(--on-gold)' : 'var(--tx2)',
               border: `1px solid ${on ? 'var(--gold)' : 'var(--bd)'}`,
@@ -89,9 +89,9 @@ export function SeletorSite({
         background: 'var(--elev)',
         color: 'var(--tx)',
         border: '1px solid var(--bd)',
-        borderRadius: 8,
+        borderRadius: 'var(--raio-p)',
         padding: '10px 12px',
-        fontSize: 13,
+        fontSize: 'var(--tipo-corpo)',
         minWidth: 220,
       }}
     >
@@ -111,13 +111,13 @@ export function IntervaloPersonalizado({ de, ate }: { de: string; ate: string })
     background: 'var(--elev)',
     color: 'var(--tx)',
     border: '1px solid var(--bd)',
-    borderRadius: 8,
+    borderRadius: 'var(--raio-p)',
     padding: '8px 10px',
-    fontSize: 12.5,
+    fontSize: 'var(--tipo-apoio)',
   } as const;
 
   return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--tx2)' }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
       <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
         De
         <input type="date" value={de} max={ate} style={campo} onChange={(e) => atualizar({ de: e.target.value })} />
@@ -163,9 +163,9 @@ export function SeletorSiteRota({
         background: 'var(--elev)',
         color: 'var(--tx)',
         border: '1px solid var(--bd)',
-        borderRadius: 8,
+        borderRadius: 'var(--raio-p)',
         padding: '10px 12px',
-        fontSize: 13,
+        fontSize: 'var(--tipo-corpo)',
         minWidth: 220,
       }}
     >

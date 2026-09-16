@@ -69,9 +69,9 @@ export function Situacao({ item }: { item: Otimizacao }) {
         style={{
           background: 'var(--elev)',
           border: '1px solid var(--bd)',
-          borderRadius: 6,
+          borderRadius: 'var(--raio-p)',
           padding: '4px 6px',
-          fontSize: 11.5,
+          fontSize: 'var(--tipo-legenda)',
           color: 'var(--tx)',
           maxWidth: 190,
         }}
@@ -89,7 +89,7 @@ export function Situacao({ item }: { item: Otimizacao }) {
       </select>
 
       {reabertoPeloSinal && (
-        <span style={{ fontSize: 10.5, color: 'var(--warn-tx)', lineHeight: 1.5, maxWidth: 190 }}>
+        <span style={{ fontSize: 'var(--tipo-micro)', color: 'var(--warn-tx)', lineHeight: 1.5, maxWidth: 190 }}>
           Este item já tinha sido fechado por medição, e o sinal voltou a ser detectado. O
           fechamento anterior continua registrado em &quot;Fechadas pela medição&quot;, com a data —
           ele aconteceu; o problema é que voltou.
@@ -97,7 +97,7 @@ export function Situacao({ item }: { item: Otimizacao }) {
       )}
 
       {resolvidaMasPersiste && (
-        <span style={{ fontSize: 10.5, color: 'var(--warn-tx)', lineHeight: 1.5, maxWidth: 190 }}>
+        <span style={{ fontSize: 'var(--tipo-micro)', color: 'var(--warn-tx)', lineHeight: 1.5, maxWidth: 190 }}>
           Marcada como resolvida, mas o sinal continua sendo detectado. Ela sai da lista sozinha
           quando a próxima medição não encontrar mais o problema.
         </span>
@@ -108,17 +108,17 @@ export function Situacao({ item }: { item: Otimizacao }) {
           calar essa metade transformaria uma promessa quebrada em confirmação
           silenciosa. */}
       {estado.erro && (
-        <span role="alert" style={{ fontSize: 10.5, color: 'var(--neg-tx)', lineHeight: 1.5, maxWidth: 190 }}>
+        <span role="alert" style={{ fontSize: 'var(--tipo-micro)', color: 'var(--neg-tx)', lineHeight: 1.5, maxWidth: 190 }}>
           {estado.erro}
         </span>
       )}
       {estado.aviso && (
-        <span role="status" style={{ fontSize: 10.5, color: 'var(--warn-tx)', lineHeight: 1.5, maxWidth: 190 }}>
+        <span role="status" style={{ fontSize: 'var(--tipo-micro)', color: 'var(--warn-tx)', lineHeight: 1.5, maxWidth: 190 }}>
           {estado.aviso}
         </span>
       )}
       {estado.ok && (
-        <span role="status" style={{ fontSize: 10.5, color: 'var(--pos-tx)', lineHeight: 1.5, maxWidth: 190 }}>
+        <span role="status" style={{ fontSize: 'var(--tipo-micro)', color: 'var(--pos-tx)', lineHeight: 1.5, maxWidth: 190 }}>
           {estado.ok}
         </span>
       )}

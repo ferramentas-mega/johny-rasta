@@ -1,4 +1,5 @@
 import { CabecalhoFx } from '@/components/CabecalhoFx';
+import { Sobrelinha } from '@/components/Sobrelinha';
 import { ControlesAparencia } from '@/components/ControlesAparencia';
 import { ESTADO_LABEL, ESTADO_TOM, type EstadoRastreamento } from '@/server/services/sites';
 
@@ -39,16 +40,14 @@ export function Cabecalho({
 
       <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div style={{ minWidth: 0 }}>
-          <span className="mono" style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--gold-tx)' }}>
-            {kicker}
-          </span>
+          <Sobrelinha>{kicker}</Sobrelinha>
           <h1
             className="mono"
-            style={{ fontWeight: 600, fontSize: 26, lineHeight: 1.2, margin: '2px 0 0', color: 'var(--tx)', textShadow: 'var(--glow)', wordBreak: 'break-word' }}
+            style={{ fontWeight: 600, fontSize: 'var(--tipo-display)', lineHeight: 1.2, margin: '2px 0 0', color: 'var(--tx)', textShadow: 'var(--glow)', wordBreak: 'break-word' }}
           >
             {titulo}
           </h1>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', marginTop: 6, fontSize: 12, color: 'var(--tx2)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', marginTop: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
             {estado && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                 <i style={{ width: 7, height: 7, borderRadius: '50%', background: COR_PONTO[ESTADO_TOM[estado.tipo]], display: 'inline-block', flex: 'none' }} />

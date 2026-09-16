@@ -27,7 +27,7 @@ export default async function PaginaTeste({ params }: { params: Promise<{ public
 
   const caixa: React.CSSProperties = {
     border: '1px solid var(--bd)',
-    borderRadius: 12,
+    borderRadius: 'var(--raio-m)',
     background: 'var(--card)',
     padding: 20,
   };
@@ -36,10 +36,10 @@ export default async function PaginaTeste({ params }: { params: Promise<{ public
     display: 'inline-block',
     background: 'var(--gold)',
     color: 'var(--on-gold)',
-    borderRadius: 8,
+    borderRadius: 'var(--raio-p)',
     padding: '11px 16px',
     fontWeight: 600,
-    fontSize: 14,
+    fontSize: 'var(--tipo-corpo)',
     textDecoration: 'none',
   };
 
@@ -50,13 +50,13 @@ export default async function PaginaTeste({ params }: { params: Promise<{ public
 
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '40px 20px 80px', display: 'flex', flexDirection: 'column', gap: 22 }}>
         <header>
-          <p className="mono" style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--gold-tx)' }}>
+          <p className="mono" style={{ fontSize: 'var(--tipo-legenda)', letterSpacing: 'var(--trilha-ampla)', color: 'var(--gold-tx)' }}>
             PÁGINA DE TESTE DE INSTALAÇÃO
           </p>
-          <h1 className="mono" style={{ fontSize: 26, fontWeight: 600, marginTop: 4 }}>
+          <h1 className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 600, marginTop: 4 }}>
             {site.domain}
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--tx2)', marginTop: 8 }}>
+          <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', marginTop: 8 }}>
             Esta página carrega o coletor com o identificador{' '}
             <span className="mono" style={{ color: 'var(--tx)' }}>{site.publicId}</span>. Cada ação abaixo gera um
             evento real, que aparece no painel. Abrir esta página já contou como uma visualização.
@@ -64,8 +64,8 @@ export default async function PaginaTeste({ params }: { params: Promise<{ public
         </header>
 
         <section style={caixa}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Contatos diretos</h2>
-          <p style={{ fontSize: 12.5, color: 'var(--tx2)', marginBottom: 14 }}>
+          <h2 style={{ fontSize: 'var(--tipo-secao)', fontWeight: 600, marginBottom: 6 }}>Contatos diretos</h2>
+          <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', marginBottom: 14 }}>
             Cada clique é registrado com seu subtipo. O envio usa sendBeacon, então nada atrasa a abertura do
             WhatsApp ou do discador.
           </p>
@@ -101,15 +101,15 @@ export default async function PaginaTeste({ params }: { params: Promise<{ public
         </section>
 
         <section id="formulario" style={caixa}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Fale conosco</h2>
-          <p style={{ fontSize: 12.5, color: 'var(--tx2)', marginBottom: 14 }}>
+          <h2 style={{ fontSize: 'var(--tipo-secao)', fontWeight: 600, marginBottom: 6 }}>Fale conosco</h2>
+          <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', marginBottom: 14 }}>
             Informe e-mail ou telefone. O envio é validado no servidor e só confirma depois de gravado — e reenviar
             o mesmo preenchimento não cria um segundo lead.
           </p>
           <FormularioTeste publicId={site.publicId} />
         </section>
 
-        <p style={{ fontSize: 11.5, color: 'var(--tx3)' }}>
+        <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>
           Nenhum dado de formulário vai para os eventos de analytics. Nome, e-mail e telefone chegam apenas pelo
           endpoint de formulários, quando você clica em Enviar.
         </p>

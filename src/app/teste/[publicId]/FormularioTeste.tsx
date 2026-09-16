@@ -70,29 +70,29 @@ export function FormularioTeste({ publicId }: { publicId: string }) {
     width: '100%',
     background: 'var(--elev)',
     border: '1px solid var(--bd)',
-    borderRadius: 8,
+    borderRadius: 'var(--raio-p)',
     padding: '10px 12px',
-    fontSize: 13.5,
+    fontSize: 'var(--tipo-corpo)',
     color: 'var(--tx)',
   };
 
   return (
     <form ref={formRef} onSubmit={enviar} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
         Nome
         <input name="nome" required style={campo} />
-        {retorno.campos?.nome && <span style={{ color: 'var(--neg-tx)', fontSize: 11.5 }}>{retorno.campos.nome}</span>}
+        {retorno.campos?.nome && <span style={{ color: 'var(--neg-tx)', fontSize: 'var(--tipo-legenda)' }}>{retorno.campos.nome}</span>}
       </label>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
         E-mail
         <input name="email" type="email" style={campo} />
-        {retorno.campos?.email && <span style={{ color: 'var(--neg-tx)', fontSize: 11.5 }}>{retorno.campos.email}</span>}
+        {retorno.campos?.email && <span style={{ color: 'var(--neg-tx)', fontSize: 'var(--tipo-legenda)' }}>{retorno.campos.email}</span>}
       </label>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
         Telefone
         <input name="telefone" style={campo} />
       </label>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
         Mensagem
         <textarea name="mensagem" rows={3} style={campo} />
       </label>
@@ -105,10 +105,10 @@ export function FormularioTeste({ publicId }: { publicId: string }) {
           background: 'var(--gold)',
           color: 'var(--on-gold)',
           border: 'none',
-          borderRadius: 8,
+          borderRadius: 'var(--raio-p)',
           padding: '11px 16px',
           fontWeight: 600,
-          fontSize: 14,
+          fontSize: 'var(--tipo-corpo)',
         }}
       >
         {retorno.tipo === 'enviando' ? 'Enviando…' : 'Enviar'}
@@ -118,7 +118,7 @@ export function FormularioTeste({ publicId }: { publicId: string }) {
         <p
           role={retorno.tipo === 'erro' ? 'alert' : 'status'}
           data-testid="retorno-formulario"
-          style={{ fontSize: 12.5, color: retorno.tipo === 'erro' ? 'var(--neg-tx)' : 'var(--ok-tx)' }}
+          style={{ fontSize: 'var(--tipo-apoio)', color: retorno.tipo === 'erro' ? 'var(--neg-tx)' : 'var(--ok-tx)' }}
         >
           {retorno.texto}
         </p>
@@ -148,9 +148,9 @@ export function BotaoAbrirFormulario() {
         background: 'var(--elev)',
         border: '1px solid var(--bd)',
         color: 'var(--tx)',
-        borderRadius: 8,
+        borderRadius: 'var(--raio-p)',
         padding: '11px 16px',
-        fontSize: 14,
+        fontSize: 'var(--tipo-corpo)',
       }}
     >
       Solicitar proposta

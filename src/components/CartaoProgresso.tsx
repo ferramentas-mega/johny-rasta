@@ -53,7 +53,7 @@ export function CartaoProgresso({
     <div
       style={{
         padding: '16px 18px',
-        borderRadius: 12,
+        borderRadius: 'var(--raio-m)',
         border: '1px solid var(--bd)',
         background: 'var(--card)',
         display: 'flex',
@@ -62,12 +62,12 @@ export function CartaoProgresso({
       }}
     >
       <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-        <div style={{ fontSize: 12.5, color: 'var(--tx2)' }}>{rotulo}</div>
-        <div className="mono" style={{ fontSize: 28, fontWeight: 500, margin: '8px 0 4px' }}>
+        <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{rotulo}</div>
+        <div className="mono" style={{ fontSize: 'var(--tipo-display)', fontWeight: 500, margin: '8px 0 4px' }}>
           {num(valor)}
-          <span style={{ fontSize: 16, color: 'var(--tx3)' }}>/{num(total)}</span>
+          <span style={{ fontSize: 'var(--tipo-secao)', color: 'var(--tx3)' }}>/{num(total)}</span>
         </div>
-        <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{nota}</div>
+        <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{nota}</div>
       </div>
 
       {/* Decorativo: a razão já está escrita como "valor/total" ao lado, e é
@@ -102,7 +102,7 @@ export function CartaoProgresso({
           y={LADO / 2 + 4}
           textAnchor="middle"
           className="mono"
-          style={{ fontSize: 12, fill: razao === null ? 'var(--tx3)' : 'var(--tx)' }}
+          style={{ fontSize: 'var(--tipo-apoio)', fill: razao === null ? 'var(--tx3)' : 'var(--tx)' }}
         >
           {razao === null ? '—' : pct(razao, 0)}
         </text>

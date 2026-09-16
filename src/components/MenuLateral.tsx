@@ -129,8 +129,8 @@ export function MenuLateral({
                   className="mono"
                   style={{
                     marginLeft: 'auto',
-                    fontSize: 10.5,
-                    letterSpacing: '.04em',
+                    fontSize: 'var(--tipo-micro)',
+                    letterSpacing: 'var(--trilha-media)',
                     color: on ? 'var(--gold-tx)' : 'var(--tx3)',
                   }}
                 >
@@ -156,14 +156,14 @@ export function MenuLateral({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 12,
+            fontSize: 'var(--tipo-apoio)',
             color: 'var(--gold-tx)',
           }}
         >
           {iniciais || '·'}
         </span>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap' }}>{contaNome}</div>
+          <div style={{ fontSize: 'var(--tipo-apoio)', fontWeight: 500, whiteSpace: 'nowrap' }}>{contaNome}</div>
           <form action="/api/sair" method="post">
             <button
               type="submit"
@@ -172,7 +172,7 @@ export function MenuLateral({
                 border: 'none',
                 padding: 0,
                 cursor: 'pointer',
-                fontSize: 11.5,
+                fontSize: 'var(--tipo-legenda)',
                 color: 'var(--gold-tx)',
               }}
             >

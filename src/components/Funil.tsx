@@ -88,7 +88,7 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
           conta que não existe. Dizer isso é melhor que desenhar quatro barras
           vazias, que quem olha lê como "medimos e deu zero". */}
       {base <= 0 ? (
-        <p style={{ fontSize: 13, color: 'var(--tx2)', padding: '18px 0' }}>
+        <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', padding: '18px 0' }}>
           Sem sessões no período. Sem base de cálculo, o funil não tem o que comparar.
         </p>
       ) : (
@@ -154,7 +154,7 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
                     y={25}
                     textAnchor="middle"
                     className="mono"
-                    style={{ fontSize: 17, fill: 'var(--tx)' }}
+                    style={{ fontSize: 'var(--tipo-secao)', fill: 'var(--tx)' }}
                   >
                     {num(etapa.sessoes)}
                   </text>
@@ -162,7 +162,7 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
                     x={centro}
                     y={43}
                     textAnchor="middle"
-                    style={{ fontSize: 12, fill: 'var(--tx2)' }}
+                    style={{ fontSize: 'var(--tipo-apoio)', fill: 'var(--tx2)' }}
                   >
                     {etapa.rotulo}
                   </text>
@@ -174,7 +174,7 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
                       y={36}
                       textAnchor="end"
                       className="mono"
-                      style={{ fontSize: 11.5, fill: 'var(--tx3)' }}
+                      style={{ fontSize: 'var(--tipo-legenda)', fill: 'var(--tx3)' }}
                     >
                       {pct(etapa.sessoes / base)} das sessões
                     </text>
@@ -193,11 +193,11 @@ export function Funil({ funil }: { funil: FunilDeLeads }) {
           <div key={etapa.chave} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <dt
               className="mono"
-              style={{ fontSize: 11, color: 'var(--tx3)', minWidth: 150, letterSpacing: '.02em' }}
+              style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', minWidth: 150, letterSpacing: 'var(--trilha-media)' }}
             >
               {etapa.rotulo.toUpperCase()}
             </dt>
-            <dd style={{ margin: 0, fontSize: 12, color: 'var(--tx2)', flex: '1 1 260px' }}>
+            <dd style={{ margin: 0, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', flex: '1 1 260px' }}>
               {etapa.definicao}
             </dd>
           </div>
@@ -257,16 +257,16 @@ export function ForaDoFunil({ funil }: { funil: FunilDeLeads }) {
           key={item.rotulo}
           style={{
             border: '1px solid var(--bd)',
-            borderRadius: 10,
+            borderRadius: 'var(--raio-m)',
             background: 'var(--card)',
             padding: '12px 14px',
           }}
         >
-          <div className="mono" style={{ fontSize: 19, color: 'var(--tx)' }}>
+          <div className="mono" style={{ fontSize: 'var(--tipo-titulo)', color: 'var(--tx)' }}>
             {item.valor}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--tx)', marginTop: 2 }}>{item.rotulo}</div>
-          <p style={{ fontSize: 11.5, color: 'var(--tx3)', margin: '6px 0 0', lineHeight: 1.45 }}>
+          <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx)', marginTop: 2 }}>{item.rotulo}</div>
+          <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', margin: '6px 0 0', lineHeight: 1.45 }}>
             {item.explicacao}
           </p>
         </div>

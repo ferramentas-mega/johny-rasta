@@ -50,7 +50,7 @@ function Faixa({ serie }: { serie: SerieDeEvidencia }) {
 
   if (!faixa) {
     return (
-      <p style={{ fontSize: 11.5, color: 'var(--tx3)', margin: 0 }}>
+      <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', margin: 0 }}>
         Nenhuma medição com valor nesta série.
       </p>
     );
@@ -86,7 +86,7 @@ function Faixa({ serie }: { serie: SerieDeEvidencia }) {
           display: 'flex',
           justifyContent: 'space-between',
           gap: 10,
-          fontSize: 10.5,
+          fontSize: 'var(--tipo-micro)',
           color: 'var(--tx3)',
           marginTop: 2,
         }}
@@ -115,7 +115,7 @@ function Variacao({ serie }: { serie: SerieDeEvidencia }) {
   // Uma medição só não tem variação. Dizer "0%" afirmaria que comparamos.
   if (!v) {
     return (
-      <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>Sem base comparável nesta série</span>
+      <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>Sem base comparável nesta série</span>
     );
   }
 
@@ -126,7 +126,7 @@ function Variacao({ serie }: { serie: SerieDeEvidencia }) {
     serie.unidade === 'ms' ? duracaoMs(Math.abs(v.delta)) : `${Math.round(Math.abs(v.delta))}`;
 
   return (
-    <span className="mono" style={{ fontSize: 12, color: cor }}>
+    <span className="mono" style={{ fontSize: 'var(--tipo-apoio)', color: cor }}>
       {sinal}
       {magnitude} da primeira à última medição
     </span>
@@ -136,7 +136,7 @@ function Variacao({ serie }: { serie: SerieDeEvidencia }) {
 export function Evidencias({ series }: { series: SerieDeEvidencia[] }) {
   if (series.length === 0) {
     return (
-      <p style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.6 }}>
+      <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.6 }}>
         Nenhuma medição guardada ainda. A evidência aparece a partir da primeira análise — e a
         comparação, a partir da segunda.
       </p>
@@ -160,22 +160,22 @@ export function Evidencias({ series }: { series: SerieDeEvidencia[] }) {
           data-serie={serie.chave}
           style={{
             border: '1px solid var(--bd)',
-            borderRadius: 10,
+            borderRadius: 'var(--raio-m)',
             background: 'var(--card)',
             padding: '12px 14px',
           }}
         >
-          <div className="mono" style={{ fontSize: 12, color: 'var(--tx)' }}>
+          <div className="mono" style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx)' }}>
             {serie.titulo}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--tx3)', margin: '2px 0 10px' }}>
+          <div style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', margin: '2px 0 10px' }}>
             {serie.subtitulo}
           </div>
           <Faixa serie={serie} />
           <div style={{ marginTop: 8 }}>
             <Variacao serie={serie} />
           </div>
-          <div style={{ fontSize: 10.5, color: 'var(--tx3)', marginTop: 6 }}>
+          <div style={{ fontSize: 'var(--tipo-micro)', color: 'var(--tx3)', marginTop: 6 }}>
             {dataHora(serie.pontos[0]!.em)} → {dataHora(serie.pontos[serie.pontos.length - 1]!.em)}
           </div>
         </div>

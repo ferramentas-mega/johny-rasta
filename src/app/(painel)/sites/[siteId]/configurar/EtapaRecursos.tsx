@@ -36,7 +36,7 @@ export function EtapaRecursos({
     <fieldset
       style={{
         border: '1px solid var(--bd)',
-        borderRadius: 10,
+        borderRadius: 'var(--raio-m)',
         padding: 16,
         background: 'var(--elev)',
         display: 'flex',
@@ -44,8 +44,8 @@ export function EtapaRecursos({
         gap: 12,
       }}
     >
-      <legend style={{ padding: '0 6px', fontSize: 13, fontWeight: 600 }}>{titulo}</legend>
-      <p style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.6, marginTop: -4 }}>{subtitulo}</p>
+      <legend style={{ padding: '0 6px', fontSize: 'var(--tipo-corpo)', fontWeight: 600 }}>{titulo}</legend>
+      <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', lineHeight: 1.6, marginTop: -4 }}>{subtitulo}</p>
 
       {itens.map((recurso) => {
         const info = RECURSO_EXPLICACAO[recurso];
@@ -61,8 +61,8 @@ export function EtapaRecursos({
               style={{ marginTop: 3, width: 16, height: 16, accentColor: 'var(--gold)' }}
             />
             <span>
-              <span style={{ fontSize: 13.5, color: 'var(--tx)' }}>{RECURSO_LABEL[recurso]}</span>
-              <span style={{ display: 'block', fontSize: 11.5, color: 'var(--tx2)', marginTop: 3, lineHeight: 1.6 }}>
+              <span style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx)' }}>{RECURSO_LABEL[recurso]}</span>
+              <span style={{ display: 'block', fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)', marginTop: 3, lineHeight: 1.6 }}>
                 <strong>Mede:</strong> {info.mede}
                 <br />
                 <strong>Precisa de:</strong> {info.exige}

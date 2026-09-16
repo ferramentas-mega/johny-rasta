@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Icone, type IconeNome } from '@/components/icones';
+import { Sobrelinha } from '@/components/Sobrelinha';
 import type { Variacao } from '@/lib/formato';
 
 /**
@@ -33,7 +34,7 @@ export function CartaoIndicador({
 
   const conteudo = (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--tx2)', fontSize: 13 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--tx2)', fontSize: 'var(--tipo-corpo)' }}>
         <Icone nome={icone} tamanho={15} />
         <span>{rotulo}</span>
         <span
@@ -52,7 +53,7 @@ export function CartaoIndicador({
             height: 16,
             borderRadius: '50%',
             border: '1px solid var(--bd)',
-            fontSize: 10,
+            fontSize: 'var(--tipo-micro)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -67,11 +68,11 @@ export function CartaoIndicador({
       <div
         className="mono"
         data-testid={`kpi-valor-${chave}`}
-        style={{ fontSize: 32, fontWeight: 500, letterSpacing: '-0.01em', margin: '10px 0 6px', color: 'var(--tx)' }}
+        style={{ fontSize: 'var(--tipo-numero)', fontWeight: 500, letterSpacing: 'var(--trilha-justa)', margin: '10px 0 6px', color: 'var(--tx)' }}
       >
         {valor}
       </div>
-      <div className="mono" style={{ fontSize: 11.5, color: cor }}>
+      <div className="mono" style={{ fontSize: 'var(--tipo-legenda)', color: cor }}>
         {variacao.texto}
       </div>
     </>
@@ -80,15 +81,26 @@ export function CartaoIndicador({
   const estilo = {
     display: 'block',
     padding: '18px 18px 16px',
-    borderRadius: 12,
+    borderRadius: 'var(--raio-m)',
     border: `1px solid ${destaque ? 'var(--gold)' : 'var(--bdc)'}`,
-    background: destaque ? 'linear-gradient(180deg, rgba(112,255,139,.10), var(--card) 62%)' : 'var(--card)',
+    // `var(--gold-fill)`, e não a cor escrita à mão que estava aqui
+    // (`rgba(112,255,139,.10)`): aquele é o verde do tema ESCURO, e ele não
+    // trocava no claro — o cartão de destaque puxava para um verde que não é o
+    // da paleta clara. Não dava erro, e o verificador não pegava: ele conferia
+    // hexadecimal, e isto é `rgba`. Hoje confere os dois.
+    background: destaque
+      ? 'linear-gradient(180deg, var(--gold-fill), var(--card) 62%)'
+      : 'var(--card)',
     textDecoration: 'none',
     color: 'inherit',
+    boxShadow: 'var(--sombra-1)',
   } as const;
 
+  // A classe existe só pelo que estilo inline não faz: `:hover`. O cartão que
+  // LEVA a algum lugar sobe ao nível 2 quando apontado; o que não leva fica
+  // parado, porque movimento sem destino promete clique que não existe.
   return href ? (
-    <Link href={href} data-testid={`kpi-${chave}`} style={estilo}>
+    <Link href={href} className="cartao-elevado" data-testid={`kpi-${chave}`} style={estilo}>
       {conteudo}
     </Link>
   ) : (
@@ -115,20 +127,20 @@ export function Painel({
     <section
       style={{
         border: '1px solid var(--bd)',
-        borderRadius: 12,
+        borderRadius: 'var(--raio-m)',
         background: 'var(--card)',
         padding: '18px 18px 20px',
+        // Elevação de repouso. No escuro é um filete de luz na borda de cima;
+        // no claro, sombra empilhada com lábio na base. Os dois vivem no mesmo
+        // token porque o PAPEL é um só — "esta superfície está acima do fundo".
+        boxShadow: 'var(--sombra-1)',
       }}
     >
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
         <div style={{ minWidth: 0 }}>
-          {kicker && (
-            <div className="mono" style={{ fontSize: 10.5, letterSpacing: '.12em', color: 'var(--tx3)' }}>
-              {kicker}
-            </div>
-          )}
-          <h2 style={{ fontSize: 16, fontWeight: 600, margin: '2px 0 0' }}>{titulo}</h2>
-          {subtitulo && <p style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 4 }}>{subtitulo}</p>}
+          {kicker && <Sobrelinha tom="discreto">{kicker}</Sobrelinha>}
+          <h2 style={{ fontSize: 'var(--tipo-secao)', fontWeight: 600, margin: '2px 0 0' }}>{titulo}</h2>
+          {subtitulo && <p style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)', marginTop: 4 }}>{subtitulo}</p>}
         </div>
         {acoes && <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>{acoes}</div>}
       </div>
@@ -148,11 +160,11 @@ export function Aviso({ children, tom = 'soft' }: { children: React.ReactNode; t
         alignItems: 'center',
         gap: 8,
         padding: '8px 12px',
-        borderRadius: 999,
+        borderRadius: 'var(--raio-pilula)',
         background: fundo,
         color: cor,
-        fontSize: 11.5,
-        letterSpacing: '.03em',
+        fontSize: 'var(--tipo-legenda)',
+        letterSpacing: 'var(--trilha-media)',
       }}
     >
       {children}

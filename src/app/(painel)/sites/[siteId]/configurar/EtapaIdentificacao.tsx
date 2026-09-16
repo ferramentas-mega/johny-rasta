@@ -53,7 +53,7 @@ export function EtapaIdentificacao({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <p style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.6 }}>
+      <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.6 }}>
         O domínio define qual origem pode enviar eventos, e o fuso define onde começa o dia nos relatórios.
         A plataforma decide quais instruções de instalação você verá na etapa 3.
       </p>
@@ -63,7 +63,7 @@ export function EtapaIdentificacao({
           action={acaoCliente}
           style={{
             display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end',
-            border: '1px solid var(--bd)', borderRadius: 10, padding: 14, background: 'var(--elev)',
+            border: '1px solid var(--bd)', borderRadius: 'var(--raio-m)', padding: 14, background: 'var(--elev)',
           }}
         >
           <div style={{ flex: '1 1 220px' }}>
@@ -143,8 +143,8 @@ export function EtapaIdentificacao({
           <div
             role="alert"
             style={{
-              border: '1px solid var(--warn-tx)', borderRadius: 10, padding: 14,
-              background: 'var(--warn-bg)', fontSize: 13, lineHeight: 1.6,
+              border: '1px solid var(--warn-tx)', borderRadius: 'var(--raio-m)', padding: 14,
+              background: 'var(--warn-bg)', fontSize: 'var(--tipo-corpo)', lineHeight: 1.6,
             }}
           >
             <strong>Este domínio já está cadastrado.</strong>

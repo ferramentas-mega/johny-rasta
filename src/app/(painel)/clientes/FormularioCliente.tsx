@@ -30,7 +30,7 @@ export function FormularioCliente({ emEdicao }: { emEdicao?: ClienteEditavel }) 
         flexDirection: 'column',
         gap: 12,
         border: '1px solid var(--bd)',
-        borderRadius: 10,
+        borderRadius: 'var(--raio-m)',
         padding: 16,
         background: 'var(--elev)',
         minWidth: 280,

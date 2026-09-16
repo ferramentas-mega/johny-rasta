@@ -23,8 +23,8 @@ export function EtapaQualidade({ siteId, configurada }: { siteId: string; config
       <div
         role="alert"
         style={{
-          border: '1px solid var(--warn-tx)', borderRadius: 10, padding: 14,
-          background: 'var(--warn-bg)', fontSize: 13, lineHeight: 1.7,
+          border: '1px solid var(--warn-tx)', borderRadius: 'var(--raio-m)', padding: 14,
+          background: 'var(--warn-bg)', fontSize: 'var(--tipo-corpo)', lineHeight: 1.7,
         }}
       >
         <strong>A análise técnica não está configurada neste servidor.</strong>
@@ -40,7 +40,7 @@ export function EtapaQualidade({ siteId, configurada }: { siteId: string; config
   return (
     <form action={acao} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <input type="hidden" name="siteId" value={siteId} />
-      <p style={{ fontSize: 13.5, color: 'var(--tx2)', lineHeight: 1.6 }}>
+      <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', lineHeight: 1.6 }}>
         Cadastre a URL acima, execute a primeira análise e depois confira aqui. A verificação procura uma análise
         concluída <strong>com nota registrada</strong> — uma execução que falhou não conta como verificada.
       </p>

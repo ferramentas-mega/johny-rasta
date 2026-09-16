@@ -156,6 +156,28 @@ defeito não era a paleta: `--gold-tx` já existia exatamente para texto (6,33:1
 quase todo componente usava `--gold` (4,14:1). `npm run design` mede os 22 pares
 nos dois temas e roda no CI.
 
+**A escala visual é um conjunto FECHADO, e quem a defende é o verificador.** Cor sempre esteve sob
+controle aqui; forma, não. Medido: **19 tamanhos de fonte distintos em 291 usos**, quinze deles num
+intervalo de nove pixels — e a mesma sobrelinha caixa-alta escrita como `11px/.1em` no cabeçalho de
+página e `10,5px/.12em` no de painel. Ninguém enxerga 12 contra 12,5; enxerga-se o resultado, que é
+duas telas com pesos diferentes e ninguém sabendo apontar o quê. Hoje são 9 tamanhos, 3 trilhas e 3
+raios em `:root` (forma não muda com o tema), e `npm run design` reprova valor cru **e** token fora
+do conjunto — `var(--tipo-medio)` não existe, o navegador ignora em silêncio e fica o tamanho
+herdado. Precisou de um tamanho novo? A pergunta é *que papel é este*: se for papel, vira token com
+nome, como o `--tipo-heroico` usado num lugar só. Elevação (`--sombra-1`, `--sombra-2`) é o mesmo
+token com técnica diferente por tema — no escuro é luz na borda de cima, porque sombra projetada
+sobre preto não separa nada; no claro é sombra empilhada com lábio `inset`.
+
+**O verificador de design estava cego para três coisas, e as três eram defeito real.** Ele lia
+tokens **linha a linha**, então nunca enxergou valor multilinha — `--header-bg`, `--brand-bg` e as
+sombras ficavam fora da conferência de paridade, e um deles podia faltar num tema sem ninguém saber.
+Ele conferia cor crua só em **hexadecimal**, e por essa fresta passaram três `rgba` escritos à mão
+com valores do tema ESCURO (`rgba(112,255,139,.10)` no cartão de destaque, `rgba(255,133,133,…)` em
+mais dois) — que não trocavam no tema claro. E a família de estado tinha **três fundos para quatro
+textos**: faltava `--neg-bg`, e era justamente por isso que os componentes escreviam o vermelho na
+mão. Ao acrescentar conferência a um verificador, pergunte primeiro o que ele **já deveria** estar
+pegando e não pega.
+
 **Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
 não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
 eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou

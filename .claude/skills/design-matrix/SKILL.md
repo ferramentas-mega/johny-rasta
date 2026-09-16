@@ -129,6 +129,48 @@ Duas mudanças de valor foram necessárias, as duas só no tema claro:
 **Ao escolher cor de texto, use a variante `-tx`.** `--gold`, `--pos` e `--neg`
 são preenchimento, borda e traço.
 
+## A escala é um conjunto fechado
+
+Cor sempre esteve sob controle aqui. **Forma, não.** Medido: **19 tamanhos de
+fonte distintos em 291 usos** — quinze deles num intervalo de nove pixels (10,
+10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 16, 17, 18, 19). Mais 8
+trilhas e 6 raios.
+
+Ninguém enxerga 12 contra 12,5. Enxerga-se o resultado: duas telas que dizem a
+mesma coisa com pesos diferentes, sem que dê para apontar o quê. O caso mais
+claro era a sobrelinha caixa-alta — `11px/.1em` no cabeçalho de página,
+`10,5px/.12em` no de painel. Mesmo papel, quatro valores.
+
+Hoje são 9 tamanhos, 3 trilhas e 3 raios, em `:root` (não mudam com o tema:
+descrevem forma, não cor). **Valor cru reprova, e token fora do conjunto também**
+— `var(--tipo-medio)` não existe no CSS, o navegador ignora **em silêncio**, e o
+tamanho fica o herdado.
+
+Ao precisar de um tamanho que não existe, a pergunta é *que papel é este?*. Se
+for papel novo, vira token com nome e comentário — foi assim que entrou
+`--tipo-heroico`, o `clamp` do número da tela de erro, usado num lugar só.
+Escala sem quem a defenda dura até a próxima tela.
+
+Componente: `Sobrelinha` (`src/components/Sobrelinha.tsx`) é o papel, com um
+tamanho só. O que varia é o tom — `marca` para página, `discreto` para painel.
+
+---
+
+## Elevação: a técnica muda com o tema
+
+Dois níveis, e **não são a mesma técnica nos dois temas**. É o ponto em que
+receita de sistema claro colada aqui falha em silêncio.
+
+No **escuro**, sombra projetada é invisível — preto sobre preto não separa nada.
+Quem separa é a luz: um `inset` claro na borda de cima. No **claro**, a sombra é
+que separa, empilhada em camadas curtas e longas, com lábio `inset` na base.
+
+Mesmo token (`--sombra-1`, `--sombra-2`), porque o papel é um só. `.cartao-elevado`
+sobe ao nível 2 ao apontar, e leva `!important` porque a sombra de repouso é
+estilo inline — inline vence classe.
+
+---
+
 ## Acessibilidade e movimento
 
 - `prefers-reduced-motion` zera a duração de toda animação no `theme.css`, e há
@@ -137,6 +179,46 @@ são preenchimento, borda e traço.
 - Foco visível é requisito testado, não preferência.
 - Dica que só aparece no `title` não existe para quem está no celular: a
   explicação vai em texto.
+
+---
+
+## Ao analisar um site "sofisticado" trazido de fora
+
+Já aconteceu: chegou o pacote publicado de uma landing page (`signal-ai.aura.build`)
+com o pedido de extrair um sistema visual dela. O que a análise achou vale como
+método, porque a conclusão foi o oposto da expectativa.
+
+**A paleta não era nada.** Os tokens de tema eram o **padrão do shadcn**, sem
+alteração: `--background: 0 0% 100%`, `--primary: 0 0% 9%`, `--radius: .5rem`.
+Acromático inteiro, saturação zero em tudo menos no destrutivo. Não havia
+identidade de cor para copiar — havia a ausência dela.
+
+**A sofisticação estava na forma**, e foi medível pela frequência das classes:
+`font-light` (248 usos) e `font-extralight` (46) em tamanhos grandes;
+`uppercase` + `tracking-widest` (62/56) nos rótulos minúsculos; `rounded-full`
+(126); bordas de um pixel em vez de preenchimento; `leading-relaxed`. Mais
+animações de ENTRADA (`blur-up`, `aura-modal-card-in`: desfoque + deslocamento +
+opacidade) e sombras **empilhadas com lábio `inset`**.
+
+O que veio para cá: a disciplina do conjunto pequeno de papéis, a entrada como
+desaceleração, e a sombra empilhada (adaptada — ver elevação acima).
+
+O que **não** veio, e o motivo:
+
+- **A paleta acromática e a Inter em peso 200.** Trocaria a identidade do
+  produto por uma que o zip nem tinha de propósito.
+- **`font-light`/`extralight` em texto pequeno.** Peso fino reduz o contraste
+  percebido, e a WCAG não desconta isso — o par passaria na medição e falharia
+  no olho. Este painel é feito de legenda pequena.
+- **`backdrop-filter: blur()` sobre dado.** O verificador compõe fundo com alfa
+  sobre `--bg` para medir contraste; um fundo borrado torna a composição
+  imprevisível, e a medição deixa de valer.
+- **Tailwind e shadcn.** Não existem aqui, e a CSP recusa script de CDN.
+
+A pergunta que essa análise deixa, e que serve para o próximo pacote: **o que
+neste material é medível, e o que é só a impressão que ele causa?** Frequência
+de classe, contagem de valores distintos e razão de contraste são medíveis.
+"Parece sofisticado" não é.
 
 ---
 

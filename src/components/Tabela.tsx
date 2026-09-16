@@ -51,14 +51,14 @@ export function Tabela<T>({
 
   if (linhas.length === 0) {
     return (
-      <p style={{ fontSize: 13, color: 'var(--tx2)', padding: '18px 2px' }}>{vazio}</p>
+      <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)', padding: '18px 2px' }}>{vazio}</p>
     );
   }
 
   const celula = (c: Coluna<T>): React.CSSProperties => ({
     padding: '11px 10px',
     textAlign: c.alinhamento === 'direita' ? 'right' : 'left',
-    fontSize: 13,
+    fontSize: 'var(--tipo-corpo)',
     whiteSpace: c.quebraLinha ? 'normal' : 'nowrap',
     // Sem um teto, a coluna que quebra ocupa toda a sobra e espreme as demais.
     ...(c.quebraLinha ? { maxWidth: 340 } : {}),
@@ -76,7 +76,7 @@ export function Tabela<T>({
                 title={c.ajuda}
                 style={{
                   ...celula(c),
-                  fontSize: 11.5,
+                  fontSize: 'var(--tipo-legenda)',
                   fontWeight: 500,
                   color: 'var(--tx2)',
                   borderBottom: '1px solid var(--bd)',
@@ -128,7 +128,7 @@ export function Etiqueta({ texto, tom = 'soft' }: { texto: string; tom?: 'soft' 
   const fundo =
     tom === 'ok' ? 'var(--ok-bg)'
     : tom === 'warn' ? 'var(--warn-bg)'
-    : tom === 'neg' ? 'rgba(255, 133, 133, 0.14)'
+    : tom === 'neg' ? 'var(--neg-bg)'
     : 'var(--soft-bg)';
   const cor =
     tom === 'ok' ? 'var(--ok-tx)'
@@ -140,10 +140,10 @@ export function Etiqueta({ texto, tom = 'soft' }: { texto: string; tom?: 'soft' 
       style={{
         display: 'inline-block',
         padding: '3px 9px',
-        borderRadius: 999,
+        borderRadius: 'var(--raio-pilula)',
         background: fundo,
         color: cor,
-        fontSize: 11,
+        fontSize: 'var(--tipo-legenda)',
         whiteSpace: 'nowrap',
       }}
     >
