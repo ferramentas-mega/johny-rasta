@@ -28,6 +28,9 @@ export function Situacao({ item }: { item: Otimizacao }) {
       <input type="hidden" name="tipo" value={item.tipo} />
       <input type="hidden" name="titulo" value={item.titulo} />
       <input type="hidden" name="url" value={item.url ?? ''} />
+      {/* Parte da identidade do sinal: sem ele, celular e computador da mesma
+          página compartilhariam uma linha de acompanhamento só. */}
+      <input type="hidden" name="dispositivo" value={item.dispositivo ?? ''} />
       <input type="hidden" name="proximaAcao" value={item.proximaAcao} />
       {/* A evidência do momento da marcação vira o "antes" do par que o
           fechamento por verificação vai guardar. Depois não dá para lê-la: o
@@ -70,9 +73,23 @@ export function Situacao({ item }: { item: Otimizacao }) {
         </span>
       )}
 
+      {/* Três desfechos, três cores. O aviso existe porque "registrei a situação
+          mas NÃO consegui enfileirar a análise" não é sucesso nem erro — e
+          calar essa metade transformaria uma promessa quebrada em confirmação
+          silenciosa. */}
       {estado.erro && (
-        <span role="alert" style={{ fontSize: 10.5, color: 'var(--neg)' }}>
+        <span role="alert" style={{ fontSize: 10.5, color: 'var(--neg)', lineHeight: 1.5, maxWidth: 190 }}>
           {estado.erro}
+        </span>
+      )}
+      {estado.aviso && (
+        <span role="status" style={{ fontSize: 10.5, color: 'var(--warn-tx)', lineHeight: 1.5, maxWidth: 190 }}>
+          {estado.aviso}
+        </span>
+      )}
+      {estado.ok && (
+        <span role="status" style={{ fontSize: 10.5, color: 'var(--pos)', lineHeight: 1.5, maxWidth: 190 }}>
+          {estado.ok}
         </span>
       )}
     </form>

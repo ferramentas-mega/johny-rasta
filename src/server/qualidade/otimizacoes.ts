@@ -32,7 +32,13 @@ import type { Queryable } from '@/server/db';
  *     deixa a conclusão para quem investiga.
  */
 
-import type { ChaveDoSinal, Otimizacao, StatusManual, TipoOtimizacao } from '@/lib/otimizacoes';
+import type {
+  ChaveDoSinal,
+  Dispositivo,
+  Otimizacao,
+  StatusManual,
+  TipoOtimizacao,
+} from '@/lib/otimizacoes';
 
 /** Reexporta o módulo puro para quem consome ter um import só. */
 export * from '@/lib/otimizacoes';
@@ -50,6 +56,7 @@ type LinhaBruta = {
   site: string;
   cliente: string;
   url: string | null;
+  dispositivo: Dispositivo | null;
   tipo: TipoOtimizacao;
   titulo: string;
   evidencia: string;
@@ -70,11 +77,16 @@ type LinhaBruta = {
  *
  * Parâmetros, na ordem: $1 nota ruim, $2 dias para análise vencida, $3 dias sem
  * evento.
+ *
+ * A coluna `dispositivo` é parte da IDENTIDADE do sinal, não enfeite: o sinal
+ * técnico existe por dispositivo, e os outros dois não existem em dispositivo
+ * nenhum — daí o `null::text`, que é a resposta honesta para uma pergunta que
+ * não se aplica.
  */
 const SINAIS_SQL = `
     -- 1. Desempenho ruim numa URL monitorada. Compara a análise MAIS RECENTE de
     --    cada par (url, dispositivo): uma medição antiga não sustenta alerta.
-    select r.site_id, s.name, c.name, r.url_solicitada, 'tecnico',
+    select r.site_id, s.name, c.name, r.url_solicitada, r.strategy, 'tecnico',
            'Desempenho baixo em página monitorada',
            'Nota ' || round(r.performance * 100) || '/100 no ' ||
              case r.strategy when 'mobile' then 'celular' else 'computador' end,
@@ -92,7 +104,7 @@ const SINAIS_SQL = `
     union all
 
     -- 2. URL prioritária sem análise, ou com análise velha.
-    select m.site_id, s.name, c.name, m.url, 'atualizacao',
+    select m.site_id, s.name, c.name, m.url, null::text, 'atualizacao',
            case when ultima.medido_em is null
                 then 'URL prioritária nunca analisada'
                 else 'Análise desatualizada' end,
@@ -117,7 +129,7 @@ const SINAIS_SQL = `
     --    A condição de ter mais de 30 eventos é o que separa "parou de coletar"
     --    de "site de pouco tráfego". Sem ela, todo site pequeno viraria alarme
     --    falso — e alarme falso treina o usuário a ignorar a lista.
-    select s.id, s.name, c.name, null, 'coleta',
+    select s.id, s.name, c.name, null, null::text, 'coleta',
            'Sem eventos recentes num site que coletava',
            'Último evento em ' || to_char(e.ultimo,'DD/MM/YYYY') ||
              ' · ' || e.total || ' eventos no histórico',
@@ -135,7 +147,22 @@ const SINAIS_SQL = `
 
 /** As colunas de `SINAIS_SQL`, na ordem em que ele as devolve. */
 const SINAIS_COLUNAS =
-  'site_id, site, cliente, url, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em';
+  'site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, ' +
+  'proxima_acao, detectado_em';
+
+/**
+ * O casamento entre um sinal e a linha de acompanhamento.
+ *
+ * Escrito uma vez porque as duas consultas precisam dele IGUAL. Se o `join` da
+ * listagem e o `not exists` do fechamento discordassem em uma coluna, o efeito
+ * seria fechar como resolvido um item que a lista continua mostrando.
+ */
+const CASA_SINAL = `
+         o.site_id = s.site_id
+     and o.tipo    = s.tipo
+     and coalesce(o.url, '')         = coalesce(s.url, '')
+     and coalesce(o.dispositivo, '') = coalesce(s.dispositivo, '')
+     and o.titulo  = s.titulo`;
 
 export async function listarOtimizacoes(db: Queryable): Promise<Otimizacao[]> {
   const linhas = await db.query<LinhaBruta>(
@@ -144,17 +171,13 @@ export async function listarOtimizacoes(db: Queryable): Promise<Otimizacao[]> {
     -- O acompanhamento entra por LEFT JOIN: acrescenta situação a um sinal que
     -- existe, e nunca cria linha. Um registro cujo sinal sumiu simplesmente não
     -- aparece — a ausência do sinal é a prova de que acabou.
-    select o.id, sinais.site_id, sinais.site, sinais.cliente, sinais.url, sinais.tipo,
-           sinais.titulo, sinais.evidencia, sinais.prioridade,
+    select o.id, s.site_id, s.site, s.cliente, s.url, s.dispositivo, s.tipo,
+           s.titulo, s.evidencia, s.prioridade,
            coalesce(o.status, 'pendente') as status,
-           sinais.proxima_acao, sinais.detectado_em
-      from sinais
-      left join optimizations o
-        on o.site_id = sinais.site_id
-       and o.tipo    = sinais.tipo
-       and coalesce(o.url, '') = coalesce(sinais.url, '')
-       and o.titulo  = sinais.titulo
-    order by sinais.prioridade, sinais.detectado_em desc
+           s.proxima_acao, s.detectado_em
+      from sinais s
+      left join optimizations o on ${CASA_SINAL}
+    order by s.prioridade, s.detectado_em desc
     `,
     [DESEMPENHO_RUIM, DIAS_ANALISE_VENCIDA, DIAS_SEM_EVENTO],
   );
@@ -165,6 +188,7 @@ export async function listarOtimizacoes(db: Queryable): Promise<Otimizacao[]> {
     site: l.site,
     cliente: l.cliente,
     url: l.url,
+    dispositivo: l.dispositivo,
     tipo: l.tipo,
     titulo: l.titulo,
     evidencia: l.evidencia,
@@ -203,18 +227,21 @@ export async function marcarOtimizacao(
   // onde se partiu.
   await db.query(
     `insert into optimizations
-       (account_id, site_id, url, tipo, titulo, prioridade, status, proxima_acao,
+       (account_id, site_id, url, dispositivo, tipo, titulo, prioridade, status, proxima_acao,
         evidencia, atualizado_em)
-     values (app.current_account_id(), $1, $2, $3, $4, 2, $5, $6,
+     values (app.current_account_id(), $1, $2, $8, $3, $4, 2, $5, $6,
              jsonb_build_object('texto', $7::text, 'em', now()), now())
-     on conflict (site_id, tipo, coalesce(url, ''), titulo) do update
+     on conflict (site_id, tipo, coalesce(url, ''), coalesce(dispositivo, ''), titulo) do update
         set status    = excluded.status,
             evidencia = case
                           when optimizations.evidencia ? 'texto' then optimizations.evidencia
                           else excluded.evidencia
                         end,
             atualizado_em = now()`,
-    [sinal.siteId, sinal.url, sinal.tipo, sinal.titulo, status, proximaAcao, evidencia],
+    [
+      sinal.siteId, sinal.url, sinal.tipo, sinal.titulo, status, proximaAcao, evidencia,
+      sinal.dispositivo,
+    ],
   );
 }
 
@@ -257,11 +284,16 @@ export async function fecharPorVerificacao(db: Queryable, siteId: string): Promi
              'resolvidoPor', 'nova medição',
              -- O "depois". Nulo quando o tipo não tem URL (o sinal de coleta
              -- vale para o site inteiro), e nulo é honesto: não havia número.
+             --
+             -- O filtro de dispositivo não é detalhe: sem ele, fechar o item do
+             -- celular podia gravar como "depois" a nota medida no computador —
+             -- creditando a um dispositivo a melhora que aconteceu no outro.
              'notaDepois', (
                select round(r.performance * 100)
                  from lighthouse_results r
                 where r.site_id = o.site_id
                   and r.url_solicitada = o.url
+                  and (o.dispositivo is null or r.strategy = o.dispositivo)
                   and r.performance is not null
                 order by r.medido_em desc
                 limit 1
@@ -271,11 +303,7 @@ export async function fecharPorVerificacao(db: Queryable, siteId: string): Promi
      where o.site_id = $4
        and o.status <> 'resolvida_por_verificacao'
        and not exists (
-         select 1 from sinais s
-          where s.site_id = o.site_id
-            and s.tipo    = o.tipo
-            and coalesce(s.url, '') = coalesce(o.url, '')
-            and s.titulo  = o.titulo
+         select 1 from sinais s where ${CASA_SINAL}
        )
     returning o.id`,
     [DESEMPENHO_RUIM, DIAS_ANALISE_VENCIDA, DIAS_SEM_EVENTO, siteId],
@@ -286,6 +314,7 @@ export async function fecharPorVerificacao(db: Queryable, siteId: string): Promi
 export type ResolvidaPorVerificacao = {
   site: string;
   url: string | null;
+  dispositivo: Dispositivo | null;
   titulo: string;
   antes: string | null;
   notaDepois: number | null;
@@ -298,7 +327,7 @@ export async function resolvidasPorVerificacao(
   dias: number,
 ): Promise<ResolvidaPorVerificacao[]> {
   return db.query<ResolvidaPorVerificacao>(
-    `select s.name as site, o.url, o.titulo,
+    `select s.name as site, o.url, o.dispositivo, o.titulo,
             o.evidencia->>'texto'                     as antes,
             (o.evidencia->>'notaDepois')::int         as "notaDepois",
             (o.evidencia->>'resolvidoEm')::timestamptz as "resolvidoEm"

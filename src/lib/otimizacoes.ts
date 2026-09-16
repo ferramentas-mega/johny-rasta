@@ -13,12 +13,28 @@
 
 export type TipoOtimizacao = 'tecnico' | 'comercial' | 'coleta' | 'atualizacao';
 
+/**
+ * O dispositivo do sinal, quando ele tem um.
+ *
+ * Nulo não é "ainda não sabemos": é "esta pergunta não se aplica". Uma URL
+ * prioritária nunca analisada não tem nota em dispositivo nenhum, e um site que
+ * parou de coletar vale inteiro. Preencher com 'mobile' por comodidade
+ * afirmaria uma medição que não existe.
+ */
+export type Dispositivo = 'mobile' | 'desktop';
+
+export const DISPOSITIVO_LABEL: Record<Dispositivo, string> = {
+  mobile: 'celular',
+  desktop: 'computador',
+};
+
 export type Otimizacao = {
   id: string | null;
   siteId: string;
   site: string;
   cliente: string;
   url: string | null;
+  dispositivo: Dispositivo | null;
   tipo: TipoOtimizacao;
   titulo: string;
   evidencia: string;
@@ -69,11 +85,21 @@ export function ehStatusManual(valor: string): valor is StatusManual {
  *
  * Um sinal derivado não tem id próprio: ele é recalculado a cada consulta. A
  * identidade dele é o que o descreve — por isso a chave é composta, e por isso
- * o índice único do banco é sobre essas mesmas quatro colunas.
+ * o índice único do banco é sobre essas mesmas cinco colunas.
+ *
+ * `dispositivo` entrou depois, e a falta dele custava caro: o título do sinal
+ * técnico é igual nos dois dispositivos, então celular e computador da mesma
+ * página casavam com UMA linha de acompanhamento — marcar um mudava o outro, e
+ * o fechamento podia creditar a um a melhora medida no outro.
  */
 export type ChaveDoSinal = {
   siteId: string;
   tipo: TipoOtimizacao;
   url: string | null;
+  dispositivo: Dispositivo | null;
   titulo: string;
 };
+
+export function ehDispositivo(valor: string): valor is Dispositivo {
+  return valor === 'mobile' || valor === 'desktop';
+}

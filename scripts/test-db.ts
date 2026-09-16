@@ -298,9 +298,9 @@ export async function prepararBancoDeTeste(): Promise<void> {
   async function semearResolvidaPorVerificacao(accountId: string, siteId: string) {
     await db.query(
       `insert into optimizations
-         (account_id, site_id, url, tipo, titulo, prioridade, status, proxima_acao,
+         (account_id, site_id, url, dispositivo, tipo, titulo, prioridade, status, proxima_acao,
           evidencia, detectado_em, atualizado_em)
-       values ($1, $2, 'https://alfa.teste/planos', 'tecnico',
+       values ($1, $2, 'https://alfa.teste/planos', 'mobile', 'tecnico',
                'Desempenho baixo em página monitorada', 1,
                'resolvida_por_verificacao', 'Abrir Qualidade técnica e ver os diagnósticos',
                jsonb_build_object(

@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Queryable } from '@/server/db';
 import { fecharPorVerificacao } from '@/server/qualidade/otimizacoes';
+import type { ChaveDoSinal } from '@/lib/otimizacoes';
 import { validarUrlPublica, MOTIVO_LABEL } from './url-publica';
 import type { Estrategia, ResultadoPageSpeed } from './pagespeed';
 
@@ -86,6 +87,75 @@ export async function enfileirar(
   return existente
     ? { ok: true, jobId: existente.id, jaExistia: true }
     : { ok: false, erro: 'Não foi possível enfileirar a análise.' };
+}
+
+/**
+ * O desfecho de um pedido de reanálise. Código, não frase: o texto vive na
+ * tela, e assim o mecanismo fica testável sem depender de redação.
+ */
+export type PedidoDeReanalise =
+  | { resultado: 'enfileirada' }
+  | { resultado: 'ja_na_fila' }
+  | { resultado: 'sem_pagina' }
+  | { resultado: 'nao_configurado' }
+  | { resultado: 'recusado'; motivo: string };
+
+/** Os dois dispositivos, para o sinal que não é de um só. */
+const AMBOS = ['mobile', 'desktop'] as const;
+
+/**
+ * Põe na fila a análise que "aguardando nova análise" acabou de prometer.
+ *
+ * ── Por que isto existe ──────────────────────────────────────────────────────
+ *
+ * `aguardando_nova_analise` era o único status que afirmava um ACONTECIMENTO
+ * FUTURO, e não havia nada por trás dele. O agendador diário só olha URL
+ * prioritária; uma página comum não é reanalisada por ninguém. Então o item
+ * ficava ali, esperando para sempre um evento que nunca vinha — e, pior, dizendo
+ * ao operador que estava esperando. Um status que promete e não cumpre é a mesma
+ * família do `configurado: true` que este projeto recusa: estado declarado sem
+ * fato por trás.
+ *
+ * ── O que ele recusa, e por quê ──────────────────────────────────────────────
+ *
+ * Sinal sem página (o de coleta vale para o site inteiro) não se resolve medindo
+ * URL nenhuma. Enfileirar ali gastaria a vaga diária do plano Hobby com uma
+ * medição que não responde à pergunta — e devolveria uma confirmação falsa.
+ *
+ * Toda recusa vira código, e a tela diz qual foi. "Registrei a situação mas não
+ * consegui enfileirar" não pode virar "pronto".
+ *
+ * Mora aqui, e não junto da lista de otimizações, por uma razão mecânica:
+ * `otimizacoes.ts` já é importado por este arquivo (o fechamento por
+ * verificação), e a volta fecharia um ciclo entre os dois módulos.
+ */
+export async function enfileirarReanalise(
+  db: Queryable,
+  sinal: ChaveDoSinal,
+): Promise<PedidoDeReanalise> {
+  if (!sinal.url) return { resultado: 'sem_pagina' };
+  if (!process.env.PAGESPEED_API_KEY) return { resultado: 'nao_configurado' };
+
+  // Sinal com dispositivo pede aquele dispositivo. Sem dispositivo, o sinal é
+  // sobre a AUSÊNCIA de análise — e aí faltam as duas, exatamente como o
+  // agendador diário já trata as URLs prioritárias.
+  const alvos = sinal.dispositivo ? [sinal.dispositivo] : AMBOS;
+  const pedidos: Enfileiramento[] = [];
+  // Em série, e não em `Promise.all`: dentro de uma transação o `Queryable`
+  // serializa as consultas de qualquer jeito, e em série o segundo pedido
+  // enxerga o primeiro — que é o que faz a deduplicação valer entre eles.
+  for (const strategy of alvos) {
+    pedidos.push(await enfileirar(db, { siteId: sinal.siteId, url: sinal.url, strategy }));
+  }
+
+  const recusado = pedidos.find((p) => !p.ok);
+  if (recusado && !recusado.ok) return { resultado: 'recusado', motivo: recusado.erro };
+
+  // Clique repetido não vira segunda tarefa — e quem chama diz isso em vez de
+  // fingir que enfileirou de novo.
+  return pedidos.every((p) => p.ok && p.jaExistia)
+    ? { resultado: 'ja_na_fila' }
+    : { resultado: 'enfileirada' };
 }
 
 /**

@@ -69,6 +69,24 @@ HTML: script bloqueado por CSP, consentimento ou bloqueador está lá e não med
 diagnóstico existe para separar o teste do operador do tráfego real — sem o token, "recebemos um
 clique no WhatsApp" pode ser de qualquer pessoa.
 
+**A chave de um sinal derivado precisa conter TUDO que o distingue.** O acompanhamento de
+otimização era identificado por (site, tipo, url, título) — e o título do sinal técnico é o mesmo nos
+dois dispositivos. Resultado: celular e computador da mesma página, que são dois itens na lista,
+casavam com UMA linha de acompanhamento. Marcar um mudava o outro, a evidência guardada como "antes"
+passava a valer para uma nota que não era a dela, e o fechamento podia creditar a um dispositivo a
+melhora medida no outro. Nada disso dava erro. É a regra da nota técnica (acima) aplicada à chave:
+`dispositivo` é coluna da identidade, e o índice único do banco é sobre as mesmas cinco colunas que
+`ChaveDoSinal` tem. Ao acrescentar um sinal, a pergunta é "duas ocorrências diferentes deste sinal
+poderiam produzir a mesma chave?".
+
+**Status que promete acontecimento futuro precisa de mecanismo por trás.** `aguardando_nova_analise`
+existia como rótulo e não agendava nada: o cron diário só olha URL prioritária, então uma página
+comum esperava para sempre uma reanálise que ninguém ia fazer — com a tela afirmando que estava
+esperando. Hoje escolher o status chama `enfileirarReanalise`, que enfileira o dispositivo do sinal
+(ou os dois, quando o sinal é sobre a AUSÊNCIA de análise) e devolve um **código** de desfecho, não
+uma frase. As recusas aparecem na tela como aviso, nunca como confirmação: sinal sem página não tem
+o que medir, e gastar a vaga diária do plano ali responderia a pergunta errada.
+
 **Fechar um acompanhamento é uma medição, nunca uma declaração.** A lista de Otimizações mostra
 sinais derivados; `optimizations` só guarda o que o operador marcou. Quando o sinal some, quem grava
 `resolvida_por_verificacao` é `fecharPorVerificacao`, chamado por `registrarSucesso` na **mesma

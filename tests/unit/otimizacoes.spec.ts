@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, afterAll, beforeAll, beforeEach } from 'vitest';
 import { Client } from 'pg';
 import { withAccount } from '@/server/db';
 import {
@@ -7,6 +7,7 @@ import {
   marcarOtimizacao,
   resolvidasPorVerificacao,
 } from '@/server/qualidade/otimizacoes';
+import { enfileirarReanalise } from '@/server/qualidade/auditoria';
 import { prepararBancoDeTeste, MASSA, CONTAS } from '../../scripts/test-db';
 
 /**
@@ -154,20 +155,23 @@ describe('isolamento entre contas', () => {
 
 
 /** Uma nota baixa numa URL monitorada: o sinal técnico mais simples. */
-async function comSinalTecnico() {
+async function comSinalTecnico(strategy: 'mobile' | 'desktop' = 'mobile') {
   await inserir(
     `insert into monitored_urls (account_id, site_id, url, prioritaria)
-     values ($1,$2,'https://escrita.teste/lenta', false)`,
+     values ($1,$2,'https://escrita.teste/lenta', false)
+     on conflict (site_id, url) do nothing`,
     [contaId, siteEscrita],
   );
   await inserir(
     `insert into lighthouse_results
        (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
-     values ($1,$2,'https://escrita.teste/lenta','https://escrita.teste/lenta','mobile', 0.30, now())`,
-    [contaId, siteEscrita],
+     values ($1,$2,'https://escrita.teste/lenta','https://escrita.teste/lenta',$3, 0.30, now())`,
+    [contaId, siteEscrita, strategy],
   );
   const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
-  const item = lista.find((o) => o.siteId === siteEscrita && o.tipo === 'tecnico');
+  const item = lista.find(
+    (o) => o.siteId === siteEscrita && o.tipo === 'tecnico' && o.dispositivo === strategy,
+  );
   expect(item, 'o sinal técnico precisa aparecer').toBeTruthy();
   return item!;
 }
@@ -190,7 +194,7 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
     await withAccount(contaId, (db) =>
       marcarOtimizacao(
         db,
-        { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo },
+        { siteId: item.siteId, tipo: item.tipo, url: item.url, dispositivo: item.dispositivo, titulo: item.titulo },
         'em_andamento',
         item.proximaAcao,
         item.evidencia,
@@ -207,7 +211,7 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
 
   it('marcar DUAS vezes não cria duas linhas', async () => {
     const item = await comSinalTecnico();
-    const chave = { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo };
+    const chave = { siteId: item.siteId, tipo: item.tipo, url: item.url, dispositivo: item.dispositivo, titulo: item.titulo };
     await withAccount(contaId, (db) => marcarOtimizacao(db, chave, 'em_andamento', '', 'Nota 30/100 no celular'));
     await withAccount(contaId, (db) => marcarOtimizacao(db, chave, 'aguardando_nova_analise', '', 'Nota 30/100 no celular'));
 
@@ -224,7 +228,7 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
     await withAccount(contaId, (db) =>
       marcarOtimizacao(
         db,
-        { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo },
+        { siteId: item.siteId, tipo: item.tipo, url: item.url, dispositivo: item.dispositivo, titulo: item.titulo },
         'resolvida_manual',
         '',
         'Nota 30/100 no celular',
@@ -242,7 +246,7 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
     await withAccount(contaId, (db) =>
       marcarOtimizacao(
         db,
-        { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo },
+        { siteId: item.siteId, tipo: item.tipo, url: item.url, dispositivo: item.dispositivo, titulo: item.titulo },
         'em_andamento',
         '',
         'Nota 30/100 no celular',
@@ -278,7 +282,7 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
       withAccount(contaId, (db) =>
         marcarOtimizacao(
           db,
-          { siteId: rival, tipo: 'tecnico', url: null, titulo: 'Invasão' },
+          { siteId: rival, tipo: 'tecnico', url: null, dispositivo: null, titulo: 'Invasão' },
           'em_andamento',
           '',
           '',
@@ -332,7 +336,7 @@ describe('fechamento por verificação: quem conclui é a medição', () => {
     await withAccount(contaId, (db) =>
       marcarOtimizacao(
         db,
-        { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo },
+        { siteId: item.siteId, tipo: item.tipo, url: item.url, dispositivo: item.dispositivo, titulo: item.titulo },
         status,
         item.proximaAcao,
         item.evidencia,
@@ -412,6 +416,7 @@ describe('fechamento por verificação: quem conclui é a medição', () => {
           siteId: siteEscrita,
           tipo: 'coleta',
           url: null,
+          dispositivo: null,
           titulo: 'Sem eventos recentes num site que coletava',
         },
         'em_andamento',
@@ -463,5 +468,226 @@ describe('fechamento por verificação: quem conclui é a medição', () => {
     await limpeza.connect();
     await limpeza.query('delete from optimizations where site_id = $1', [rival]);
     await limpeza.end();
+  });
+});
+
+describe('o sinal técnico pertence a uma URL E a um dispositivo', () => {
+  /*
+   * A chave do acompanhamento era (site, tipo, url, título), e o título do sinal
+   * técnico é o MESMO nos dois dispositivos. Então celular e computador da mesma
+   * página — duas linhas na lista, como deve ser — casavam com uma linha só de
+   * acompanhamento. Marcar um mudava o outro, e o fechamento podia creditar a um
+   * a melhora medida no outro.
+   *
+   * O CLAUDE.md já dizia a regra: "Nota técnica pertence a uma URL e a um
+   * dispositivo." Ela valia na tela de qualidade e não valia nesta chave.
+   */
+
+  async function lerStatus(dispositivo: string) {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const { rows } = await admin.query<{ status: string; evidencia: { notaDepois?: number | null } }>(
+      'select status, evidencia from optimizations where site_id = $1 and dispositivo = $2',
+      [siteEscrita, dispositivo],
+    );
+    await admin.end();
+    return rows[0] ?? null;
+  }
+
+  it('a mesma página lenta nos dois dispositivos são DOIS itens', async () => {
+    await comSinalTecnico('mobile');
+    await comSinalTecnico('desktop');
+
+    const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
+    const tecnicos = lista.filter((o) => o.siteId === siteEscrita && o.tipo === 'tecnico');
+    expect(tecnicos).toHaveLength(2);
+    expect(tecnicos.map((o) => o.dispositivo).sort()).toEqual(['desktop', 'mobile']);
+  });
+
+  it('marcar o item do celular não mexe no do computador', async () => {
+    const celular = await comSinalTecnico('mobile');
+    await comSinalTecnico('desktop');
+
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        {
+          siteId: celular.siteId,
+          tipo: celular.tipo,
+          url: celular.url,
+          dispositivo: celular.dispositivo,
+          titulo: celular.titulo,
+        },
+        'em_andamento',
+        '',
+        celular.evidencia,
+      ),
+    );
+
+    const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
+    const porDispositivo = Object.fromEntries(
+      lista
+        .filter((o) => o.siteId === siteEscrita && o.tipo === 'tecnico')
+        .map((o) => [o.dispositivo, o.status]),
+    );
+    expect(porDispositivo.mobile).toBe('em_andamento');
+    // Sem dispositivo na chave, este seria 'em_andamento' também — e ninguém
+    // teria pedido isso.
+    expect(porDispositivo.desktop).toBe('pendente');
+  });
+
+  it('o fechamento grava a nota do dispositivo certo, não a última qualquer', async () => {
+    const celular = await comSinalTecnico('mobile');
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        {
+          siteId: celular.siteId,
+          tipo: celular.tipo,
+          url: celular.url,
+          dispositivo: celular.dispositivo,
+          titulo: celular.titulo,
+        },
+        'em_andamento',
+        '',
+        celular.evidencia,
+      ),
+    );
+
+    // O celular melhora...
+    await inserir(
+      `insert into lighthouse_results
+         (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
+       values ($1,$2,'https://escrita.teste/lenta','https://escrita.teste/lenta','mobile', 0.95, now() + interval '1 minute')`,
+      [contaId, siteEscrita],
+    );
+    // ...e DEPOIS dele mede-se o computador, que continua ruim. Sem o filtro de
+    // dispositivo, esta é a medição mais recente da URL e viraria o "depois" do
+    // item do celular: 33 em vez de 95.
+    await inserir(
+      `insert into lighthouse_results
+         (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
+       values ($1,$2,'https://escrita.teste/lenta','https://escrita.teste/lenta','desktop', 0.33, now() + interval '2 minutes')`,
+      [contaId, siteEscrita],
+    );
+
+    expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita))).toBe(1);
+
+    const linha = await lerStatus('mobile');
+    expect(linha!.status).toBe('resolvida_por_verificacao');
+    expect(linha!.evidencia.notaDepois).toBe(95);
+  });
+});
+
+describe('"aguardando nova análise" enfileira mesmo', () => {
+  /*
+   * Era o único status que afirmava um ACONTECIMENTO FUTURO sem nada por trás.
+   * O agendador diário só olha URL prioritária: uma página comum não era
+   * reanalisada por ninguém, e o item ficava esperando para sempre um evento
+   * que nunca vinha.
+   */
+
+  const CHAVE_FALSA = process.env.PAGESPEED_API_KEY;
+  beforeEach(() => {
+    process.env.PAGESPEED_API_KEY = 'chave-de-teste';
+  });
+  afterAll(() => {
+    if (CHAVE_FALSA === undefined) delete process.env.PAGESPEED_API_KEY;
+    else process.env.PAGESPEED_API_KEY = CHAVE_FALSA;
+  });
+
+  async function fila() {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const { rows } = await admin.query<{ url: string; strategy: string; status: string }>(
+      'select url, strategy, status from audit_jobs where site_id = $1 order by strategy',
+      [siteEscrita],
+    );
+    await admin.end();
+    return rows;
+  }
+
+  function chave(item: Awaited<ReturnType<typeof comSinalTecnico>>) {
+    return {
+      siteId: item.siteId,
+      tipo: item.tipo,
+      url: item.url,
+      dispositivo: item.dispositivo,
+      titulo: item.titulo,
+    };
+  }
+
+  it('o sinal do celular enfileira UMA análise, e só a do celular', async () => {
+    const item = await comSinalTecnico('mobile');
+
+    const pedido = await withAccount(contaId, (db) => enfileirarReanalise(db, chave(item)));
+    expect(pedido.resultado).toBe('enfileirada');
+
+    const jobs = await fila();
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]!.strategy).toBe('mobile');
+    expect(jobs[0]!.url).toBe('https://escrita.teste/lenta');
+  });
+
+  it('pedir duas vezes não vira duas tarefas, e a resposta diz isso', async () => {
+    const item = await comSinalTecnico('mobile');
+
+    await withAccount(contaId, (db) => enfileirarReanalise(db, chave(item)));
+    const segundo = await withAccount(contaId, (db) => enfileirarReanalise(db, chave(item)));
+
+    expect(segundo.resultado).toBe('ja_na_fila');
+    expect(await fila()).toHaveLength(1);
+  });
+
+  it('sinal sem dispositivo pede os dois — é a ausência de análise que o define', async () => {
+    await inserir(
+      `insert into monitored_urls (account_id, site_id, url, prioritaria)
+       values ($1,$2,'https://escrita.teste/planos', true)`,
+      [contaId, siteEscrita],
+    );
+    const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
+    const item = lista.find((o) => o.tipo === 'atualizacao' && o.url?.includes('/planos'));
+    expect(item!.dispositivo).toBeNull();
+
+    const pedido = await withAccount(contaId, (db) =>
+      enfileirarReanalise(db, {
+        siteId: item!.siteId, tipo: item!.tipo, url: item!.url,
+        dispositivo: item!.dispositivo, titulo: item!.titulo,
+      }),
+    );
+    expect(pedido.resultado).toBe('enfileirada');
+    expect((await fila()).map((j) => j.strategy)).toEqual(['desktop', 'mobile']);
+  });
+
+  it('sinal sem página NÃO enfileira nada — e diz o motivo', async () => {
+    // Enfileirar aqui gastaria a vaga diária do plano com uma medição que não
+    // responde à pergunta, e devolveria uma confirmação falsa.
+    const pedido = await withAccount(contaId, (db) =>
+      enfileirarReanalise(db, {
+        siteId: siteEscrita, tipo: 'coleta', url: null, dispositivo: null,
+        titulo: 'Sem eventos recentes num site que coletava',
+      }),
+    );
+    expect(pedido.resultado).toBe('sem_pagina');
+    expect(await fila()).toHaveLength(0);
+  });
+
+  it('URL que saiu do monitoramento é recusada, com o motivo — não silenciosamente', async () => {
+    const item = await comSinalTecnico('mobile');
+    await inserir('delete from monitored_urls where site_id = $1', [siteEscrita]);
+
+    const pedido = await withAccount(contaId, (db) => enfileirarReanalise(db, chave(item)));
+    expect(pedido.resultado).toBe('recusado');
+    expect(pedido.resultado === 'recusado' && pedido.motivo).toMatch(/não está cadastrada/i);
+    expect(await fila()).toHaveLength(0);
+  });
+
+  it('sem integração configurada, avisa em vez de enfileirar tarefa que ninguém processa', async () => {
+    const item = await comSinalTecnico('mobile');
+    delete process.env.PAGESPEED_API_KEY;
+
+    const pedido = await withAccount(contaId, (db) => enfileirarReanalise(db, chave(item)));
+    expect(pedido.resultado).toBe('nao_configurado');
+    expect(await fila()).toHaveLength(0);
   });
 });

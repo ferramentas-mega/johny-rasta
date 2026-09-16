@@ -4,7 +4,9 @@ import { exigirSessao } from '@/server/contexto';
 import {
   listarOtimizacoes,
   resolvidasPorVerificacao,
+  DISPOSITIVO_LABEL,
   TIPO_LABEL,
+  type Dispositivo,
   type Otimizacao,
   type ResolvidaPorVerificacao,
 } from '@/server/qualidade/otimizacoes';
@@ -22,6 +24,25 @@ const TOM: Record<string, 'ok' | 'warn' | 'soft'> = {
 
 /** Janela da lista de resolvidas. */
 const DIAS_DE_RESOLVIDAS = 30;
+
+function Pagina({ url, dispositivo }: { url: string; dispositivo: Dispositivo | null }) {
+  return (
+    <>
+      <span className="mono" style={{ fontSize: 11.5 }}>
+        {url.replace(/^https?:\/\/[^/]+/, '') || '/'}
+      </span>
+      {dispositivo && (
+        <span style={{ display: 'block', fontSize: 11, color: 'var(--tx3)' }}>
+          no {DISPOSITIVO_LABEL[dispositivo]}
+        </span>
+      )}
+    </>
+  );
+}
+
+function SiteInteiro() {
+  return <span style={{ color: 'var(--tx3)', fontSize: 11.5 }}>site inteiro</span>;
+}
 
 export default async function PaginaOtimizacoes({
   searchParams,
@@ -58,9 +79,10 @@ export default async function PaginaOtimizacoes({
     },
     {
       chave: 'pagina', titulo: 'Página',
-      render: (o) => (o.url
-        ? <span className="mono" style={{ fontSize: 11.5 }}>{o.url.replace(/^https?:\/\/[^/]+/, '') || '/'}</span>
-        : <span style={{ color: 'var(--tx3)', fontSize: 11.5 }}>site inteiro</span>),
+      // A nota técnica pertence a uma URL E A UM DISPOSITIVO: sem o dispositivo
+      // à vista, duas linhas da mesma página pareceriam a mesma pendência
+      // repetida.
+      render: (o) => (o.url ? <Pagina url={o.url} dispositivo={o.dispositivo} /> : <SiteInteiro />),
     },
     { chave: 'tipo', titulo: 'Tipo', render: (o) => <Etiqueta texto={TIPO_LABEL[o.tipo]} tom={TOM[o.tipo] ?? 'soft'} /> },
     { chave: 'problema', titulo: 'Problema', render: (o) => o.titulo },
@@ -74,9 +96,7 @@ export default async function PaginaOtimizacoes({
     { chave: 'site', titulo: 'Site', render: (r) => r.site },
     {
       chave: 'pagina', titulo: 'Página',
-      render: (r) => (r.url
-        ? <span className="mono" style={{ fontSize: 11.5 }}>{r.url.replace(/^https?:\/\/[^/]+/, '') || '/'}</span>
-        : <span style={{ color: 'var(--tx3)', fontSize: 11.5 }}>site inteiro</span>),
+      render: (r) => (r.url ? <Pagina url={r.url} dispositivo={r.dispositivo} /> : <SiteInteiro />),
     },
     { chave: 'problema', titulo: 'Problema', render: (r) => r.titulo },
     {
