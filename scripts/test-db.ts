@@ -315,6 +315,50 @@ export async function prepararBancoDeTeste(): Promise<void> {
     );
   }
 
+  /**
+   * Uma análise técnica com as auditorias guardadas.
+   *
+   * Está na massa porque o painel "Correções elegíveis" só existe quando há
+   * auditoria para mostrar — e sem ele a tela inteira não renderiza em teste
+   * nenhum. As três auditorias cobrem os três casos que a regra separa:
+   * quantificada, reprovada sem estimativa, e informativa (sem nota, e por isso
+   * fora da lista de correções).
+   *
+   * Os valores imitam o que a medição real devolveu na versão 13.4.1 do
+   * Lighthouse, inclusive o `jsonb` no formato `{ [id]: auditoria }` que
+   * `registrarSucesso` grava.
+   *
+   * A URL é a home, e NÃO `/planos`, de propósito: `/planos` é o alvo do
+   * acompanhamento já fechado que a massa também traz. Medir ali com nota 0,34
+   * ressuscitaria o sinal daquele item e a massa passaria a afirmar duas coisas
+   * contraditórias — "resolvido pela medição" e "o problema está de pé".
+   */
+  async function semearAuditorias(accountId: string, siteId: string) {
+    await db.query(
+      `insert into lighthouse_results
+         (account_id, site_id, url_solicitada, url_final, strategy, lighthouse_version,
+          performance, lcp_ms, tbt_ms, auditorias, medido_em)
+       values ($1, $2, 'https://alfa.teste/', 'https://alfa.teste/', 'mobile',
+               '13.4.1', 0.34, 12000, 890,
+               jsonb_build_object(
+                 'render-blocking-resources', jsonb_build_object(
+                   'id', 'render-blocking-resources',
+                   'titulo', 'Eliminar recursos que bloqueiam a renderização',
+                   'nota', 0.12, 'economiaMs', 2450, 'valorExibido', '2,45 s'),
+                 'unsized-images', jsonb_build_object(
+                   'id', 'unsized-images',
+                   'titulo', 'Definir largura e altura explícitas nas imagens',
+                   'nota', 0, 'economiaMs', null, 'valorExibido', null),
+                 'network-requests', jsonb_build_object(
+                   'id', 'network-requests',
+                   'titulo', 'Requisições de rede',
+                   'nota', null, 'economiaMs', null, 'valorExibido', '48 recursos')
+               ),
+               now() - interval '2 days')`,
+      [accountId, siteId],
+    );
+  }
+
   async function criarCliente(accountId: string, nome: string) {
     const id = randomUUID();
     await db.query('insert into clients (id, account_id, name) values ($1, $2, $3)', [id, accountId, nome]);
@@ -399,6 +443,7 @@ export async function prepararBancoDeTeste(): Promise<void> {
   await semear(agencia, clienteUm, alfa, SESSOES_ALFA);
   await semear(agencia, clienteDois, beta, SESSOES_BETA);
   await semearResolvidaPorVerificacao(agencia, alfa);
+  await semearAuditorias(agencia, alfa);
 
   const rival = await criarConta(CONTAS.rival.nome, CONTAS.rival.email);
   const clienteRival = await criarCliente(rival, 'Cliente Rival');

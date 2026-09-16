@@ -17,8 +17,8 @@ Quem continuar: leia isto antes do `CLAUDE.md`.
 | 6 | Validação real e modos de teste | **feito** — diagnóstico com prazo de 30 min, nos dois lados |
 | 7 | Formulários sem substituição destrutiva | **feito** — exemplo executável, contato sem analytics |
 | 8 | Inventário de tags e botões | **feito** — estados por botão, ação sugerida e detecção de tag duplicada |
-| 9 | Automação de otimização | não iniciado |
-| 10 | Correções elegíveis | não iniciado |
+| 9 | Automação de otimização | **feito** — fechamento por medição, reanálise enfileirada, varredura diária |
+| 10 | Correções elegíveis | **feito** — auditorias do Lighthouse por URL e dispositivo |
 | 11 | Evidências de desempenho | não iniciado |
 | 12 | UI/UX | parcial — celular, cartões, navegação e funil de leads feitos |
 | 13 | Replay/heatmap (futuro) | não iniciado, por último |
@@ -180,6 +180,31 @@ inteiros no servidor e não tinham porta na tela — editar site, arquivar site 
 remover URL monitorada —, e a etapa de formulários não tinha como ser concluída
 por ela mesma. Detalhe que vale guardar: o teste da edição montava
 `/sites?editar=<id>` à mão, então passava com o produto inalcançável.
+
+---
+
+**Coluna escrita e nunca lida, com a tela mandando olhar para ela.**
+`lighthouse_results.auditorias` guardava todas as auditorias de cada análise
+desde o esquema inicial — 153 na medição real — e **nenhuma linha do projeto lia
+essa coluna**. Ao mesmo tempo, a lista de Otimizações trazia como próxima ação
+"Abrir Qualidade técnica e ver os diagnósticos", e a tela de Qualidade técnica
+não mostrava diagnóstico nenhum: o produto mandava o operador a um lugar que não
+tinha o que ele foi buscar. É a mesma família do "recurso sem porta na tela", só
+que do lado do dado.
+
+**Duas cópias do formatador de duração, as duas escrevendo ponto.** A tela de
+qualidade e o painel de correções tinham cada uma sua `ms()`/`duracao()` com
+`toFixed(1)`, imprimindo `2.5 s` numa interface inteira em português. Só ficou
+visível quando os dois apareceram lado a lado: o valor do próprio Lighthouse
+vinha `2,45 s` (ele respeita o `locale=pt_BR` que pedimos) e o nosso, ao lado,
+`2.5 s`. Hoje é `duracaoMs` em `src/lib/formato.ts`, como manda a regra da casa.
+
+**Objetos novos não declarados em `esquema.ts`.** Falha minha, nas migrações do
+§9: `optimizations.dispositivo` e `app.contas_com_acompanhamento_aberto()`
+entraram no banco e não na lista que o `/api/diagnostico` confere. Não quebrou
+nada porque as migrações foram aplicadas antes do código — mas é justamente esse
+arquivo que existe para um deploy contra um banco atrasado ser NOMEADO em vez de
+dar 500 sem explicação.
 
 ---
 

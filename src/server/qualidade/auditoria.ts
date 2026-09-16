@@ -297,6 +297,45 @@ export async function ultimasAnalises(db: Queryable, siteId: string): Promise<Ul
   );
 }
 
+/**
+ * As correções elegíveis de cada (URL, dispositivo), da análise mais recente.
+ *
+ * Lê `lighthouse_results.auditorias` — uma coluna que existia desde o esquema
+ * inicial e que **nenhuma linha do projeto lia**. Eram 153 auditorias por
+ * análise gravadas e nunca mostradas, enquanto a lista de Otimizações mandava
+ * "abrir Qualidade técnica e ver os diagnósticos" numa tela que não tinha
+ * diagnóstico nenhum.
+ *
+ * `distinct on (url, strategy)` pelo mesmo motivo de `ultimasAnalises`: a nota
+ * pertence a uma URL E a um dispositivo, e a análise anterior continua na tabela
+ * como histórico — mostrar as correções de uma medição velha seria pedir
+ * trabalho sobre um problema que talvez já não exista.
+ *
+ * A separação entre correção e auditoria informativa acontece fora daqui, em
+ * `src/lib/correcoes.ts`: é regra pura, e ali ela é testável sem subir banco.
+ */
+export type AnaliseComAuditorias = {
+  url_solicitada: string;
+  strategy: Estrategia;
+  performance: string | null;
+  auditorias: unknown;
+  medido_em: Date;
+};
+
+export async function ultimasAuditorias(
+  db: Queryable,
+  siteId: string,
+): Promise<AnaliseComAuditorias[]> {
+  return db.query<AnaliseComAuditorias>(
+    `select distinct on (url_solicitada, strategy)
+            url_solicitada, strategy, performance, auditorias, medido_em
+       from lighthouse_results
+      where site_id = $1
+      order by url_solicitada, strategy, medido_em desc`,
+    [siteId],
+  );
+}
+
 // ───────────────────────────── experiência real (CrUX) ─────────────────────────────
 
 export type SnapshotCrux = {

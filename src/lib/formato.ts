@@ -33,6 +33,23 @@ export function variacao(atual: number, anterior: number): Variacao {
   };
 }
 
+/**
+ * Duração em milissegundos, legível e em pt-BR.
+ *
+ * Existiam duas cópias disto — uma na tela de qualidade, outra no painel de
+ * correções — e as duas escreviam `2.5 s`, com PONTO, numa interface inteira em
+ * português. Ficou visível quando as duas passaram a aparecer lado a lado: o
+ * valor do próprio Lighthouse vinha `2,45 s` (ele respeita o `locale=pt_BR` que
+ * pedimos) e o nosso, logo ao lado, `2.5 s`.
+ *
+ * Abaixo de um segundo continua em ms: `0,8 s` esconde a ordem de grandeza que
+ * importa quando se está comparando bloqueio de renderização.
+ */
+export function duracaoMs(ms: number): string {
+  if (!Number.isFinite(ms)) return '—';
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1).replace('.', ',')} s` : `${Math.round(ms)} ms`;
+}
+
 export function dataCurta(iso: string): string {
   const [, mes, dia] = iso.split('-');
   return `${dia}/${mes}`;

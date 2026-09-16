@@ -65,6 +65,8 @@ const COLUNAS: readonly (readonly [tabela: string, coluna: string])[] = [
   ['form_submissions', 'diagnostic_token'],
   // 20260916000011 — o prazo da sessão de diagnóstico
   ['diagnostic_sessions', 'expira_em'],
+  // 20260916000014 — o dispositivo faz parte da identidade do sinal
+  ['optimizations', 'dispositivo'],
 ] as const;
 
 /**
@@ -84,6 +86,8 @@ const FUNCOES = [
   // 20260916000010
   'app.contas_com_job_pendente(integer)',
   'app.contas_com_auditoria_vencida(integer)',
+  // 20260916000016
+  'app.contas_com_acompanhamento_aberto()',
 ] as const;
 
 export type FaltaNoEsquema = {

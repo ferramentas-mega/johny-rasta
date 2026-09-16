@@ -86,6 +86,43 @@ test('a aba de qualidade técnica abre e declara o que os números são', async 
   expect(texto).toMatch(/não representa as demais páginas/i);
 });
 
+test('as correções elegíveis aparecem, separadas do que é só informação', async ({ page }) => {
+  /*
+   * `lighthouse_results.auditorias` guardava todas as auditorias de cada
+   * análise desde o esquema inicial — 153 na medição real — e nenhuma linha do
+   * projeto lia a coluna. Ao mesmo tempo, a lista de Otimizações mandava
+   * "abrir Qualidade técnica e ver os diagnósticos": o produto apontava para
+   * uma tela que não tinha o que ele mandou buscar.
+   */
+  // Pelo cartão do site, como o usuário chega: a massa põe a análise com
+  // auditorias no alfa.teste.
+  await page.goto('/sites');
+  const site = await page
+    .locator('.cartao-site', { hasText: 'alfa.teste' })
+    .locator('a[href*="/desempenho"]')
+    .first()
+    .getAttribute('href');
+  expect(site, 'o cartão do alfa.teste precisa existir').toBeTruthy();
+  await page.goto(`/sites/${site!.split('/')[2]}/qualidade`);
+
+  const dobra = page.locator('details', { hasText: 'Eliminar recursos' }).first();
+  await dobra.click();
+
+  // A correção quantificada mostra a estimativa do próprio Lighthouse.
+  await expect(dobra).toContainText('2,5 s');
+  // A reprovada SEM estimativa continua na lista, dizendo que não tem —
+  // ausência de estimativa não é economia zero.
+  await expect(dobra).toContainText('Definir largura e altura');
+  await expect(dobra).toContainText('sem estimativa');
+  // A informativa não vira pendência, mas também não some em silêncio.
+  await expect(dobra).not.toContainText('Requisições de rede');
+  await expect(dobra).toContainText(/1 auditoria\(s\) desta medição são informativas/i);
+
+  // E o resumo é a maior estimativa, jamais a soma.
+  const corpo = await page.locator('body').innerText();
+  expect(corpo).toMatch(/As economias não se somam/i);
+});
+
 test('sem análise, a tela diz que não há — e não mostra nota zerada', async ({ page }) => {
   await page.goto('/sites');
   const href = await page.locator('.cartao-site a[href*="/desempenho"]').first().getAttribute('href');

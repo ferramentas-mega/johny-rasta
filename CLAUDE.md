@@ -107,6 +107,17 @@ aquele acompanhamento ficava aberto para sempre — fora da lista (que mostra si
 resolvidas. Ela mora no cron de agendamento por limite de plataforma, não por afinidade: o plano
 Hobby dá dois crons e os dois já estão gastos.
 
+**Estimativa do Lighthouse não se soma, e "sem estimativa" não é zero.** As correções elegíveis
+(`src/lib/correcoes.ts`) saem de `lighthouse_results.auditorias`. O `overallSavingsMs` de cada
+auditoria é o ganho daquela correção **isolada**, contra a mesma execução: corrigir duas coisas não
+economiza a soma das duas, porque elas disputam o mesmo caminho crítico. Por isso o resumo mostra a
+MAIOR estimativa, nunca o total — um total somado é grande, convincente, falso, e vai parar numa
+conversa com o cliente. Pela mesma família de regra, auditoria reprovada sem estimativa continua na
+lista, **depois** das quantificadas: ausência de estimativa não é ganho zero, e pode ser a correção
+mais importante da página. E auditoria sem NOTA é informativa, não pendência — o Lighthouse devolve o
+dado e não emite veredito; ela fica fora da lista, com a contagem à vista, porque descartar em
+silêncio faria a lista parecer completa.
+
 **Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
 não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
 eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou

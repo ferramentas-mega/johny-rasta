@@ -2,14 +2,20 @@ import { notFound } from 'next/navigation';
 import { withAccount } from '@/server/db';
 import { exigirSessao } from '@/server/contexto';
 import { obterSite, listarSites } from '@/server/services/sites';
-import { ultimasAnalises, ultimosCrux, type SnapshotCrux } from '@/server/qualidade/auditoria';
+import {
+  ultimasAnalises,
+  ultimasAuditorias,
+  ultimosCrux,
+  type SnapshotCrux,
+} from '@/server/qualidade/auditoria';
 import { paraCem } from '@/server/qualidade/pagespeed';
-import { dataHora, num } from '@/lib/formato';
+import { dataHora, duracaoMs, num } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Abas } from '@/components/Abas';
 import { Painel, Aviso } from '@/components/Cartoes';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { SeletorSiteRota } from '@/components/filtros';
+import { Correcoes } from '@/components/Correcoes';
 import { PainelDeAnalise } from './PainelDeAnalise';
 
 export const dynamic = 'force-dynamic';
@@ -27,8 +33,7 @@ function Nota({ valor }: { valor: string | null }) {
 
 function ms(valor: string | null) {
   if (valor === null) return <span style={{ color: 'var(--tx3)' }}>—</span>;
-  const n = Number(valor);
-  return <>{n >= 1000 ? `${(n / 1000).toFixed(1)} s` : `${Math.round(n)} ms`}</>;
+  return <>{duracaoMs(Number(valor))}</>;
 }
 
 export default async function PaginaQualidade({ params }: { params: Promise<{ siteId: string }> }) {
@@ -38,12 +43,13 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
   if (!site) notFound();
   const sites = await listarSites(usuario.accountId);
 
-  const { urls, analises, fila, campo } = await withAccount(usuario.accountId, async (db) => ({
+  const { urls, analises, auditorias, fila, campo } = await withAccount(usuario.accountId, async (db) => ({
     urls: await db.query<UrlMonitorada>(
       'select id, url, prioritaria from monitored_urls where site_id = $1 order by prioritaria desc, url',
       [siteId],
     ),
     analises: await ultimasAnalises(db, siteId),
+    auditorias: await ultimasAuditorias(db, siteId),
     campo: await ultimosCrux(db, siteId),
     fila: await db.query<Job>(
       `select id, url, strategy, status, erro, criado_em from audit_jobs
@@ -135,6 +141,30 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
             <strong> TBT não é INP</strong>: o INP real só existe em dado de campo, que depende da API do CrUX.
             A nota de SEO do Lighthouse é uma checagem técnica, não posição no Google nem auditoria completa.
             Uma análise da Home não representa as demais páginas: monitore cada URL que importa.
+          </p>
+        </Painel>
+
+        <Painel
+          titulo="Correções elegíveis"
+          subtitulo="O que o Lighthouse reprovou em cada página e dispositivo, e quanto ele estima de ganho"
+        >
+          <Correcoes
+            analises={auditorias.map((a) => ({
+              url: a.url_solicitada,
+              dispositivo: a.strategy,
+              auditorias: a.auditorias,
+            }))}
+          />
+          <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 12, lineHeight: 1.6 }}>
+            <strong>As economias não se somam.</strong> Cada estimativa é o ganho daquela correção
+            sozinha, contra esta mesma execução — corrigir duas coisas não economiza a soma das
+            duas, porque elas disputam o mesmo caminho crítico. Por isso o resumo mostra a maior
+            estimativa, nunca o total.
+            Correção sem estimativa continua na lista, depois das quantificadas: o Lighthouse não
+            estimou aquele ganho, e <strong>não estimar não é estimar zero</strong> — pode ser a
+            correção mais importante da página.
+            Tudo aqui é medição de laboratório daquela execução, como as notas acima: diz o que
+            melhoraria no teste, não o que seus visitantes vão sentir.
           </p>
         </Painel>
 
