@@ -89,9 +89,8 @@ o que medir, e gastar a vaga diária do plano ali responderia a pergunta errada.
 
 **Fechar um acompanhamento é uma medição, nunca uma declaração.** A lista de Otimizações mostra
 sinais derivados; `optimizations` só guarda o que o operador marcou. Quando o sinal some, quem grava
-`resolvida_por_verificacao` é `fecharPorVerificacao`, chamado por `registrarSucesso` na **mesma
-transação** da análise nova — separadas, existiria um instante com a medição boa no banco e o
-acompanhamento ainda "em andamento". Ele guarda o par: a evidência do momento da marcação (o
+`resolvida_por_verificacao` é `fecharPorVerificacao`, chamado pela rota de processamento logo depois
+de a medição ser gravada (ver, abaixo, por que fora da transação dela). Ele guarda o par: a evidência do momento da marcação (o
 "antes", capturado ali porque depois o que causou o sinal já não existe) e a nota da medição que
 fechou. Guardar o par não é concluir causa: o painel não afirma que a correção causou a melhora. Os
 sinais têm UMA definição em SQL (`SINAIS_SQL`), compartilhada por quem lista e por quem fecha — com
