@@ -131,6 +131,8 @@ Documentação complementar:
 - [`docs/deploy-supabase.md`](docs/deploy-supabase.md) — subir para o Supabase
 - [`docs/deploy-vercel.md`](docs/deploy-vercel.md) — publicar na Vercel, clique a clique
 - [`docs/relatorio-testes.md`](docs/relatorio-testes.md) — o que foi testado, e o que não foi
+- [`docs/spec-rastreamento/`](docs/spec-rastreamento/README.md) — especificação portável do rastreamento
+  de botões, para reimplementar em outro aplicativo
 - [`DESIGN.md`](DESIGN.md) — a identidade visual e seus componentes
 - [`CLAUDE.md`](CLAUDE.md) — decisões que valem para quem for continuar o trabalho
 
