@@ -48,7 +48,7 @@ function Linha({ correcao }: { correcao: Correcao }) {
       {correcao.economiaMs === null ? (
         <span style={{ fontSize: 11, color: 'var(--tx3)' }}>sem estimativa</span>
       ) : (
-        <span className="mono" style={{ fontSize: 12.5, color: 'var(--gold)' }}>
+        <span className="mono" style={{ fontSize: 12.5, color: 'var(--gold-tx)' }}>
           −{duracaoMs(correcao.economiaMs)}
         </span>
       )}
@@ -95,7 +95,7 @@ export function Correcoes({ analises }: { analises: AnaliseParaCorrecoes[] }) {
                 {num(g.correcoes.length)} correção(ões)
               </span>
               {maior !== null && (
-                <span className="mono" style={{ color: 'var(--gold)', fontSize: 12 }}>
+                <span className="mono" style={{ color: 'var(--gold-tx)', fontSize: 12 }}>
                   {' · '}maior estimativa −{duracaoMs(maior)}
                 </span>
               )}

@@ -155,7 +155,7 @@ export function FormularioDeLogin() {
         </label>
 
         {estado.erro && (
-          <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)' }}>
+          <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>
             {estado.erro}
           </p>
         )}

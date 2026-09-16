@@ -26,6 +26,11 @@
   --on-gold: #04120a;
   --pos: #39c965;
   --neg: #ff8585;
+  /* Versões de TEXTO de --pos e --neg. No escuro coincidem com o
+     preenchimento, porque ali já passam de 4,5:1; existem para que o
+     componente diga o que quer (texto) em vez de acertar por acaso. */
+  --pos-tx: #39c965;
+  --neg-tx: #ff8585;
   --ok-bg: rgba(112, 255, 139, 0.12);
   --ok-tx: #70ff8b;
   --soft-bg: rgba(161, 181, 166, 0.1);
@@ -49,15 +54,23 @@
   --glow: none;
   --tx: #0e1710;
   --tx2: #4c5d50;
-  --tx3: #6b7d6f;
+  /* #6b7d6f dava 3,78:1 sobre --elev: reprova para texto de corpo, e é
+     justamente o token das legendas. #607064 passa nos quatro fundos. */
+  --tx3: #607064;
   --hover: #e9f0ea;
   --rowbd: rgba(14, 23, 16, 0.09);
-  --gold: #1f8f43;
+  /* #1f8f43 deixava --on-gold em 4,04:1. Um passo mais escuro leva o texto
+     do botão a 4,52:1, e a diferença de matiz não se vê. */
+  --gold: #1d8840;
   --gold-fill: rgba(31, 143, 67, 0.12);
   --gold-tx: #186e34;
-  --on-gold: #f4fff6;
+  --on-gold: #ffffff;
   --pos: #1f8f43;
   --neg: #a83232;
+  /* --pos como texto dava 4,14:1 sobre --card. --neg já passava; fica
+     declarado do mesmo jeito para o uso ser explícito. */
+  --pos-tx: #1b7c3a;
+  --neg-tx: #a83232;
   --ok-bg: rgba(31, 143, 67, 0.12);
   --ok-tx: #186e34;
   --soft-bg: rgba(14, 23, 16, 0.07);
@@ -364,7 +377,7 @@ select option {
 }
 
 .campo-login:focus-within > svg {
-  color: var(--gold);
+  color: var(--gold-tx);
 }
 
 .campo-login > input {
@@ -818,7 +831,7 @@ select option {
   }
 
   .item-inferior[aria-current='page'] {
-    color: var(--gold);
+    color: var(--gold-tx);
   }
 
   .item-inferior:hover {
@@ -953,7 +966,7 @@ select option {
   text-decoration: none;
 }
 .cartao-site-nome a:hover {
-  color: var(--gold);
+  color: var(--gold-tx);
 }
 
 .cartao-site-dominio {

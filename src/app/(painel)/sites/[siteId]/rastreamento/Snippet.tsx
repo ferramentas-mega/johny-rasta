@@ -87,7 +87,7 @@ export function Snippet({ codigo, rotulo }: { codigo: string; rotulo: string }) 
             borderRadius: 7,
             background: 'var(--elev)',
             border: '1px solid var(--bd)',
-            color: estado === 'ocioso' ? 'var(--tx2)' : 'var(--gold)',
+            color: estado === 'ocioso' ? 'var(--tx2)' : 'var(--gold-tx)',
           }}
         >
           {ROTULO[estado]}

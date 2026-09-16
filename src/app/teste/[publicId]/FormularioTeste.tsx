@@ -81,12 +81,12 @@ export function FormularioTeste({ publicId }: { publicId: string }) {
       <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
         Nome
         <input name="nome" required style={campo} />
-        {retorno.campos?.nome && <span style={{ color: 'var(--neg)', fontSize: 11.5 }}>{retorno.campos.nome}</span>}
+        {retorno.campos?.nome && <span style={{ color: 'var(--neg-tx)', fontSize: 11.5 }}>{retorno.campos.nome}</span>}
       </label>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
         E-mail
         <input name="email" type="email" style={campo} />
-        {retorno.campos?.email && <span style={{ color: 'var(--neg)', fontSize: 11.5 }}>{retorno.campos.email}</span>}
+        {retorno.campos?.email && <span style={{ color: 'var(--neg-tx)', fontSize: 11.5 }}>{retorno.campos.email}</span>}
       </label>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: 'var(--tx2)' }}>
         Telefone
@@ -118,7 +118,7 @@ export function FormularioTeste({ publicId }: { publicId: string }) {
         <p
           role={retorno.tipo === 'erro' ? 'alert' : 'status'}
           data-testid="retorno-formulario"
-          style={{ fontSize: 12.5, color: retorno.tipo === 'erro' ? 'var(--neg)' : 'var(--ok-tx)' }}
+          style={{ fontSize: 12.5, color: retorno.tipo === 'erro' ? 'var(--neg-tx)' : 'var(--ok-tx)' }}
         >
           {retorno.texto}
         </p>

@@ -65,7 +65,7 @@ export function EventoTeste({ publicId }: { publicId: string }) {
       {estado.texto && (
         <span
           role="status"
-          style={{ fontSize: 12.5, color: estado.tipo === 'ok' ? 'var(--ok-tx)' : 'var(--neg)' }}
+          style={{ fontSize: 12.5, color: estado.tipo === 'ok' ? 'var(--ok-tx)' : 'var(--neg-tx)' }}
         >
           {estado.texto}
         </span>

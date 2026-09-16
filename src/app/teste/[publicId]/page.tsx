@@ -50,7 +50,7 @@ export default async function PaginaTeste({ params }: { params: Promise<{ public
 
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '40px 20px 80px', display: 'flex', flexDirection: 'column', gap: 22 }}>
         <header>
-          <p className="mono" style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--gold)' }}>
+          <p className="mono" style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--gold-tx)' }}>
             PÁGINA DE TESTE DE INSTALAÇÃO
           </p>
           <h1 className="mono" style={{ fontSize: 26, fontWeight: 600, marginTop: 4 }}>

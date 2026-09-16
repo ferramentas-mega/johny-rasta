@@ -53,6 +53,10 @@ jobs:
 
       - run: npm run typecheck
       - run: npm run lint
+      # Sistema visual: paridade entre os temas, nenhuma tela inventando cor, e
+      # contraste mínimo de 4,5:1 em todo par texto-sobre-fundo. Sai com código
+      # 1 se divergir, então a regressão para aqui em vez de chegar à tela.
+      - run: npm run design
       - run: npm test
 
       # O build vem ANTES do navegador por dois motivos. O barato: build

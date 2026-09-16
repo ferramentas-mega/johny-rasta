@@ -52,7 +52,7 @@ export function Campo({
       )}
       {dica && !erro && <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{dica}</span>}
       {erro && (
-        <span id={idErro} role="alert" style={{ fontSize: 11.5, color: 'var(--neg)' }}>
+        <span id={idErro} role="alert" style={{ fontSize: 11.5, color: 'var(--neg-tx)' }}>
           {erro}
         </span>
       )}
@@ -146,7 +146,7 @@ export function Retorno({ estado }: { estado: EstadoFormulario }) {
       role={erro ? 'alert' : 'status'}
       style={{
         fontSize: 12.5,
-        color: erro ? 'var(--neg)' : 'var(--ok-tx)',
+        color: erro ? 'var(--neg-tx)' : 'var(--ok-tx)',
         background: erro ? 'transparent' : 'var(--ok-bg)',
         padding: erro ? 0 : '8px 12px',
         borderRadius: 8,

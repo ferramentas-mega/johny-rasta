@@ -131,7 +131,7 @@ export function MenuLateral({
                     marginLeft: 'auto',
                     fontSize: 10.5,
                     letterSpacing: '.04em',
-                    color: on ? 'var(--gold)' : 'var(--tx3)',
+                    color: on ? 'var(--gold-tx)' : 'var(--tx3)',
                   }}
                 >
                   {contagem}
@@ -157,7 +157,7 @@ export function MenuLateral({
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 12,
-            color: 'var(--gold)',
+            color: 'var(--gold-tx)',
           }}
         >
           {iniciais || '·'}

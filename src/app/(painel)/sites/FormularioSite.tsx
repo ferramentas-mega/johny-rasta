@@ -159,7 +159,7 @@ function Arquivar({ site }: { site: SiteEditavel }) {
         </span>
       </p>
       {estado.erro && (
-        <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)', margin: 0 }}>{estado.erro}</p>
+        <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)', margin: 0 }}>{estado.erro}</p>
       )}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         <button

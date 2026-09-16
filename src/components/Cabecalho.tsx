@@ -39,7 +39,7 @@ export function Cabecalho({
 
       <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div style={{ minWidth: 0 }}>
-          <span className="mono" style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--gold)' }}>
+          <span className="mono" style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--gold-tx)' }}>
             {kicker}
           </span>
           <h1

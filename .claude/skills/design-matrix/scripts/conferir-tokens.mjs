@@ -22,7 +22,13 @@
  *      meta tags de `theme-color` NÃO PODEM ler CSS, então ali a cor crua é
  *      obrigatória — e é exatamente por isso que ela precisa ser vigiada.
  *
- *   3. As cores cruas que copiam um token ainda BATEM com ele?
+ *   3. Todo par texto-sobre-fundo alcança 4,5:1?
+ *      É o mínimo da WCAG para texto de corpo, e este painel é feito de
+ *      legenda pequena. Medido antes de existir esta conferência: o tema CLARO
+ *      reprovava em sete pares — `--tx3` sobre `--elev` dava 3,78:1, e `--tx3`
+ *      é justamente o token de toda legenda da interface.
+ *
+ *   4. As cores cruas que copiam um token ainda BATEM com ele?
  *      É o defeito silencioso de verdade: mudar `--side` no tema e esquecer o
  *      manifesto deixa a barra do navegador com a cor antiga. Nada quebra,
  *      ninguém vê, e a identidade fica meio velha e meio nova.
@@ -116,7 +122,53 @@ for (const caminho of arquivos(join(RAIZ, 'src'))) {
   });
 }
 
+// ── 4. Contraste ─────────────────────────────────────────────────────────────
+//
+// Os pares que a interface realmente usa. Fundo com alfa é composto sobre
+// `--bg` antes de medir: `rgba(…, .12)` sobre preto não é a cor que se vê.
+const PARES = [
+  ['--tx', '--bg'], ['--tx', '--card'], ['--tx', '--side'], ['--tx', '--elev'], ['--tx', '--hover'],
+  ['--tx2', '--bg'], ['--tx2', '--card'], ['--tx2', '--side'], ['--tx2', '--elev'],
+  ['--tx3', '--bg'], ['--tx3', '--card'], ['--tx3', '--side'], ['--tx3', '--elev'],
+  ['--gold-tx', '--bg'], ['--gold-tx', '--card'], ['--gold-tx', '--elev'],
+  ['--pos-tx', '--card'], ['--neg-tx', '--card'],
+  ['--ok-tx', '--ok-bg'], ['--warn-tx', '--warn-bg'], ['--soft-tx', '--soft-bg'],
+  ['--on-gold', '--gold'],
+];
+const MINIMO = 4.5;
+
+function cor(v) {
+  let m = /^#([0-9a-f]{6})$/i.exec(v);
+  if (m) { const n = parseInt(m[1], 16); return [n >> 16 & 255, n >> 8 & 255, n & 255, 1]; }
+  m = /^#([0-9a-f]{3})$/i.exec(v);
+  if (m) return [...m[1]].map((c) => parseInt(c + c, 16)).concat(1);
+  m = /rgba?\(([^)]+)\)/i.exec(v);
+  if (m) { const p = m[1].split(',').map((x) => parseFloat(x.trim())); return [p[0], p[1], p[2], p[3] ?? 1]; }
+  return null;
+}
+const sobre = (f, b) => (f[3] >= 1 ? f : [0, 1, 2].map((i) => f[i] * f[3] + b[i] * (1 - f[3])).concat(1));
+const luz = (c) => {
+  const [r, g, b] = c.slice(0, 3).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const razao = (f, b) => (Math.max(luz(f), luz(b)) + 0.05) / (Math.min(luz(f), luz(b)) + 0.05);
+
+for (const [tema, tokens] of [['escuro', escuro], ['claro', claro]]) {
+  const fundo = cor(tokens.get('--bg'));
+  for (const [frente, atras] of PARES) {
+    const f = cor(tokens.get(frente));
+    const a = cor(tokens.get(atras));
+    if (!f || !a) continue;
+    const base = sobre(a, fundo);
+    const r = razao(sobre(f, base), base);
+    if (r < MINIMO) {
+      problemas.push(`contraste ${frente} sobre ${atras} no tema ${tema}: ${r.toFixed(2)}:1 — mínimo ${MINIMO}:1 para texto de corpo.`);
+    }
+  }
+}
+
 console.log(`Tokens: ${escuro.size} no escuro, ${claro.size} no claro.`);
+console.log(`Contraste: ${PARES.length} pares conferidos por tema, mínimo ${MINIMO}:1.`);
 if (avisos.length) {
   console.log(`\nCópias vigiadas (${avisos.length}) — obrigatórias, e por isso rastreadas:`);
   for (const a of avisos) console.log(`  · ${a}`);

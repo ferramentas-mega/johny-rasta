@@ -147,6 +147,15 @@ régua vertical é a faixa da própria série, não 0–100: contra 0–100 uma 
 some, e é justamente ela que a evidência existe para mostrar. Laboratório e campo ficam em painéis
 separados, pela regra de sempre.
 
+**Cor de texto usa a variante `-tx`.** `--gold`, `--pos` e `--neg` são
+preenchimento, borda e traço; `--gold-tx`, `--pos-tx` e `--neg-tx` são texto.
+Medido: o tema CLARO reprovava em sete pares de contraste — `--tx3` sobre
+`--elev` dava 3,78:1, abaixo dos 4,5:1 que a WCAG pede para texto de corpo, e
+`--tx3` é o token de toda legenda da interface. O escuro passava inteiro. O
+defeito não era a paleta: `--gold-tx` já existia exatamente para texto (6,33:1) e
+quase todo componente usava `--gold` (4,14:1). `npm run design` mede os 22 pares
+nos dois temas e roda no CI.
+
 **Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
 não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
 eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou

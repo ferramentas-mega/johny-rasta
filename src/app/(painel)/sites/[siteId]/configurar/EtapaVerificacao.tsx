@@ -122,7 +122,7 @@ export function EtapaVerificacao({
             </BotaoSubmeter>
           </div>
           {inicio.erro && (
-            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)' }}>
+            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>
               {inicio.erro}
             </p>
           )}
@@ -174,7 +174,7 @@ export function EtapaVerificacao({
           </div>
 
           {conferencia.erro && (
-            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)' }}>
+            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>
               {conferencia.erro}
             </p>
           )}

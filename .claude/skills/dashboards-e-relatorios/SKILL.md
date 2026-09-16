@@ -143,6 +143,33 @@ exportado teria de respeitar para não virar mentira:
 
 ---
 
+## Maquete antes de construir
+
+Chegou junto uma terceira receita — um gerador de dashboard de uma tela só, em
+HTML, com números "específicos e plausíveis" inventados a partir do briefing.
+Ela também viola a regra do dado de exemplo, **mas tem um uso legítimo aqui, e é
+o único**: desenhar uma tela ANTES de ela existir.
+
+Este projeto nasceu exatamente assim. O ponto de partida foi uma maquete honesta
+exportada do Claude Design, com números vindo de um PRNG de semente fixa — e ela
+não enganava ninguém, porque a própria tela de configurações dizia que não havia
+backend. Foi dela que saíram a identidade e as definições de métrica.
+
+Então: maquete é permitida, com duas condições que a receita não traz.
+
+1. **A maquete diz que é maquete, na própria tela.** Não num comentário do
+   código, não na conversa: em texto visível. A maquete original fazia isso, e é
+   por isso que ela pôde virar produto sem ter mentido no caminho.
+2. **Maquete não entra em `src/app`.** Ela é arquivo solto, fora da rota, e
+   morre quando a tela real nasce. Uma tela de números com dado inventado dentro
+   do aplicativo é indistinguível de um defeito de consulta.
+
+O que a receita acerta e combina com o projeto: **gráfico em SVG embutido, sem
+biblioteca** — `<polyline>` para linha, `<rect>` para barra. É o mesmo caminho
+que `Grafico.tsx` e `Funil.tsx` já seguem.
+
+---
+
 ## Sobre receitas prontas em geral
 
 Vale para qualquer template de dashboard que chegue aqui. Três perguntas, nessa

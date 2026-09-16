@@ -229,7 +229,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
                       fontSize: 11,
                       border: `1px solid ${concluido ? 'var(--gold)' : atual ? 'var(--warn-tx)' : 'var(--bd)'}`,
                       background: concluido ? 'var(--gold-fill)' : 'transparent',
-                      color: concluido ? 'var(--gold)' : atual ? 'var(--warn-tx)' : 'var(--tx3)',
+                      color: concluido ? 'var(--gold-tx)' : atual ? 'var(--warn-tx)' : 'var(--tx3)',
                     }}
                   >
                     {concluido ? '✓' : numero}
@@ -295,7 +295,7 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
                 marginBottom: 14,
               }}
             >
-              <strong style={{ fontSize: 13.5, color: 'var(--neg)' }}>
+              <strong style={{ fontSize: 13.5, color: 'var(--neg-tx)' }}>
                 Coletor instalado mais de uma vez
               </strong>
               <p style={{ fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.7, margin: '6px 0' }}>

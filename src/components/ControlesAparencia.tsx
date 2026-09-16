@@ -60,7 +60,7 @@ export function ControlesAparencia() {
           borderRadius: 8,
           background: 'var(--elev)',
           border: '1px solid var(--bd)',
-          color: fx ? 'var(--gold)' : 'var(--tx3)',
+          color: fx ? 'var(--gold-tx)' : 'var(--tx3)',
         }}
       >
         {fx ? '>_ FX ON' : '>_ FX OFF'}

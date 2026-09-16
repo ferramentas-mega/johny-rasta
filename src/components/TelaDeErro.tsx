@@ -85,7 +85,7 @@ export function TelaDeErro({
             lineHeight: 0.9,
             fontWeight: 700,
             letterSpacing: '-0.04em',
-            color: 'var(--gold)',
+            color: 'var(--gold-tx)',
             textShadow: 'var(--glow)',
           }}
         >

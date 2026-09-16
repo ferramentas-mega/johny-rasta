@@ -413,7 +413,7 @@ function Resumo({
                   verificado em {dataHora(l.verificadoEm, fuso)}
                 </span>
               )}
-              {l.erro && <span style={{ fontSize: 11, color: 'var(--neg)', maxWidth: 380 }}>{l.erro}</span>}
+              {l.erro && <span style={{ fontSize: 11, color: 'var(--neg-tx)', maxWidth: 380 }}>{l.erro}</span>}
             </span>
           </li>
         ))}

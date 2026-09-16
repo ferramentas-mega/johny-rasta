@@ -225,7 +225,7 @@ function FaltaOEnvio({
             <BotaoSubmeter ocupado="Abrindo…">Abrir modo de diagnóstico</BotaoSubmeter>
           </div>
           {inicio.erro && (
-            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)' }}>{inicio.erro}</p>
+            <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>{inicio.erro}</p>
           )}
         </form>
       ) : (
@@ -258,7 +258,7 @@ function FaltaOEnvio({
             </div>
 
             {conferencia.erro && (
-              <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)' }}>{conferencia.erro}</p>
+              <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)' }}>{conferencia.erro}</p>
             )}
 
             {conferencia.conferidoEm && (

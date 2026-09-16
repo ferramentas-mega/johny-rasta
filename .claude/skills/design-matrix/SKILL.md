@@ -22,7 +22,7 @@ o sistema visual inteiro. Já aconteceu duas vezes nesta base (um funil e uma
 chuva Matrix): nas duas, aproveitar a ideia em SVG com os tokens do tema custou
 menos e não trouxe dependência.
 
-O sistema inteiro são **25 tokens**, definidos duas vezes em
+O sistema inteiro são **27 tokens**, definidos duas vezes em
 `src/styles/theme.css` — uma por tema:
 
 | Grupo | Tokens |
@@ -31,12 +31,12 @@ O sistema inteiro são **25 tokens**, definidos duas vezes em
 | Bordas | `--bd` `--bdc` `--rowbd` `--glow` |
 | Texto | `--tx` `--tx2` `--tx3` |
 | Marca | `--gold` `--gold-fill` `--gold-tx` `--on-gold` |
-| Estado | `--pos` `--neg` `--ok-bg` `--ok-tx` `--soft-bg` `--soft-tx` `--warn-bg` `--warn-tx` |
+| Estado | `--pos` `--neg` `--pos-tx` `--neg-tx` `--ok-bg` `--ok-tx` `--soft-bg` `--soft-tx` `--warn-bg` `--warn-tx` |
 | Fundos compostos | `--header-bg` `--brand-bg` |
 
-Os valores são os do protótipo, preservados de propósito. `--gold` é **verde**
-(`#70ff8b` no escuro, `#1f8f43` no claro) — o nome vem do componente de origem,
-não da cor.
+Os valores são os do protótipo, preservados de propósito — com as duas exceções
+de contraste listadas adiante. `--gold` é **verde** (`#70ff8b` no escuro,
+`#1d8840` no claro): o nome vem do componente de origem, não da cor.
 
 ---
 
@@ -61,13 +61,15 @@ Layout responsivo: trocar o **eixo** numa media query, não encolher o menu. Um
 ## O verificador
 
 ```bash
-node .claude/skills/design-matrix/scripts/conferir-tokens.mjs
+npm run design
 ```
 
-Sem argumento, sem banco, sem navegador — só lê arquivo. Sai com código 1 se
-achar divergência, então dá para pôr no CI.
+Roda no CI, junto de tipos e lint.
 
-Ele responde três perguntas:
+Sem argumento, sem banco, sem navegador — só lê arquivo. Sai com código 1 se
+achar divergência.
+
+Ele responde quatro perguntas:
 
 **1. Os dois temas definem o mesmo conjunto de tokens?** Um token que existe só
 no escuro não dá erro: no claro ele herda o valor do `:root`, que é o escuro, e a
@@ -75,7 +77,10 @@ tela fica com texto quase preto sobre fundo quase preto. Silencioso e feio.
 
 **2. Alguma tela escreve cor crua?** Aí é defeito, e ele reprova.
 
-**3. As cores cruas OBRIGATÓRIAS ainda batem com o token que copiam?** Esta é a
+**3. Todo par texto-sobre-fundo alcança 4,5:1?** Ver a seção de contraste
+abaixo.
+
+**4. As cores cruas OBRIGATÓRIAS ainda batem com o token que copiam?** Esta é a
 parte que a skill genérica não tinha e que este projeto precisa. Quatro lugares
 não conseguem ler CSS e por isso têm de repetir o valor:
 
@@ -91,12 +96,38 @@ uma com o token correspondente. É o defeito silencioso de verdade: mudar
 `--side` e esquecer o manifesto deixa a barra do navegador com a cor antiga,
 nada quebra, ninguém vê, e a identidade fica meio velha e meio nova.
 
-A da `ChuvaMatrix` merece nota: no tema claro ela repete `#1F8F43`, que é
-`--gold` claro; no escuro usa `#00FF41`, que **não** é token nenhum — é o verde
+A da `ChuvaMatrix` merece nota: no tema claro ela repete o verde da marca; no escuro usa `#00FF41`, que **não** é token nenhum — é o verde
 clássico do filme, escolhido para o efeito e não para a interface. Divergência
 proposital, e é melhor que ela esteja escrita aqui do que pareça descuido.
 
 ---
+
+## Contraste: 4,5:1, medido
+
+Veio de uma skill de UI genérica, e é o único critério dela que dá para
+**medir** em vez de opinar. O verificador confere 22 pares texto-sobre-fundo em
+cada tema, compondo fundo com alfa sobre `--bg` antes de calcular — `rgba(…,
+.12)` sobre preto não é a cor que se vê.
+
+Medido antes de a conferência existir: o tema **claro reprovava em sete pares**.
+`--tx3` sobre `--elev` dava 3,78:1, e `--tx3` é o token de toda legenda da
+interface. O escuro passava inteiro.
+
+O que a medição revelou não foi problema de paleta, e sim de **token errado**:
+`--gold-tx` (#186e34, 6,33:1) já existia exatamente para texto, e quase todo
+componente usava `--gold` (4,14:1). É o ponto que a skill de UI faz sobre nome
+semântico — `color-error`, não `color-red`. Hoje existem também `--pos-tx` e
+`--neg-tx`, pela mesma razão.
+
+Duas mudanças de valor foram necessárias, as duas só no tema claro:
+
+| Token | Era | É | Por quê |
+|---|---|---|---|
+| `--tx3` | `#6b7d6f` | `#607064` | 3,78:1 sobre `--elev` |
+| `--gold` | `#1f8f43` | `#1d8840` | deixava `--on-gold` em 4,04:1 |
+
+**Ao escolher cor de texto, use a variante `-tx`.** `--gold`, `--pos` e `--neg`
+são preenchimento, borda e traço.
 
 ## Acessibilidade e movimento
 

@@ -88,8 +88,8 @@ export function PainelDeAnalise({
           {cadastrando ? 'Salvando…' : 'Monitorar URL'}
         </button>
       </form>
-      {estadoCadastro.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)', marginTop: 8 }}>{estadoCadastro.erro}</p>}
-      {estadoCadastro.ok && <p role="status" style={{ fontSize: 12.5, color: 'var(--pos)', marginTop: 8 }}>{estadoCadastro.ok}</p>}
+      {estadoCadastro.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)', marginTop: 8 }}>{estadoCadastro.erro}</p>}
+      {estadoCadastro.ok && <p role="status" style={{ fontSize: 12.5, color: 'var(--pos-tx)', marginTop: 8 }}>{estadoCadastro.ok}</p>}
 
       <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {urls.length === 0 && (
@@ -101,7 +101,7 @@ export function PainelDeAnalise({
           <li key={u.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
             borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
             <span className="mono" style={{ fontSize: 12, flex: '1 1 220px', wordBreak: 'break-all' }}>{u.url}</span>
-            {u.prioritaria && <span style={{ fontSize: 10.5, color: 'var(--gold)' }}>PRIORITÁRIA</span>}
+            {u.prioritaria && <span style={{ fontSize: 10.5, color: 'var(--gold-tx)' }}>PRIORITÁRIA</span>}
             <form action={acaoRemocao} style={{ display: 'inline' }}>
               <input type="hidden" name="siteId" value={siteId} />
               <input type="hidden" name="url" value={u.url} />
@@ -130,9 +130,9 @@ export function PainelDeAnalise({
         ))}
       </ul>
 
-      {estadoAnalise.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)', marginTop: 10 }}>{estadoAnalise.erro}</p>}
-      {estadoRemocao.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg)', marginTop: 10 }}>{estadoRemocao.erro}</p>}
-      {estadoRemocao.ok && <p role="status" style={{ fontSize: 12.5, color: 'var(--pos)', marginTop: 10 }}>{estadoRemocao.ok}</p>}
+      {estadoAnalise.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)', marginTop: 10 }}>{estadoAnalise.erro}</p>}
+      {estadoRemocao.erro && <p role="alert" style={{ fontSize: 12.5, color: 'var(--neg-tx)', marginTop: 10 }}>{estadoRemocao.erro}</p>}
+      {estadoRemocao.ok && <p role="status" style={{ fontSize: 12.5, color: 'var(--pos-tx)', marginTop: 10 }}>{estadoRemocao.ok}</p>}
 
       {/*
         O botão aparece nos DOIS casos: tarefa criada agora, e tarefa que já
@@ -142,7 +142,7 @@ export function PainelDeAnalise({
       */}
       {(estadoAnalise.ok || estadoAnalise.aviso) && (
         <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span role="status" style={{ fontSize: 12.5, color: estadoAnalise.ok ? 'var(--pos)' : 'var(--warn-tx)' }}>
+          <span role="status" style={{ fontSize: 12.5, color: estadoAnalise.ok ? 'var(--pos-tx)' : 'var(--warn-tx)' }}>
             {estadoAnalise.ok ?? estadoAnalise.aviso}
           </span>
           <button type="button" onClick={processarAgora} disabled={processando} style={{ ...botao(!processando), padding: '7px 12px', fontSize: 12.5 }}>

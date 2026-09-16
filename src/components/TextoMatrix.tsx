@@ -136,7 +136,7 @@ export function TextoMatrix({ texto, disparo = 0 }: { texto: string; disparo?: n
       {animando && (
         <span
           aria-hidden="true"
-          style={{ gridArea: '1 / 1', color: 'var(--gold)', textShadow: 'var(--glow)' }}
+          style={{ gridArea: '1 / 1', color: 'var(--gold-tx)', textShadow: 'var(--glow)' }}
         >
           {letras.map((c, i) => {
             if (c === ' ') return <span key={i}>&nbsp;</span>;

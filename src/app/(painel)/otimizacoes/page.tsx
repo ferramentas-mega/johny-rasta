@@ -69,7 +69,7 @@ export default async function PaginaOtimizacoes({
   const colunas: Coluna<Otimizacao>[] = [
     {
       chave: 'prioridade', titulo: '!', alinhamento: 'direita', mono: true,
-      render: (o) => <span style={{ color: o.prioridade === 1 ? 'var(--neg)' : 'var(--tx3)' }}>{o.prioridade === 1 ? 'Alta' : 'Média'}</span>,
+      render: (o) => <span style={{ color: o.prioridade === 1 ? 'var(--neg-tx)' : 'var(--tx3)' }}>{o.prioridade === 1 ? 'Alta' : 'Média'}</span>,
     },
     {
       chave: 'onde', titulo: 'Cliente e site',
@@ -113,7 +113,7 @@ export default async function PaginaOtimizacoes({
       // uma medição que não houve.
       render: (r) => (r.notaDepois === null
         ? <span style={{ color: 'var(--tx3)', fontSize: 11.5 }}>sem nota</span>
-        : <span style={{ color: 'var(--pos)' }}>{r.notaDepois}/100</span>),
+        : <span style={{ color: 'var(--pos-tx)' }}>{r.notaDepois}/100</span>),
     },
     {
       chave: 'quando', titulo: 'Fechado em',
@@ -162,7 +162,7 @@ export default async function PaginaOtimizacoes({
                 style={{
                   fontSize: 12.5, padding: '6px 11px', borderRadius: 999,
                   border: `1px solid ${on ? 'var(--gold)' : 'var(--bd)'}`,
-                  color: on ? 'var(--gold)' : 'var(--tx2)', textDecoration: 'none',
+                  color: on ? 'var(--gold-tx)' : 'var(--tx2)', textDecoration: 'none',
                   background: on ? 'var(--elev)' : 'transparent',
                 }}
               >

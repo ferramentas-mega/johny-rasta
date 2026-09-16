@@ -33,7 +33,7 @@ export function Marca({ compacto = false }: { compacto?: boolean }) {
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: 13,
-          color: 'var(--gold)',
+          color: 'var(--gold-tx)',
           textShadow: 'var(--glow)',
         }}
       >

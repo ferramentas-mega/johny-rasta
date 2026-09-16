@@ -188,7 +188,12 @@ export function ChuvaMatrix({
       // clara que o rastro; é bonito, mas muda a aparência — a chuva de
       // referência é um campo uniforme de dígitos, onde a profundidade vem só
       // do desbotamento progressivo do véu.
-      ctx.fillStyle = claro ? '#1F8F43' : '#00FF41';
+      // No claro, o mesmo verde da marca (`--gold`); no escuro, o verde
+      // clássico do filme, que NÃO é token nenhum — é escolha do efeito, e
+      // está registrada na skill `design-matrix` para não parecer descuido.
+      // `ctx.fillStyle` não resolve `var(--token)`, então o valor é copiado: se
+      // `--gold` mudar, `conferir-tokens.mjs` aponta esta linha.
+      ctx.fillStyle = claro ? '#1d8840' : '#00FF41';
       const linhas = Math.ceil(altura / TAMANHO);
 
       for (let i = 0; i < colunas.length; i += 1) {

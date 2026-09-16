@@ -49,10 +49,13 @@ export function Situacao({ item }: { item: Otimizacao }) {
           que causou o sinal já não existe. */}
       <input type="hidden" name="evidencia" value={item.evidencia} />
 
-      <Etiqueta
-        texto={reabertoPeloSinal ? 'Voltou a ser detectada' : STATUS_LABEL[item.status] ?? item.status}
-        tom={reabertoPeloSinal ? 'warn' : item.status === 'pendente' ? 'soft' : 'ok'}
-      />
+      {/* A etiqueta só aparece quando diz algo que o seletor NÃO diz.
+          Antes ela vinha sempre, e a célula mostrava "Pendente" duas vezes —
+          uma na etiqueta, outra no `<select>` logo abaixo —, parecendo dois
+          controles com o mesmo valor. O seletor já carrega a situação atual;
+          "Voltou a ser detectada" é o único estado que ele não consegue
+          exibir, porque não é opção de ninguém. */}
+      {reabertoPeloSinal && <Etiqueta texto="Voltou a ser detectada" tom="warn" />}
 
       <select
         name="status"
@@ -105,7 +108,7 @@ export function Situacao({ item }: { item: Otimizacao }) {
           calar essa metade transformaria uma promessa quebrada em confirmação
           silenciosa. */}
       {estado.erro && (
-        <span role="alert" style={{ fontSize: 10.5, color: 'var(--neg)', lineHeight: 1.5, maxWidth: 190 }}>
+        <span role="alert" style={{ fontSize: 10.5, color: 'var(--neg-tx)', lineHeight: 1.5, maxWidth: 190 }}>
           {estado.erro}
         </span>
       )}
@@ -115,7 +118,7 @@ export function Situacao({ item }: { item: Otimizacao }) {
         </span>
       )}
       {estado.ok && (
-        <span role="status" style={{ fontSize: 10.5, color: 'var(--pos)', lineHeight: 1.5, maxWidth: 190 }}>
+        <span role="status" style={{ fontSize: 10.5, color: 'var(--pos-tx)', lineHeight: 1.5, maxWidth: 190 }}>
           {estado.ok}
         </span>
       )}
