@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Client } from 'pg';
 import { withAccount } from '@/server/db';
-import { listarOtimizacoes, marcarOtimizacao } from '@/server/qualidade/otimizacoes';
+import {
+  fecharPorVerificacao,
+  listarOtimizacoes,
+  marcarOtimizacao,
+  resolvidasPorVerificacao,
+} from '@/server/qualidade/otimizacoes';
 import { prepararBancoDeTeste, MASSA, CONTAS } from '../../scripts/test-db';
 
 /**
@@ -148,6 +153,25 @@ describe('isolamento entre contas', () => {
 });
 
 
+/** Uma nota baixa numa URL monitorada: o sinal técnico mais simples. */
+async function comSinalTecnico() {
+  await inserir(
+    `insert into monitored_urls (account_id, site_id, url, prioritaria)
+     values ($1,$2,'https://escrita.teste/lenta', false)`,
+    [contaId, siteEscrita],
+  );
+  await inserir(
+    `insert into lighthouse_results
+       (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
+     values ($1,$2,'https://escrita.teste/lenta','https://escrita.teste/lenta','mobile', 0.30, now())`,
+    [contaId, siteEscrita],
+  );
+  const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
+  const item = lista.find((o) => o.siteId === siteEscrita && o.tipo === 'tecnico');
+  expect(item, 'o sinal técnico precisa aparecer').toBeTruthy();
+  return item!;
+}
+
 describe('acompanhamento: a marcação acrescenta situação, e não esconde o sinal', () => {
   /*
    * `optimizations` existia inteira — status, check de cinco valores,
@@ -156,25 +180,6 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
    * inalcançáveis. Estes testes travam o comportamento que faltava, e sobretudo
    * o limite dele.
    */
-
-  /** Uma nota baixa numa URL monitorada: o sinal técnico mais simples. */
-  async function comSinalTecnico() {
-    await inserir(
-      `insert into monitored_urls (account_id, site_id, url, prioritaria)
-       values ($1,$2,'https://escrita.teste/lenta', false)`,
-      [contaId, siteEscrita],
-    );
-    await inserir(
-      `insert into lighthouse_results
-         (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
-       values ($1,$2,'https://escrita.teste/lenta','https://escrita.teste/lenta','mobile', 0.30, now())`,
-      [contaId, siteEscrita],
-    );
-    const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
-    const item = lista.find((o) => o.siteId === siteEscrita && o.tipo === 'tecnico');
-    expect(item, 'o sinal técnico precisa aparecer').toBeTruthy();
-    return item!;
-  }
 
   it('sem marcação, a situação é pendente', async () => {
     expect((await comSinalTecnico()).status).toBe('pendente');
@@ -188,6 +193,7 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
         { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo },
         'em_andamento',
         item.proximaAcao,
+        item.evidencia,
       ),
     );
 
@@ -202,8 +208,8 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
   it('marcar DUAS vezes não cria duas linhas', async () => {
     const item = await comSinalTecnico();
     const chave = { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo };
-    await withAccount(contaId, (db) => marcarOtimizacao(db, chave, 'em_andamento', ''));
-    await withAccount(contaId, (db) => marcarOtimizacao(db, chave, 'aguardando_nova_analise', ''));
+    await withAccount(contaId, (db) => marcarOtimizacao(db, chave, 'em_andamento', '', 'Nota 30/100 no celular'));
+    await withAccount(contaId, (db) => marcarOtimizacao(db, chave, 'aguardando_nova_analise', '', 'Nota 30/100 no celular'));
 
     const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
     expect(lista.filter((o) => o.siteId === siteEscrita && o.tipo === 'tecnico')).toHaveLength(1);
@@ -221,6 +227,7 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
         { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo },
         'resolvida_manual',
         '',
+        'Nota 30/100 no celular',
       ),
     );
 
@@ -238,6 +245,7 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
         { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo },
         'em_andamento',
         '',
+        'Nota 30/100 no celular',
       ),
     );
 
@@ -273,8 +281,187 @@ describe('acompanhamento: a marcação acrescenta situação, e não esconde o s
           { siteId: rival, tipo: 'tecnico', url: null, titulo: 'Invasão' },
           'em_andamento',
           '',
+          '',
         ),
       ),
     ).rejects.toThrow(/não encontrado/i);
+  });
+});
+
+describe('fechamento por verificação: quem conclui é a medição', () => {
+  /*
+   * `resolvida_por_verificacao` era um status que ninguém alcançava: quando o
+   * sinal sumia, a linha de acompanhamento só parava de aparecer, e ficava no
+   * banco para sempre com o último status que o operador tinha posto. Não
+   * sobrava registro de QUE a medição resolveu, nem QUANDO, nem PARTINDO DE
+   * QUANTO.
+   *
+   * O que estes testes travam é o limite disso: fechar é consequência de uma
+   * medição nova, nunca de uma declaração — a mesma regra da verificação de
+   * instalação.
+   */
+
+  type Acompanhamento = {
+    status: string;
+    evidencia: { texto?: string; notaDepois?: number | null; resolvidoEm?: string; resolvidoPor?: string };
+  };
+
+  async function lerAcompanhamento(siteId: string, tipo = 'tecnico'): Promise<Acompanhamento[]> {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const { rows } = await admin.query<Acompanhamento>(
+      'select status, evidencia from optimizations where site_id = $1 and tipo = $2',
+      [siteId, tipo],
+    );
+    await admin.end();
+    return rows;
+  }
+
+  /** A próxima análise passa: a mesma URL, medida depois, com nota boa. */
+  async function medicaoBoa() {
+    await inserir(
+      `insert into lighthouse_results
+         (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
+       values ($1,$2,'https://escrita.teste/lenta','https://escrita.teste/lenta','mobile', 0.95, now() + interval '1 minute')`,
+      [contaId, siteEscrita],
+    );
+  }
+
+  async function marcado(status: Parameters<typeof marcarOtimizacao>[2] = 'em_andamento') {
+    const item = await comSinalTecnico();
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        { siteId: item.siteId, tipo: item.tipo, url: item.url, titulo: item.titulo },
+        status,
+        item.proximaAcao,
+        item.evidencia,
+      ),
+    );
+    return item;
+  }
+
+  it('o sinal some e o acompanhamento guarda as DUAS medições', async () => {
+    const item = await marcado();
+    expect(item.evidencia).toContain('30');
+
+    await medicaoBoa();
+    const fechadas = await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita));
+    expect(fechadas).toBe(1);
+
+    const [linha] = await lerAcompanhamento(siteEscrita);
+    expect(linha!.status).toBe('resolvida_por_verificacao');
+    // O "antes" é o texto guardado na marcação — depois não dá para lê-lo, porque
+    // o que causou o sinal já não existe.
+    expect(linha!.evidencia.texto).toContain('30');
+    // O "depois" é a medição que fechou.
+    expect(linha!.evidencia.notaDepois).toBe(95);
+    expect(linha!.evidencia.resolvidoEm).toBeTruthy();
+  });
+
+  it('enquanto o sinal existir, NADA fecha — nem marcado como resolvido', async () => {
+    // O ponto central: a marcação do operador não conclui nada. A nota continua
+    // 0,30, o problema continua, e o acompanhamento continua aberto.
+    await marcado('resolvida_manual');
+
+    const fechadas = await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita));
+    expect(fechadas).toBe(0);
+
+    const [linha] = await lerAcompanhamento(siteEscrita);
+    expect(linha!.status).toBe('resolvida_manual');
+    expect(linha!.evidencia.resolvidoEm).toBeUndefined();
+  });
+
+  it('fechar duas vezes fecha uma vez: a segunda passagem não acha o que fechar', async () => {
+    // `registrarSucesso` chama isto a cada análise gravada. Sem a guarda de
+    // status, toda análise seguinte reescreveria `resolvidoEm` — e a data de
+    // quando o problema acabou viraria a data da última medição qualquer.
+    await marcado();
+    await medicaoBoa();
+
+    expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita))).toBe(1);
+    const [primeira] = await lerAcompanhamento(siteEscrita);
+
+    expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita))).toBe(0);
+    const [segunda] = await lerAcompanhamento(siteEscrita);
+
+    expect(segunda!.evidencia.resolvidoEm).toBe(primeira!.evidencia.resolvidoEm);
+  });
+
+  it('fecha só o site medido: a análise de um site não conclui nada sobre outro', async () => {
+    await marcado();
+    await medicaoBoa();
+
+    // A medição foi do site de escrita; o fechamento roda no escopo do site que
+    // ACABOU de ser medido. Varrer a conta inteira faria uma análise de um site
+    // encerrar acompanhamento de outro, sem medição nenhuma por trás.
+    expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, siteSemColeta))).toBe(0);
+
+    const [linha] = await lerAcompanhamento(siteEscrita);
+    expect(linha!.status).toBe('em_andamento');
+  });
+
+  it('sinal sem URL fecha com nota "depois" nula — ausência de número não é zero', async () => {
+    // O sinal de coleta vale para o site inteiro e não tem URL, então não há
+    // nota a registrar. Nulo é a resposta honesta; zero afirmaria uma medição
+    // que não houve.
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        {
+          siteId: siteEscrita,
+          tipo: 'coleta',
+          url: null,
+          titulo: 'Sem eventos recentes num site que coletava',
+        },
+        'em_andamento',
+        'Conferir se o script continua instalado',
+        'Último evento em 01/01/2026 · 400 eventos no histórico',
+      ),
+    );
+
+    expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita))).toBe(1);
+
+    const [linha] = await lerAcompanhamento(siteEscrita, 'coleta');
+    expect(linha!.status).toBe('resolvida_por_verificacao');
+    expect(linha!.evidencia.notaDepois).toBeNull();
+    expect(linha!.evidencia.texto).toContain('400 eventos');
+  });
+
+  it('o que a medição fechou fica legível na tela, com o par de números', async () => {
+    await marcado();
+    await medicaoBoa();
+    await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita));
+
+    const resolvidas = await withAccount(contaId, (db) => resolvidasPorVerificacao(db, 30));
+    const nossa = resolvidas.find((r) => r.url?.includes('/lenta'));
+    expect(nossa, 'a resolução precisa aparecer na listagem').toBeTruthy();
+    expect(nossa!.antes).toContain('30');
+    expect(nossa!.notaDepois).toBe(95);
+  });
+
+  it('a listagem de resolvidas não atravessa contas', async () => {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const rival = (
+      await admin.query<{ id: string }>('select id from sites where public_id = $1', [MASSA.siteRival])
+    ).rows[0]!.id;
+    await admin.query(
+      `insert into optimizations (account_id, site_id, url, tipo, titulo, prioridade, status, proxima_acao, evidencia)
+       select account_id, id, 'https://rival.teste/x', 'tecnico', 'Segredo alheio', 1,
+              'resolvida_por_verificacao', '',
+              jsonb_build_object('texto','Nota 10/100', 'resolvidoEm', to_jsonb(now()), 'notaDepois', 99)
+         from sites where id = $1`,
+      [rival],
+    );
+    await admin.end();
+
+    const resolvidas = await withAccount(contaId, (db) => resolvidasPorVerificacao(db, 30));
+    expect(resolvidas.filter((r) => r.titulo === 'Segredo alheio')).toHaveLength(0);
+
+    const limpeza = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await limpeza.connect();
+    await limpeza.query('delete from optimizations where site_id = $1', [rival]);
+    await limpeza.end();
   });
 });

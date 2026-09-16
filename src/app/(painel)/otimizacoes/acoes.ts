@@ -29,13 +29,14 @@ export async function marcarSituacao(
   const url = typeof bruta === 'string' && bruta ? bruta : null;
   const proximaAcao = String(dados.get('proximaAcao') ?? '');
   const status = String(dados.get('status') ?? '');
+  const evidencia = String(dados.get('evidencia') ?? '');
 
   if (!siteId || !tipo || !titulo) return { erro: 'Item inválido.' };
   if (!ehStatusManual(status)) return { erro: 'Situação inválida.' };
 
   try {
     await withAccount(usuario.accountId, (db) =>
-      marcarOtimizacao(db, { siteId, tipo, url, titulo }, status, proximaAcao),
+      marcarOtimizacao(db, { siteId, tipo, url, titulo }, status, proximaAcao, evidencia),
     );
     revalidatePath('/otimizacoes');
     return { ok: 'Situação registrada.' };

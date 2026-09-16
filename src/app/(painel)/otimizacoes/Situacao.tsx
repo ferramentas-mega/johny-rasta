@@ -29,6 +29,10 @@ export function Situacao({ item }: { item: Otimizacao }) {
       <input type="hidden" name="titulo" value={item.titulo} />
       <input type="hidden" name="url" value={item.url ?? ''} />
       <input type="hidden" name="proximaAcao" value={item.proximaAcao} />
+      {/* A evidência do momento da marcação vira o "antes" do par que o
+          fechamento por verificação vai guardar. Depois não dá para lê-la: o
+          que causou o sinal já não existe. */}
+      <input type="hidden" name="evidencia" value={item.evidencia} />
 
       <Etiqueta
         texto={STATUS_LABEL[item.status] ?? item.status}

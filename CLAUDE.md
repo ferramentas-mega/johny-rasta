@@ -69,6 +69,17 @@ HTML: script bloqueado por CSP, consentimento ou bloqueador está lá e não med
 diagnóstico existe para separar o teste do operador do tráfego real — sem o token, "recebemos um
 clique no WhatsApp" pode ser de qualquer pessoa.
 
+**Fechar um acompanhamento é uma medição, nunca uma declaração.** A lista de Otimizações mostra
+sinais derivados; `optimizations` só guarda o que o operador marcou. Quando o sinal some, quem grava
+`resolvida_por_verificacao` é `fecharPorVerificacao`, chamado por `registrarSucesso` na **mesma
+transação** da análise nova — separadas, existiria um instante com a medição boa no banco e o
+acompanhamento ainda "em andamento". Ele guarda o par: a evidência do momento da marcação (o
+"antes", capturado ali porque depois o que causou o sinal já não existe) e a nota da medição que
+fechou. Guardar o par não é concluir causa: o painel não afirma que a correção causou a melhora. Os
+sinais têm UMA definição em SQL (`SINAIS_SQL`), compartilhada por quem lista e por quem fecha — com
+uma cópia em cada, elas divergiriam na primeira correção feita só numa, e o modo de falhar seria
+fechar como resolvido um problema que a lista continua mostrando.
+
 **Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
 não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
 eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou

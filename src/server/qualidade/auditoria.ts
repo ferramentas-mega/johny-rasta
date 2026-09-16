@@ -1,5 +1,6 @@
 import 'server-only';
 import type { Queryable } from '@/server/db';
+import { fecharPorVerificacao } from '@/server/qualidade/otimizacoes';
 import { validarUrlPublica, MOTIVO_LABEL } from './url-publica';
 import type { Estrategia, ResultadoPageSpeed } from './pagespeed';
 
@@ -167,6 +168,20 @@ export async function registrarSucesso(
     `update audit_jobs set status = 'sucesso', erro = null, concluido_em = now() where id = $1`,
     [job.id],
   );
+
+  /*
+   * Uma medição nova é o único momento em que um sinal técnico pode ter acabado
+   * de desaparecer — então é aqui que o acompanhamento se fecha, e na MESMA
+   * transação da gravação.
+   *
+   * Juntas de propósito: separadas, existiria um instante em que a medição boa
+   * já está no banco e o acompanhamento ainda diz "em andamento". E se o
+   * fechamento falhasse sozinho, ninguém ficaria sabendo.
+   *
+   * Quem fecha é a medição, nunca uma declaração. É a mesma regra da
+   * verificação de instalação: o fato tem de chegar ao servidor.
+   */
+  await fecharPorVerificacao(db, job.site_id);
 }
 
 /**

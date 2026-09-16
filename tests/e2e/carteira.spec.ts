@@ -133,6 +133,30 @@ test('otimizações filtram por tipo, pela URL e pelo clique', async ({ page }) 
   expect(corpo).toMatch(/não afirma que lentidão causou|não conclui que o rastreamento quebrou/i);
 });
 
+test('o que a medição fechou aparece com as duas notas, e sem afirmar causa', async ({ page }) => {
+  /*
+   * `resolvida_por_verificacao` era um status inalcançável: quando o sinal
+   * sumia, o item só parava de aparecer e a linha ficava no banco com o último
+   * status que o operador tinha posto. Fechar sem deixar registro é a mesma
+   * falha de "recurso sem porta na tela" — só que do lado do dado.
+   *
+   * O que este teste trava é o PAR: sem as duas medições juntas a tela diria
+   * "resolvido" sem mostrar de quanto para quanto, que é a única coisa que
+   * torna a afirmação conferível.
+   */
+  await page.goto('/otimizacoes');
+
+  const painel = page.locator('section', { hasText: 'Fechadas pela medição' }).first();
+  await expect(painel).toBeVisible();
+
+  const linha = painel.locator('table tbody tr', { hasText: '/planos' });
+  await expect(linha).toContainText('34');  // a medição de quando foi marcado
+  await expect(linha).toContainText('91');  // a medição que fechou
+
+  // O painel guarda o par e a data; a conclusão continua sendo de quem lê.
+  await expect(painel).toContainText(/não afirma que a correção causou a melhora/i);
+});
+
 test('as telas novas não registram erro no console', async ({ page }) => {
   const erros: string[] = [];
   page.on('console', (m) => m.type() === 'error' && erros.push(m.text()));

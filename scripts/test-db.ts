@@ -283,6 +283,38 @@ export async function prepararBancoDeTeste(): Promise<void> {
     return siteId;
   }
 
+  /**
+   * Um acompanhamento que a MEDIÇÃO fechou — o rastro histórico que o sistema
+   * real deixa quando uma análise nova não encontra mais o problema.
+   *
+   * Está na massa porque sem ele o painel "Fechadas pela medição" não renderiza
+   * em teste nenhum: ele só existe quando há o que mostrar. E é justamente a
+   * tela que prova que o ciclo se fecha — marcar, corrigir, medir de novo.
+   *
+   * Não cria item na lista de pendências: `optimizations` entra por `left join`
+   * sobre os sinais, e o sinal desta linha não existe mais. É exatamente o que
+   * a linha afirma.
+   */
+  async function semearResolvidaPorVerificacao(accountId: string, siteId: string) {
+    await db.query(
+      `insert into optimizations
+         (account_id, site_id, url, tipo, titulo, prioridade, status, proxima_acao,
+          evidencia, detectado_em, atualizado_em)
+       values ($1, $2, 'https://alfa.teste/planos', 'tecnico',
+               'Desempenho baixo em página monitorada', 1,
+               'resolvida_por_verificacao', 'Abrir Qualidade técnica e ver os diagnósticos',
+               jsonb_build_object(
+                 'texto', 'Nota 34/100 no celular',
+                 'em', to_jsonb(now() - interval '9 days'),
+                 'resolvidoPor', 'nova medição',
+                 'resolvidoEm', to_jsonb(now() - interval '2 days'),
+                 'notaDepois', 91
+               ),
+               now() - interval '9 days', now() - interval '2 days')`,
+      [accountId, siteId],
+    );
+  }
+
   async function criarCliente(accountId: string, nome: string) {
     const id = randomUUID();
     await db.query('insert into clients (id, account_id, name) values ($1, $2, $3)', [id, accountId, nome]);
@@ -366,6 +398,7 @@ export async function prepararBancoDeTeste(): Promise<void> {
   await criarSite(agencia, clienteDois, 'escrita.teste', 'escrita.teste', MASSA.siteEscrita);
   await semear(agencia, clienteUm, alfa, SESSOES_ALFA);
   await semear(agencia, clienteDois, beta, SESSOES_BETA);
+  await semearResolvidaPorVerificacao(agencia, alfa);
 
   const rival = await criarConta(CONTAS.rival.nome, CONTAS.rival.email);
   const clienteRival = await criarCliente(rival, 'Cliente Rival');

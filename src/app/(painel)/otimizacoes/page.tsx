@@ -1,7 +1,13 @@
 import Link from 'next/link';
 import { withAccount } from '@/server/db';
 import { exigirSessao } from '@/server/contexto';
-import { listarOtimizacoes, TIPO_LABEL, type Otimizacao } from '@/server/qualidade/otimizacoes';
+import {
+  listarOtimizacoes,
+  resolvidasPorVerificacao,
+  TIPO_LABEL,
+  type Otimizacao,
+  type ResolvidaPorVerificacao,
+} from '@/server/qualidade/otimizacoes';
 import { Situacao } from './Situacao';
 import { dataHora, num } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
@@ -14,6 +20,9 @@ const TOM: Record<string, 'ok' | 'warn' | 'soft'> = {
   tecnico: 'warn', comercial: 'warn', coleta: 'warn', atualizacao: 'soft',
 };
 
+/** Janela da lista de resolvidas. */
+const DIAS_DE_RESOLVIDAS = 30;
+
 export default async function PaginaOtimizacoes({
   searchParams,
 }: {
@@ -23,7 +32,12 @@ export default async function PaginaOtimizacoes({
   const tipoFiltro = typeof busca.tipo === 'string' ? busca.tipo : '';
   const usuario = await exigirSessao();
 
-  const todas = await withAccount(usuario.accountId, (db) => listarOtimizacoes(db));
+  const { todas, resolvidas } = await withAccount(usuario.accountId, async (db) => ({
+    todas: await listarOtimizacoes(db),
+    // Trinta dias: prazo suficiente para a análise semanal de uma URL
+    // prioritária ter rodado pelo menos quatro vezes desde a correção.
+    resolvidas: await resolvidasPorVerificacao(db, DIAS_DE_RESOLVIDAS),
+  }));
   const itens = tipoFiltro ? todas.filter((o) => o.tipo === tipoFiltro) : todas;
 
   const porTipo = (t: string) => todas.filter((o) => o.tipo === t).length;
@@ -54,6 +68,34 @@ export default async function PaginaOtimizacoes({
     { chave: 'acao', titulo: 'Próxima ação', render: (o) => <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{o.proximaAcao}</span> },
     { chave: 'status', titulo: 'Situação', quebraLinha: true, render: (o) => <Situacao item={o} /> },
     { chave: 'quando', titulo: 'Desde', render: (o) => <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{dataHora(o.detectadoEm)}</span> },
+  ];
+
+  const colunasResolvidas: Coluna<ResolvidaPorVerificacao>[] = [
+    { chave: 'site', titulo: 'Site', render: (r) => r.site },
+    {
+      chave: 'pagina', titulo: 'Página',
+      render: (r) => (r.url
+        ? <span className="mono" style={{ fontSize: 11.5 }}>{r.url.replace(/^https?:\/\/[^/]+/, '') || '/'}</span>
+        : <span style={{ color: 'var(--tx3)', fontSize: 11.5 }}>site inteiro</span>),
+    },
+    { chave: 'problema', titulo: 'Problema', render: (r) => r.titulo },
+    {
+      chave: 'antes', titulo: 'Quando foi marcado',
+      render: (r) => <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{r.antes ?? '—'}</span>,
+    },
+    {
+      chave: 'depois', titulo: 'Na medição que fechou', mono: true,
+      // Nulo aparece como "sem nota", e não como zero: o sinal de coleta vale
+      // para o site inteiro e não tem nota nenhuma a mostrar. Zero afirmaria
+      // uma medição que não houve.
+      render: (r) => (r.notaDepois === null
+        ? <span style={{ color: 'var(--tx3)', fontSize: 11.5 }}>sem nota</span>
+        : <span style={{ color: 'var(--pos)' }}>{r.notaDepois}/100</span>),
+    },
+    {
+      chave: 'quando', titulo: 'Fechado em',
+      render: (r) => <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{dataHora(r.resolvidoEm)}</span>,
+    },
   ];
 
   const filtros: { chave: string; rotulo: string; n: number }[] = [
@@ -109,6 +151,22 @@ export default async function PaginaOtimizacoes({
             uma nova análise é executada.
           </p>
         </Painel>
+
+        {resolvidas.length > 0 && (
+          <Painel
+            titulo="Fechadas pela medição"
+            subtitulo={`Itens cujo sinal deixou de ser detectado numa análise nova, nos últimos ${DIAS_DE_RESOLVIDAS} dias`}
+          >
+            <Tabela colunas={colunasResolvidas} linhas={resolvidas} vazio="" />
+            <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
+              Estas saíram da lista acima porque a <strong>próxima medição não encontrou mais o
+              problema</strong> — não porque alguém declarou resolvido. As duas notas são as duas
+              medições: a de quando o item foi marcado e a que fechou. O painel guarda o par e a
+              data; <strong>não afirma que a correção causou a melhora</strong>, porque daqui não dá
+              para saber o que mais mudou na página nesse intervalo.
+            </p>
+          </Painel>
+        )}
 
         <footer style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
           <Aviso tom="ok">DERIVADO DOS DADOS, NÃO DE UM SCORE</Aviso>
