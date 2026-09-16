@@ -114,7 +114,20 @@ export default async function PaginaOtimizacoes({
     },
     {
       chave: 'quando', titulo: 'Fechado em',
-      render: (r) => <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{dataHora(r.resolvidoEm)}</span>,
+      render: (r) => (
+        <>
+          <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{dataHora(r.resolvidoEm)}</span>
+          {/* "nova medição" e "varredura diária" não são a mesma afirmação: a
+              primeira diz que uma análise daquele site mostrou a ausência; a
+              segunda, que a ausência foi NOTADA naquele dia — o dado pode ter
+              mudado antes. Guardar a diferença e esconder seria inútil. */}
+          {r.resolvidoPor && (
+            <span style={{ display: 'block', fontSize: 11, color: 'var(--tx3)' }}>
+              por {r.resolvidoPor}
+            </span>
+          )}
+        </>
+      ),
     },
   ];
 

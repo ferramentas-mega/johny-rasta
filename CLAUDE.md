@@ -98,6 +98,15 @@ sinais têm UMA definição em SQL (`SINAIS_SQL`), compartilhada por quem lista 
 uma cópia em cada, elas divergiriam na primeira correção feita só numa, e o modo de falhar seria
 fechar como resolvido um problema que a lista continua mostrando.
 
+Isso acontece em dois momentos, e a diferença vai gravada em `resolvidoPor`: `'nova medição'` quando
+uma análise daquele site mostrou a ausência, `'varredura diária'` quando o cron apenas NOTOU a
+ausência naquele dia — o dado pode ter mudado bem antes. Escrever "nova medição" nos dois casos
+afirmaria uma medição que não houve. A varredura existe porque nem todo sinal some por medição: o de
+coleta some quando os eventos voltam a chegar, e nada dispara um Lighthouse por causa disso. Sem ela,
+aquele acompanhamento ficava aberto para sempre — fora da lista (que mostra sinais) e fora das
+resolvidas. Ela mora no cron de agendamento por limite de plataforma, não por afinidade: o plano
+Hobby dá dois crons e os dois já estão gastos.
+
 **Explicar a espera não é verificar.** `src/lib/instalacao.ts` diz POR QUE a verificação ainda
 não passou, combinando fatos que o banco já tem: o site já recebeu algo alguma vez, os únicos
 eventos vieram das páginas do próprio painel (`/teste/…`, `/verificacao-de-instalacao`), ou chegou

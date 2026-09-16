@@ -152,6 +152,9 @@ test('o que a medição fechou aparece com as duas notas, e sem afirmar causa', 
   const linha = painel.locator('table tbody tr', { hasText: '/planos' });
   await expect(linha).toContainText('34');  // a medição de quando foi marcado
   await expect(linha).toContainText('91');  // a medição que fechou
+  // E o que mostrou a ausência: uma análise nova, não uma varredura que só
+  // notou depois. São afirmações diferentes, e a tela não as confunde.
+  await expect(linha).toContainText('nova medição');
 
   // O painel guarda o par e a data; a conclusão continua sendo de quem lê.
   await expect(painel).toContainText(/não afirma que a correção causou a melhora/i);

@@ -691,3 +691,139 @@ describe('"aguardando nova análise" enfileira mesmo', () => {
     expect(await fila()).toHaveLength(0);
   });
 });
+
+describe('varredura: o que não some por medição também precisa fechar', () => {
+  /*
+   * O fechamento por medição roda quando uma análise é gravada, e só no site
+   * medido. Isso cobre os sinais que somem POR uma medição.
+   *
+   * O de coleta não é um deles: ele some quando os EVENTOS voltam a chegar, e
+   * nada dispara um Lighthouse por causa disso. Sem a varredura diária, aquele
+   * acompanhamento ficava aberto para sempre — some da lista, porque a lista
+   * mostra sinais, e nunca aparecia entre as resolvidas. O ciclo não fechava.
+   */
+
+  async function acompanhamento(tipo: string) {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const { rows } = await admin.query<{ status: string; evidencia: { resolvidoPor?: string } }>(
+      'select status, evidencia from optimizations where site_id = $1 and tipo = $2',
+      [siteEscrita, tipo],
+    );
+    await admin.end();
+    return rows[0] ?? null;
+  }
+
+  /** Um acompanhamento de coleta cujo sinal não existe: os eventos voltaram. */
+  async function coletaMarcada() {
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        {
+          siteId: siteEscrita, tipo: 'coleta', url: null, dispositivo: null,
+          titulo: 'Sem eventos recentes num site que coletava',
+        },
+        'em_andamento',
+        'Conferir se o script continua instalado',
+        'Último evento em 01/01/2026 · 400 eventos no histórico',
+      ),
+    );
+  }
+
+  it('a varredura fecha o acompanhamento que nenhuma análise alcançaria', async () => {
+    await coletaMarcada();
+    const fechadas = await withAccount(contaId, (db) => fecharPorVerificacao(db, null, 'varredura'));
+    expect(fechadas).toBe(1);
+    expect((await acompanhamento('coleta'))!.status).toBe('resolvida_por_verificacao');
+  });
+
+  it('a varredura diz que foi varredura, e não "nova medição"', async () => {
+    // Não é cosmética: "nova medição" afirmaria que uma análise daquele site
+    // mostrou a ausência. A varredura só NOTOU a ausência naquele dia — o dado
+    // pode ter mudado bem antes.
+    await coletaMarcada();
+    await withAccount(contaId, (db) => fecharPorVerificacao(db, null, 'varredura'));
+    expect((await acompanhamento('coleta'))!.evidencia.resolvidoPor).toBe('varredura diária');
+
+    const lista = await withAccount(contaId, (db) => resolvidasPorVerificacao(db, 30));
+    expect(lista.find((r) => r.titulo.includes('Sem eventos'))!.resolvidoPor).toBe('varredura diária');
+  });
+
+  it('o fechamento por medição continua dizendo "nova medição"', async () => {
+    const item = await comSinalTecnico('mobile');
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        {
+          siteId: item.siteId, tipo: item.tipo, url: item.url,
+          dispositivo: item.dispositivo, titulo: item.titulo,
+        },
+        'em_andamento',
+        '',
+        item.evidencia,
+      ),
+    );
+    await inserir(
+      `insert into lighthouse_results
+         (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
+       values ($1,$2,'https://escrita.teste/lenta','https://escrita.teste/lenta','mobile', 0.95, now() + interval '1 minute')`,
+      [contaId, siteEscrita],
+    );
+
+    await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita));
+    expect((await acompanhamento('tecnico'))!.evidencia.resolvidoPor).toBe('nova medição');
+  });
+
+  it('a varredura NÃO fecha o que ainda tem sinal de pé', async () => {
+    // A varredura é ampla no alcance e idêntica no critério: ela não afrouxa
+    // nada. Se o sinal existe, o acompanhamento continua aberto.
+    const item = await comSinalTecnico('mobile');
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        {
+          siteId: item.siteId, tipo: item.tipo, url: item.url,
+          dispositivo: item.dispositivo, titulo: item.titulo,
+        },
+        'resolvida_manual',
+        '',
+        item.evidencia,
+      ),
+    );
+
+    expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, null, 'varredura'))).toBe(0);
+    expect((await acompanhamento('tecnico'))!.status).toBe('resolvida_manual');
+  });
+
+  it('a varredura de uma conta não toca no acompanhamento de outra', async () => {
+    // O alcance é "a conta inteira", e é a RLS que define qual conta. Sem
+    // `app.account_id` nenhuma linha casaria; com ele, só as da conta da
+    // transação.
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const rival = (
+      await admin.query<{ id: string }>('select id from sites where public_id = $1', [MASSA.siteRival])
+    ).rows[0]!.id;
+    await admin.query(
+      `insert into optimizations (account_id, site_id, tipo, titulo, prioridade, status, proxima_acao)
+       select account_id, id, 'coleta', 'Sinal alheio', 1, 'em_andamento', ''
+         from sites where id = $1`,
+      [rival],
+    );
+    await admin.end();
+
+    await coletaMarcada();
+    // Fecha 1: o da própria conta. O da rival não é nem visto.
+    expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, null, 'varredura'))).toBe(1);
+
+    const limpeza = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await limpeza.connect();
+    const { rows } = await limpeza.query<{ status: string }>(
+      'select status from optimizations where site_id = $1',
+      [rival],
+    );
+    await limpeza.query('delete from optimizations where site_id = $1', [rival]);
+    await limpeza.end();
+    expect(rows[0]!.status).toBe('em_andamento');
+  });
+});

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAccount, withoutAccount } from '@/server/db';
 import { segredoConfere } from '@/server/segredos';
+import { fecharPorVerificacao } from '@/server/qualidade/otimizacoes';
 
 /**
  * Enfileira as auditorias vencidas. Chamado uma vez por dia pelo cron.
@@ -30,8 +31,36 @@ export async function GET(request: Request) {
     return NextResponse.json({ erro: 'Não autorizado.' }, { status: 401 });
   }
 
+  /*
+   * A varredura de acompanhamento, na mesma passagem diária.
+   *
+   * Vem junto por limite de plataforma, e vale registrar: o plano Hobby dá DOIS
+   * crons, e os dois já estão gastos (agendar e processar). Um terceiro gatilho
+   * não é questão de código.
+   *
+   * O que ela cobre é o que o fechamento por medição não alcança. Aquele roda
+   * quando uma análise é gravada, e só no site medido — perfeito para o sinal
+   * técnico, inútil para o de coleta, que some quando os EVENTOS voltam a
+   * chegar. Sem isto, o acompanhamento daquele item ficava aberto para sempre.
+   *
+   * Conta por conta, dentro de `withAccount`, como todo o resto deste endpoint.
+   */
+  let fechadas = 0;
+  for (const { conta } of await withoutAccount((db) =>
+    db.query<{ conta: string }>('select app.contas_com_acompanhamento_aberto() as conta'),
+  )) {
+    fechadas += await withAccount(conta, (db) => fecharPorVerificacao(db, null, 'varredura'));
+  }
+
+
+  // A varredura acima NÃO depende do PageSpeed — ela só olha dados que já
+  // estão no banco. Por isso vem antes desta recusa, e o número vai na resposta:
+  // sem integração configurada o agendamento para, o fechamento não.
   if (!process.env.PAGESPEED_API_KEY) {
-    return NextResponse.json({ enfileiradas: 0, motivo: 'integração não configurada' }, { status: 503 });
+    return NextResponse.json(
+      { enfileiradas: 0, fechadas, motivo: 'integração não configurada' },
+      { status: 503 },
+    );
   }
 
   /**
@@ -78,5 +107,5 @@ export async function GET(request: Request) {
     enfileiradas += linhas.length;
   }
 
-  return NextResponse.json({ enfileiradas, contas: contas.length });
+  return NextResponse.json({ enfileiradas, fechadas, contas: contas.length });
 }

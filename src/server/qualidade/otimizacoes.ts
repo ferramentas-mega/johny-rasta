@@ -256,12 +256,26 @@ export async function marcarOtimizacao(
  * "em andamento" inclusive. Não sobrava registro de que **a medição** resolveu,
  * nem quando, nem partindo de quanto.
  *
- * ── Onde roda, e por quê ─────────────────────────────────────────────────────
+ * ── Quando roda, e por quê nos dois momentos ─────────────────────────────────
  *
- * No momento em que uma análise nova é gravada (`registrarSucesso`), e na mesma
- * transação dela. É o único instante em que um sinal técnico pode ter acabado de
- * desaparecer, e amarrar as duas escritas juntas evita o estado intermediário em
- * que a medição existe e o fechamento não.
+ * 1. **`origem: 'medicao'`** — quando uma análise nova é gravada
+ *    (`registrarSucesso`), na mesma transação dela e restrita ao site medido. É
+ *    o instante em que um sinal técnico pode ter acabado de desaparecer, e
+ *    amarrar as duas escritas juntas evita o estado intermediário em que a
+ *    medição existe e o fechamento não. Restrita ao site porque a análise de um
+ *    site não diz nada sobre outro.
+ *
+ * 2. **`origem: 'varredura'`** — uma vez por dia, pelo cron, sobre a conta
+ *    inteira (`siteId: null`). Existe porque nem todo sinal some por medição: o
+ *    de coleta some quando os EVENTOS voltam a chegar, e nada dispara um
+ *    Lighthouse por causa disso. Sem a varredura, esse acompanhamento ficava
+ *    aberto para sempre — some da lista, porque a lista mostra sinais, e nunca
+ *    aparece entre as resolvidas.
+ *
+ * A distinção vai gravada em `resolvidoPor`, e não é cosmética: "nova medição"
+ * diz que uma análise daquele site mostrou a ausência; "varredura diária" diz
+ * que a ausência foi NOTADA naquele dia, e que o dado pode ter mudado antes.
+ * Escrever "nova medição" nos dois casos afirmaria uma medição que não houve.
  *
  * Não roda na leitura da tela, de propósito: escrever durante o render de uma
  * página é o caminho para um `revalidatePath` proibido e para gravação disparada
@@ -273,7 +287,19 @@ export async function marcarOtimizacao(
  * de quando foi marcado e a de agora — e a data. Quem lê tira a conclusão; o
  * painel não conclui causalidade, aqui como em todo o resto.
  */
-export async function fecharPorVerificacao(db: Queryable, siteId: string): Promise<number> {
+export type OrigemDoFechamento = 'medicao' | 'varredura';
+
+const ROTULO_DA_ORIGEM: Record<OrigemDoFechamento, string> = {
+  medicao: 'nova medição',
+  varredura: 'varredura diária',
+};
+
+export async function fecharPorVerificacao(
+  db: Queryable,
+  /** O site medido, ou `null` para varrer a conta inteira. */
+  siteId: string | null,
+  origem: OrigemDoFechamento = 'medicao',
+): Promise<number> {
   const fechadas = await db.query<{ id: string }>(
     `
     with sinais (${SINAIS_COLUNAS}) as (${SINAIS_SQL})
@@ -281,7 +307,7 @@ export async function fecharPorVerificacao(db: Queryable, siteId: string): Promi
        set status = 'resolvida_por_verificacao',
            evidencia = coalesce(o.evidencia, '{}'::jsonb) || jsonb_build_object(
              'resolvidoEm', to_jsonb(now()),
-             'resolvidoPor', 'nova medição',
+             'resolvidoPor', $5::text,
              -- O "depois". Nulo quando o tipo não tem URL (o sinal de coleta
              -- vale para o site inteiro), e nulo é honesto: não havia número.
              --
@@ -300,13 +326,16 @@ export async function fecharPorVerificacao(db: Queryable, siteId: string): Promi
              )
            ),
            atualizado_em = now()
-     where o.site_id = $4
+     -- $4 nulo é a varredura da conta inteira. Quem limita o alcance continua
+     -- sendo a RLS: sem app.account_id nenhuma linha casaria, e com ele só
+     -- casam as da conta da transação.
+     where ($4::uuid is null or o.site_id = $4)
        and o.status <> 'resolvida_por_verificacao'
        and not exists (
          select 1 from sinais s where ${CASA_SINAL}
        )
     returning o.id`,
-    [DESEMPENHO_RUIM, DIAS_ANALISE_VENCIDA, DIAS_SEM_EVENTO, siteId],
+    [DESEMPENHO_RUIM, DIAS_ANALISE_VENCIDA, DIAS_SEM_EVENTO, siteId, ROTULO_DA_ORIGEM[origem]],
   );
   return fechadas.length;
 }
@@ -318,6 +347,8 @@ export type ResolvidaPorVerificacao = {
   titulo: string;
   antes: string | null;
   notaDepois: number | null;
+  /** O que mostrou a ausência: "nova medição" ou "varredura diária". */
+  resolvidoPor: string | null;
   resolvidoEm: Date;
 };
 
@@ -330,6 +361,7 @@ export async function resolvidasPorVerificacao(
     `select s.name as site, o.url, o.dispositivo, o.titulo,
             o.evidencia->>'texto'                     as antes,
             (o.evidencia->>'notaDepois')::int         as "notaDepois",
+            o.evidencia->>'resolvidoPor'              as "resolvidoPor",
             (o.evidencia->>'resolvidoEm')::timestamptz as "resolvidoEm"
        from optimizations o
        join sites s on s.id = o.site_id
