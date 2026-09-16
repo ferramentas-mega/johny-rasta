@@ -335,6 +335,17 @@ confirme que o commit está no ar, e só então aplique a migração. Toda migra
 que RESTRINGE uma política tem essa assimetria; toda migração que só acrescenta
 objeto tem a oposta.
 
+**Quem PERGUNTA onde há trabalho e quem FAZ o trabalho precisam usar o mesmo critério.** O cron de
+agendamento roda em dois passos: `app.contas_com_auditoria_vencida` diz quais contas têm trabalho, e
+o `insert` dentro de `withAccount` enfileira. O `insert` sempre decidiu por (url, ESTRATÉGIA); a
+função não olhava estratégia nenhuma — bastava UMA análise da URL em sete dias, de qualquer
+dispositivo. A conta não entrava na lista, a transação não abria, e o `insert` nunca rodava. Medido
+em produção: `agenciaadrmarketing.com/` analisado no celular no dia anterior e **nunca** no
+computador, com a porteira respondendo zero conta vencida. Depois da correção: uma conta, e o
+trabalho é exatamente aquele desktop. Dois critérios separados não dão erro quando divergem — dão
+silêncio. O mesmo valia do lado da tela: o sinal de "Análise desatualizada" usava `max(medido_em)`
+sobre as duas estratégias e escondia a mesma coisa; hoje ele é por dispositivo, como o técnico.
+
 **`withoutAccount` + RLS `FORCE` = zero linhas, sem erro nenhum.** O cron rodava assim contra
 `audit_jobs` e `monitored_urls`. Sem `app.account_id`, `app.current_account_id()` é `NULL`,
 `account_id = NULL` é `NULL`, e nenhuma política casa. Os dois endpoints agendados respondiam

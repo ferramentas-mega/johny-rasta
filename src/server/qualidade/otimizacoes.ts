@@ -103,20 +103,33 @@ const SINAIS_SQL = `
 
     union all
 
-    -- 2. URL prioritária sem análise, ou com análise velha.
-    select m.site_id, s.name, c.name, m.url, null::text, 'atualizacao',
+    -- 2. URL prioritária sem análise, ou com análise velha — POR DISPOSITIVO.
+    --
+    --    Era por URL, com max(medido_em) sobre as duas estratégias, e isso
+    --    escondia exatamente o caso medido em produção: uma página prioritária
+    --    analisada no celular ontem e NUNCA no computador não aparecia aqui,
+    --    porque a medição de celular satisfazia a pergunta. Metade das medições
+    --    faltando, e a tela dizendo que estava tudo em dia.
+    --
+    --    É a mesma correção da porteira do cron (migração 20260916000017), do
+    --    lado da tela: quem pergunta e quem trabalha precisam usar o mesmo
+    --    critério, e a nota técnica pertence a uma URL E A UM DISPOSITIVO.
+    select m.site_id, s.name, c.name, m.url, d.strategy, 'atualizacao',
            case when ultima.medido_em is null
                 then 'URL prioritária nunca analisada'
                 else 'Análise desatualizada' end,
            coalesce('Última análise em ' || to_char(ultima.medido_em,'DD/MM/YYYY'),
-                    'Nenhuma análise registrada'),
+                    'Nenhuma análise registrada') || ' no ' ||
+             case d.strategy when 'mobile' then 'celular' else 'computador' end,
            2, 'Executar análise', coalesce(ultima.medido_em, m.created_at)
       from monitored_urls m
+      cross join (values ('mobile'), ('desktop')) as d(strategy)
       join sites s   on s.id = m.site_id
       join clients c on c.id = s.client_id
       left join lateral (
         select max(medido_em) as medido_em from lighthouse_results r
          where r.site_id = m.site_id and r.url_solicitada = m.url
+           and r.strategy = d.strategy
       ) ultima on true
      where m.prioritaria
        and (ultima.medido_em is null

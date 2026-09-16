@@ -639,20 +639,78 @@ describe('"aguardando nova análise" enfileira mesmo', () => {
     expect(await fila()).toHaveLength(1);
   });
 
-  it('sinal sem dispositivo pede os dois — é a ausência de análise que o define', async () => {
+  it('a URL prioritária sem análise vira DOIS itens, um por dispositivo', async () => {
+    /*
+     * Era um item só, com `max(medido_em)` sobre as duas estratégias — e isso
+     * escondia o caso medido em produção: página prioritária analisada no
+     * celular ontem e NUNCA no computador não aparecia na lista, porque a
+     * medição de celular satisfazia a pergunta. Metade das medições faltando,
+     * com a tela dizendo que estava tudo em dia.
+     */
     await inserir(
       `insert into monitored_urls (account_id, site_id, url, prioritaria)
        values ($1,$2,'https://escrita.teste/planos', true)`,
       [contaId, siteEscrita],
     );
+
     const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
-    const item = lista.find((o) => o.tipo === 'atualizacao' && o.url?.includes('/planos'));
-    expect(item!.dispositivo).toBeNull();
+    const itens = lista.filter((o) => o.tipo === 'atualizacao' && o.url?.includes('/planos'));
+    expect(itens).toHaveLength(2);
+    expect(itens.map((o) => o.dispositivo).sort()).toEqual(['desktop', 'mobile']);
+    // A evidência diz de qual dispositivo se está falando.
+    expect(itens.find((o) => o.dispositivo === 'desktop')!.evidencia).toContain('computador');
+  });
+
+  it('analisado só no celular: o item do COMPUTADOR continua de pé', async () => {
+    // O caso exato de produção, do lado da tela.
+    await inserir(
+      `insert into monitored_urls (account_id, site_id, url, prioritaria)
+       values ($1,$2,'https://escrita.teste/planos', true)`,
+      [contaId, siteEscrita],
+    );
+    await inserir(
+      `insert into lighthouse_results
+         (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
+       values ($1,$2,'https://escrita.teste/planos','https://escrita.teste/planos','mobile', 0.90, now())`,
+      [contaId, siteEscrita],
+    );
+
+    const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
+    const itens = lista.filter((o) => o.tipo === 'atualizacao' && o.url?.includes('/planos'));
+    expect(itens).toHaveLength(1);
+    expect(itens[0]!.dispositivo).toBe('desktop');
+    expect(itens[0]!.titulo).toContain('nunca analisada');
+
+    // E pedir reanálise dali enfileira só o computador — não gasta a vaga
+    // diária do plano remedindo o que já está em dia.
+    const pedido = await withAccount(contaId, (db) =>
+      enfileirarReanalise(db, {
+        siteId: itens[0]!.siteId, tipo: itens[0]!.tipo, url: itens[0]!.url,
+        dispositivo: itens[0]!.dispositivo, titulo: itens[0]!.titulo,
+      }),
+    );
+    expect(pedido.resultado).toBe('enfileirada');
+    expect((await fila()).map((j) => j.strategy)).toEqual(['desktop']);
+  });
+
+  it('chave sem dispositivo, vinda de fora da tela, pede os dois', async () => {
+    /*
+     * Hoje NENHUM sinal com URL chega sem dispositivo — os de atualização
+     * passaram a ter um, e o de coleta não tem URL. Este ramo é guarda para um
+     * chamador que monte a chave incompleta (a Action recebe campo oculto, e o
+     * Next não confere nada), não caminho que a tela produza. Fica registrado
+     * como guarda, e não disfarçado de fluxo.
+     */
+    await inserir(
+      `insert into monitored_urls (account_id, site_id, url, prioritaria)
+       values ($1,$2,'https://escrita.teste/planos', true)`,
+      [contaId, siteEscrita],
+    );
 
     const pedido = await withAccount(contaId, (db) =>
       enfileirarReanalise(db, {
-        siteId: item!.siteId, tipo: item!.tipo, url: item!.url,
-        dispositivo: item!.dispositivo, titulo: item!.titulo,
+        siteId: siteEscrita, tipo: 'atualizacao', url: 'https://escrita.teste/planos',
+        dispositivo: null, titulo: 'URL prioritária nunca analisada',
       }),
     );
     expect(pedido.resultado).toBe('enfileirada');

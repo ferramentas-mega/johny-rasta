@@ -172,3 +172,98 @@ describe('mobile e desktop não se sobrescrevem', () => {
     expect(porDispositivo.desktop).toBeCloseTo(0.91, 2);
   });
 });
+
+describe('a porteira do cron enxerga o mesmo que o insert enfileiraria', () => {
+  /*
+   * `/api/auditorias/agendar` funciona em dois passos: pergunta a
+   * `app.contas_com_auditoria_vencida` QUAIS CONTAS têm trabalho e, dentro de
+   * uma transação por conta, roda o `insert` que enfileira.
+   *
+   * O `insert` decide por (url, ESTRATÉGIA). A função não olhava estratégia
+   * nenhuma: bastava UMA análise da URL em sete dias, de qualquer dispositivo,
+   * para ela dar a conta como em dia. A conta não entrava na lista, a transação
+   * não abria, e a análise que faltava nunca era enfileirada.
+   *
+   * Medido no banco de PRODUÇÃO em 16/09/2026: uma página prioritária analisada
+   * no celular no dia anterior e NUNCA no computador, com a porteira
+   * respondendo zero conta vencida. É o no-op que se declara bem-sucedido, de
+   * novo — e o relatório fica com metade das medições sem dizer que falta.
+   */
+
+  async function porteira(dias: number): Promise<string[]> {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const { rows } = await admin.query<{ conta: string }>(
+      'select app.contas_com_auditoria_vencida($1) as conta',
+      [dias],
+    );
+    await admin.end();
+    return rows.map((r) => r.conta);
+  }
+
+  /** O que o `insert` do endpoint enfileiraria agora, nas mesmas condições. */
+  async function oInsertEnfileiraria(dias: number): Promise<string[]> {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const { rows } = await admin.query<{ strategy: string }>(
+      `select d.strategy
+         from monitored_urls m
+         cross join (values ('mobile'), ('desktop')) as d(strategy)
+        where m.prioritaria and m.site_id = $1
+          and not exists (
+            select 1 from lighthouse_results r
+             where r.site_id = m.site_id and r.url_solicitada = m.url
+               and r.strategy = d.strategy
+               and r.medido_em > now() - make_interval(days => $2::int)
+          )
+        order by d.strategy`,
+      [siteId, dias],
+    );
+    await admin.end();
+    return rows.map((r) => r.strategy);
+  }
+
+  async function analisar(strategy: 'mobile' | 'desktop', quandoAtras: string) {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    await admin.query(
+      `insert into lighthouse_results
+         (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
+       values ($1,$2,$3,$3,$4, 0.80, now() - $5::interval)`,
+      [contaId, siteId, URL_MONITORADA, strategy, quandoAtras],
+    );
+    await admin.end();
+  }
+
+  it('análise de celular recente NÃO esconde a de computador que falta', async () => {
+    // É o caso exato de produção, e o que a função antiga deixava passar.
+    await analisar('mobile', '1 day');
+
+    expect(await oInsertEnfileiraria(7)).toEqual(['desktop']);
+    expect(
+      await porteira(7),
+      'há trabalho (desktop), então a conta precisa entrar na lista',
+    ).toContain(contaId);
+  });
+
+  it('com os dois dispositivos em dia, a conta sai da lista', async () => {
+    await analisar('mobile', '1 day');
+    await analisar('desktop', '2 days');
+
+    expect(await oInsertEnfileiraria(7)).toEqual([]);
+    expect(await porteira(7)).not.toContain(contaId);
+  });
+
+  it('sem análise nenhuma, a porteira vê a conta e o insert quer os dois', async () => {
+    expect(await oInsertEnfileiraria(7)).toEqual(['desktop', 'mobile']);
+    expect(await porteira(7)).toContain(contaId);
+  });
+
+  it('análise velha nos dois volta a abrir a conta', async () => {
+    await analisar('mobile', '30 days');
+    await analisar('desktop', '30 days');
+
+    expect(await oInsertEnfileiraria(7)).toEqual(['desktop', 'mobile']);
+    expect(await porteira(7)).toContain(contaId);
+  });
+});
