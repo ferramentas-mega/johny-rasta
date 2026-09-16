@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { Etiqueta } from '@/components/Tabela';
-import { STATUS_LABEL, STATUS_MANUAIS, type Otimizacao } from '@/lib/otimizacoes';
+import { ehStatusManual, STATUS_LABEL, STATUS_MANUAIS, type Otimizacao } from '@/lib/otimizacoes';
 import { marcarSituacao, type EstadoOtimizacao } from './acoes';
 
 /**
@@ -22,6 +22,18 @@ export function Situacao({ item }: { item: Otimizacao }) {
 
   const resolvidaMasPersiste = item.status === 'resolvida_manual';
 
+  /*
+   * O item foi FECHADO pela medição e o sinal está aqui de novo.
+   *
+   * Só acontece de um jeito: a página foi corrigida, a medição confirmou, o
+   * acompanhamento fechou — e depois regrediu. A linha volta pelo `left join`
+   * com o status guardado, e sem este caso a tela mentia duas vezes: a etiqueta
+   * dizia "Resolvida por verificação" com o problema de pé, e o `<select>` caía
+   * em "Pendente" (porque `resolvida_por_verificacao` não é opção de ninguém),
+   * mostrando duas situações contraditórias na mesma célula.
+   */
+  const reabertoPeloSinal = !ehStatusManual(item.status);
+
   return (
     <form action={acao} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <input type="hidden" name="siteId" value={item.siteId} />
@@ -38,13 +50,15 @@ export function Situacao({ item }: { item: Otimizacao }) {
       <input type="hidden" name="evidencia" value={item.evidencia} />
 
       <Etiqueta
-        texto={STATUS_LABEL[item.status] ?? item.status}
-        tom={item.status === 'pendente' ? 'soft' : 'ok'}
+        texto={reabertoPeloSinal ? 'Voltou a ser detectada' : STATUS_LABEL[item.status] ?? item.status}
+        tom={reabertoPeloSinal ? 'warn' : item.status === 'pendente' ? 'soft' : 'ok'}
       />
 
       <select
         name="status"
-        defaultValue={item.status}
+        // Reaberto não tem opção correspondente: o seletor começa sem escolha,
+        // em vez de exibir "Pendente" como se alguém tivesse decidido isso.
+        defaultValue={reabertoPeloSinal ? '' : item.status}
         aria-label={`Situação de "${item.titulo}"`}
         // Submete na troca: um botão "salvar" por linha encheria a tabela de
         // controles para uma escolha que é sempre de um clique.
@@ -59,12 +73,25 @@ export function Situacao({ item }: { item: Otimizacao }) {
           maxWidth: 190,
         }}
       >
+        {reabertoPeloSinal && (
+          <option value="" disabled>
+            Escolha a situação
+          </option>
+        )}
         {STATUS_MANUAIS.map((s) => (
           <option key={s} value={s}>
             {STATUS_LABEL[s]}
           </option>
         ))}
       </select>
+
+      {reabertoPeloSinal && (
+        <span style={{ fontSize: 10.5, color: 'var(--warn-tx)', lineHeight: 1.5, maxWidth: 190 }}>
+          Este item já tinha sido fechado por medição, e o sinal voltou a ser detectado. O
+          fechamento anterior continua registrado em &quot;Fechadas pela medição&quot;, com a data —
+          ele aconteceu; o problema é que voltou.
+        </span>
+      )}
 
       {resolvidaMasPersiste && (
         <span style={{ fontSize: 10.5, color: 'var(--warn-tx)', lineHeight: 1.5, maxWidth: 190 }}>

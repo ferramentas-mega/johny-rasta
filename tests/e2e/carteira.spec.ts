@@ -205,6 +205,37 @@ test('otimizações filtram por tipo, pela URL e pelo clique', async ({ page }) 
   expect(corpo).toMatch(/não afirma que lentidão causou|não conclui que o rastreamento quebrou/i);
 });
 
+test('mudar a situação pelo seletor grava de verdade e sobrevive ao recarregar', async ({ page }) => {
+  /*
+   * O caminho que faltava. `marcarSituacao` e a fiação do formulário
+   * (`onChange` → `requestSubmit` → Server Action) só eram exercitados por
+   * chamadas diretas a `marcarOtimizacao` nos testes de unidade: um formulário
+   * quebrado passaria no CI inteiro.
+   *
+   * É a regra que o próprio CLAUDE.md registra — teste que constrói o caminho
+   * que o usuário não tem prova o mecanismo e esconde a tela quebrada. Aqui o
+   * teste começa pelo clique.
+   */
+  await page.goto('/otimizacoes?tipo=tecnico');
+
+  const seletor = page.locator('select[aria-label^="Situação de"]').first();
+  await expect(seletor).toBeVisible();
+  const linha = page.locator('tbody tr', { has: seletor });
+
+  await seletor.selectOption('em_andamento');
+  await expect(linha.getByRole('status')).toContainText('Situação registrada');
+
+  // E ficou GRAVADO: recarregar a página traz a situação de volta do banco, em
+  // vez de um estado que só existia na aba aberta.
+  await page.reload();
+  await expect(page.locator('select[aria-label^="Situação de"]').first()).toHaveValue('em_andamento');
+  await expect(linha).toContainText('Em andamento');
+
+  // Devolve ao estado inicial para não deixar rastro entre execuções.
+  await page.locator('select[aria-label^="Situação de"]').first().selectOption('pendente');
+  await expect(page.locator('tbody tr').first().getByRole('status')).toContainText('Situação registrada');
+});
+
 test('o que a medição fechou aparece com as duas notas, e sem afirmar causa', async ({ page }) => {
   /*
    * `resolvida_por_verificacao` era um status inalcançável: quando o sinal

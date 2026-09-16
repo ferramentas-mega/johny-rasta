@@ -98,6 +98,24 @@ sinais têm UMA definição em SQL (`SINAIS_SQL`), compartilhada por quem lista 
 uma cópia em cada, elas divergiriam na primeira correção feita só numa, e o modo de falhar seria
 fechar como resolvido um problema que a lista continua mostrando.
 
+**Fechar exige FATO POSITIVO, não a ausência do sinal.** Esta é a correção mais importante que uma
+revisão pegou nesta rodada. O fechamento equiparava "o sinal não é mais derivado" a "uma medição
+mostrou que acabou", e há três jeitos de o sinal sumir sem ninguém ter medido nada de bom: a URL sai
+de `monitored_urls` (gesto do operador), o site é arquivado (o sinal de coleta exige `archived_at is
+null`), ou a análise nova vem **sem nota** (o sinal técnico exige `performance is not null`) — e
+nesse último o "depois" caía na última nota com valor, a RUIM, e a tela lia "de 34 para 34,
+resolvido por nova medição". Hoje `FATO_DE_RESOLUCAO` exige, para sinal de página, uma medição nova
+do mesmo dispositivo, com nota, feita **depois da marcação**; para o de coleta, evento real recente
+em site não arquivado. É a regra da verificação de instalação aplicada ao fechamento.
+
+**O fechamento NÃO roda na transação da medição.** Rodava, com o argumento de evitar o instante em
+que a medição boa está no banco e o acompanhamento ainda diz "em andamento". O instante é
+inofensivo; o custo do contrário não era: o fechamento varre os sinais da CONTA inteira, e um erro
+ou tempo esgotado ali derrubava a transação junto com a análise que o Google acabou de cobrar — e o
+`catch` da rota ainda a marcava como falha. A medição é cara e irrepetível; o fechamento é barato e
+tem a varredura diária como rede. Quem fecha é a rota, depois do commit, em transação própria, com
+`catch` que só registra.
+
 Isso acontece em dois momentos, e a diferença vai gravada em `resolvidoPor`: `'nova medição'` quando
 uma análise daquele site mostrou a ausência, `'varredura diária'` quando o cron apenas NOTOU a
 ausência naquele dia — o dado pode ter mudado bem antes. Escrever "nova medição" nos dois casos

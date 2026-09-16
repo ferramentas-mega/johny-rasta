@@ -177,6 +177,59 @@ const CASA_SINAL = `
      and coalesce(o.dispositivo, '') = coalesce(s.dispositivo, '')
      and o.titulo  = s.titulo`;
 
+/** Quando o operador marcou o acompanhamento. A âncora do "depois". */
+const MARCADO_EM = `coalesce((o.evidencia->>'em')::timestamptz, o.detectado_em)`;
+
+/**
+ * O FATO POSITIVO que autoriza fechar por verificação.
+ *
+ * ── O defeito que isto corrige ───────────────────────────────────────────────
+ *
+ * O fechamento equiparava "o sinal não é mais derivado" a "uma medição mostrou
+ * que acabou". São coisas diferentes, e há três jeitos de o sinal sumir sem
+ * ninguém ter medido nada de bom:
+ *
+ *  1. a URL sai de `monitored_urls` — gesto do operador, não medição;
+ *  2. o site é arquivado — o sinal de coleta exige `archived_at is null`;
+ *  3. a análise nova vem SEM NOTA — o sinal técnico exige
+ *     `performance is not null`, então ele some. Pior: o "depois" caía na
+ *     última nota com valor, que é a RUIM, e a tela lia "de 34 para 34,
+ *     resolvido por nova medição".
+ *
+ * Nos três o painel afirmaria uma medição que não houve. É o mesmo princípio
+ * que vale em todo o projeto — verificação é fato recebido, nunca tempo
+ * decorrido nem ausência de linha —, aplicado ao fechamento.
+ *
+ * ── O fato, por tipo de sinal ────────────────────────────────────────────────
+ *
+ * Sinal ligado a uma página fecha com uma MEDIÇÃO NOVA: do mesmo dispositivo,
+ * com nota, feita depois da marcação. Sinal de coleta fecha com EVENTO REAL
+ * recente — é o que "voltou a coletar" quer dizer —, e não fecha em site
+ * arquivado, porque ali a ausência do sinal é consequência do arquivamento.
+ */
+const FATO_DE_RESOLUCAO = `
+       and (
+         exists (
+           select 1 from lighthouse_results r
+            where o.tipo in ('tecnico', 'atualizacao')
+              and r.site_id = o.site_id
+              and r.url_solicitada = o.url
+              and (o.dispositivo is null or r.strategy = o.dispositivo)
+              and r.performance is not null
+              and r.medido_em > ${MARCADO_EM}
+         )
+         or exists (
+           select 1 from events e
+            where o.tipo = 'coleta'
+              and e.site_id = o.site_id
+              and not e.is_test
+              and e.occurred_at > now() - make_interval(days => $3::int)
+              and exists (
+                select 1 from sites s where s.id = o.site_id and s.archived_at is null
+              )
+         )
+       )`;
+
 export async function listarOtimizacoes(db: Queryable): Promise<Otimizacao[]> {
   const linhas = await db.query<LinhaBruta>(
     `
@@ -334,6 +387,7 @@ export async function fecharPorVerificacao(
                   and r.url_solicitada = o.url
                   and (o.dispositivo is null or r.strategy = o.dispositivo)
                   and r.performance is not null
+                  and r.medido_em > ${MARCADO_EM}
                 order by r.medido_em desc
                 limit 1
              )
@@ -347,6 +401,7 @@ export async function fecharPorVerificacao(
        and not exists (
          select 1 from sinais s where ${CASA_SINAL}
        )
+       ${FATO_DE_RESOLUCAO}
     returning o.id`,
     [DESEMPENHO_RUIM, DIAS_ANALISE_VENCIDA, DIAS_SEM_EVENTO, siteId, ROTULO_DA_ORIGEM[origem]],
   );
@@ -365,12 +420,19 @@ export type ResolvidaPorVerificacao = {
   resolvidoEm: Date;
 };
 
-/** As que a medição fechou, para a tela poder mostrar que o ciclo se fecha. */
+/**
+ * As que a medição fechou, para a tela poder mostrar que o ciclo se fecha.
+ *
+ * Devolve o TOTAL junto com a página. O teto existe para a tela não crescer sem
+ * limite, mas cortar em silêncio faria a lista parecer completa — é a mesma
+ * regra das auditorias informativas e das séries de evidência.
+ */
 export async function resolvidasPorVerificacao(
   db: Queryable,
   dias: number,
-): Promise<ResolvidaPorVerificacao[]> {
-  return db.query<ResolvidaPorVerificacao>(
+  limite: number,
+): Promise<{ itens: ResolvidaPorVerificacao[]; total: number }> {
+  const itens = await db.query<ResolvidaPorVerificacao>(
     `select s.name as site, o.url, o.dispositivo, o.titulo,
             o.evidencia->>'texto'                     as antes,
             (o.evidencia->>'notaDepois')::int         as "notaDepois",
@@ -381,7 +443,17 @@ export async function resolvidasPorVerificacao(
       where o.status = 'resolvida_por_verificacao'
         and (o.evidencia->>'resolvidoEm')::timestamptz > now() - make_interval(days => $1::int)
       order by (o.evidencia->>'resolvidoEm')::timestamptz desc
-      limit 20`,
+      limit $2::int`,
+    [dias, limite],
+  );
+
+  const [contagem] = await db.query<{ total: string }>(
+    `select count(*) as total
+       from optimizations o
+      where o.status = 'resolvida_por_verificacao'
+        and (o.evidencia->>'resolvidoEm')::timestamptz > now() - make_interval(days => $1::int)`,
     [dias],
   );
+
+  return { itens, total: Number(contagem?.total ?? itens.length) };
 }

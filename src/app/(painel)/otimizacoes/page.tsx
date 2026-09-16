@@ -25,6 +25,9 @@ const TOM: Record<string, 'ok' | 'warn' | 'soft'> = {
 /** Janela da lista de resolvidas. */
 const DIAS_DE_RESOLVIDAS = 30;
 
+/** Teto da lista de resolvidas. O total vem junto, e a tela diz quando corta. */
+const RESOLVIDAS_NA_TELA = 20;
+
 function Pagina({ url, dispositivo }: { url: string; dispositivo: Dispositivo | null }) {
   return (
     <>
@@ -57,7 +60,7 @@ export default async function PaginaOtimizacoes({
     todas: await listarOtimizacoes(db),
     // Trinta dias: prazo suficiente para a análise semanal de uma URL
     // prioritária ter rodado pelo menos quatro vezes desde a correção.
-    resolvidas: await resolvidasPorVerificacao(db, DIAS_DE_RESOLVIDAS),
+    resolvidas: await resolvidasPorVerificacao(db, DIAS_DE_RESOLVIDAS, RESOLVIDAS_NA_TELA),
   }));
   const itens = tipoFiltro ? todas.filter((o) => o.tipo === tipoFiltro) : todas;
 
@@ -185,12 +188,18 @@ export default async function PaginaOtimizacoes({
           </p>
         </Painel>
 
-        {resolvidas.length > 0 && (
+        {resolvidas.total > 0 && (
           <Painel
             titulo="Fechadas pela medição"
             subtitulo={`Itens cujo sinal deixou de ser detectado numa análise nova, nos últimos ${DIAS_DE_RESOLVIDAS} dias`}
           >
-            <Tabela colunas={colunasResolvidas} linhas={resolvidas} vazio="" />
+            <Tabela colunas={colunasResolvidas} linhas={resolvidas.itens} vazio="" />
+            {resolvidas.total > resolvidas.itens.length && (
+              <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10 }}>
+                Mostrando {num(resolvidas.itens.length)} de {num(resolvidas.total)} — a tela mostra
+                as mais recentes.
+              </p>
+            )}
             <p style={{ fontSize: 11.5, color: 'var(--tx3)', marginTop: 10, lineHeight: 1.6 }}>
               Estas saíram da lista acima porque a <strong>próxima medição não encontrou mais o
               problema</strong> — não porque alguém declarou resolvido. As duas notas são as duas

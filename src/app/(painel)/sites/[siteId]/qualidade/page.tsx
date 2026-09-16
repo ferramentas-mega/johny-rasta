@@ -159,8 +159,8 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
   });
 
   /** As de campo, separadas das de laboratório — e nunca no mesmo painel. */
-  const deAlvo = new Map<string, typeof campoHistorico>();
-  for (const p of campoHistorico) {
+  const deAlvo = new Map<string, typeof campoHistorico.pontos>();
+  for (const p of campoHistorico.pontos) {
     const chave = `${p.alvo}|${p.escopo}|${p.form_factor}`;
     deAlvo.set(chave, [...(deAlvo.get(chave) ?? []), p]);
   }
@@ -172,6 +172,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
       subtitulo: `${caminho(primeiro.alvo)} · ${primeiro.form_factor === 'PHONE' ? 'celular' : 'computador'} · ${escopo}`,
       maiorEhMelhor: false,
       unidade: 'ms' as const,
+      total: campoHistorico.totais.get(chave),
     };
     return [
       {

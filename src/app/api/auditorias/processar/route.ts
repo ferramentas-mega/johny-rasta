@@ -6,6 +6,7 @@ import { MINUTOS_ATE_ABANDONO } from '@/server/qualidade/auditoria';
 import { analisar, IntegracaoNaoConfigurada, FalhaNaAnalise } from '@/server/qualidade/pagespeed';
 import { reivindicarProximo, registrarSucesso, registrarFalha, salvarSnapshotCrux } from '@/server/qualidade/auditoria';
 import { consultarPaginaOuOrigem, CruxNaoConfigurado } from '@/server/qualidade/crux';
+import { fecharPorVerificacao } from '@/server/qualidade/otimizacoes';
 
 /**
  * Processa UMA auditoria da fila.
@@ -126,6 +127,27 @@ async function processar(cron: boolean, accountId?: string) {
     const auditorias = Object.fromEntries(resultado.diagnosticos.map((d) => [d.id, d]));
     await executar((db) => registrarSucesso(db, job, resultado, auditorias));
 
+    /*
+     * O fechamento por verificação, DEPOIS do commit da medição e em transação
+     * própria.
+     *
+     * Rodava dentro de `registrarSucesso`, na mesma transação. O argumento era
+     * evitar o instante em que a medição boa já está no banco e o
+     * acompanhamento ainda diz "em andamento" — um instante inofensivo. O custo
+     * do contrário não era: o fechamento varre os sinais da CONTA inteira, e um
+     * erro ou tempo esgotado ali derrubava a transação junto com a análise que
+     * o Google acabou de cobrar, e o catch abaixo ainda a marcava como falha.
+     *
+     * Falhar aqui não invalida nada: a varredura diária refaz. Por isso o catch
+     * é próprio e só registra — mesma forma do CrUX logo abaixo.
+     */
+    let acompanhamentosFechados = 0;
+    try {
+      acompanhamentosFechados = await executar((db) => fecharPorVerificacao(db, job.site_id));
+    } catch (erro) {
+      console.error('[auditoria] falha ao fechar acompanhamento de', job.site_id, String(erro).slice(0, 160));
+    }
+
     // A experiência real vem junto da auditoria, e não a cada carregamento da
     // tela: são 25.000 pedidos por dia, e uma consulta por visita queimaria a
     // quota sem trazer dado novo — a janela do CrUX anda de 28 em 28 dias.
@@ -160,6 +182,7 @@ async function processar(cron: boolean, accountId?: string) {
       url: job.url,
       strategy: job.strategy,
       campo,
+      acompanhamentosFechados,
       contasRestantes: restantes,
     });
   } catch (erro) {

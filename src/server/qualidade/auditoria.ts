@@ -1,6 +1,5 @@
 import 'server-only';
 import type { Queryable } from '@/server/db';
-import { fecharPorVerificacao } from '@/server/qualidade/otimizacoes';
 import type { ChaveDoSinal } from '@/lib/otimizacoes';
 import { validarUrlPublica, MOTIVO_LABEL } from './url-publica';
 import type { Estrategia, ResultadoPageSpeed } from './pagespeed';
@@ -211,7 +210,22 @@ export async function reivindicarProximo(db: Queryable): Promise<Job | null> {
   );
 }
 
-/** Grava o resultado. A análise anterior continua na tabela: histórico não se apaga. */
+/**
+ * Grava o resultado. A análise anterior continua na tabela: histórico não se apaga.
+ *
+ * **Não fecha acompanhamento aqui**, e isso mudou depois de uma revisão. O
+ * fechamento rodava nesta mesma transação, com o argumento de que separá-los
+ * deixaria um instante com a medição boa no banco e o acompanhamento ainda "em
+ * andamento". O instante é inofensivo; o custo do contrário não era: o
+ * fechamento varre os sinais da CONTA inteira, e qualquer erro ou tempo
+ * esgotado ali derrubava a transação — levando junto a análise que o Google
+ * acabou de cobrar. O `catch` da rota então chamava `registrarFalha`, e o
+ * trabalho pago sumia.
+ *
+ * A medição é a coisa cara e irrepetível; o fechamento é barato e tem a
+ * varredura diária como rede. Quem fecha agora é a rota, depois do commit, em
+ * transação própria.
+ */
 export async function registrarSucesso(
   db: Queryable,
   job: Job,
@@ -238,20 +252,6 @@ export async function registrarSucesso(
     `update audit_jobs set status = 'sucesso', erro = null, concluido_em = now() where id = $1`,
     [job.id],
   );
-
-  /*
-   * Uma medição nova é o único momento em que um sinal técnico pode ter acabado
-   * de desaparecer — então é aqui que o acompanhamento se fecha, e na MESMA
-   * transação da gravação.
-   *
-   * Juntas de propósito: separadas, existiria um instante em que a medição boa
-   * já está no banco e o acompanhamento ainda diz "em andamento". E se o
-   * fechamento falhasse sozinho, ninguém ficaria sabendo.
-   *
-   * Quem fecha é a medição, nunca uma declaração. É a mesma regra da
-   * verificação de instalação: o fato tem de chegar ao servidor.
-   */
-  await fecharPorVerificacao(db, job.site_id);
 }
 
 /**
@@ -407,8 +407,8 @@ export async function historicoDeCampo(
   db: Queryable,
   siteId: string,
   porAlvo: number,
-): Promise<PontoDeCampo[]> {
-  return db.query<PontoDeCampo>(
+): Promise<{ pontos: PontoDeCampo[]; totais: Map<string, number> }> {
+  const pontos = await db.query<PontoDeCampo>(
     `select alvo, escopo, form_factor, lcp_p75_ms, inp_p75_ms, cls_p75, coletado_em
        from (
          select *, row_number() over (
@@ -421,6 +421,22 @@ export async function historicoDeCampo(
       order by alvo, escopo, form_factor, coletado_em`,
     [siteId, porAlvo],
   );
+
+  // O total vem junto pelo mesmo motivo do laboratório: série cortada em
+  // silêncio parece completa. Sem isto o painel de campo nunca conseguiria
+  // escrever "12 de 37", e o comentário da tela prometia que conseguiria.
+  const contagens = await db.query<{ alvo: string; escopo: string; form_factor: string; total: string }>(
+    `select alvo, escopo, form_factor, count(*) as total
+       from crux_snapshots
+      where site_id = $1
+      group by alvo, escopo, form_factor`,
+    [siteId],
+  );
+
+  return {
+    pontos,
+    totais: new Map(contagens.map((c) => [`${c.alvo}|${c.escopo}|${c.form_factor}`, Number(c.total)])),
+  };
 }
 
 // ───────────────────────────── experiência real (CrUX) ─────────────────────────────

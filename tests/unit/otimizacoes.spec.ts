@@ -176,6 +176,27 @@ async function comSinalTecnico(strategy: 'mobile' | 'desktop' = 'mobile') {
   return item!;
 }
 
+/**
+ * O FATO POSITIVO do sinal de coleta: evento real chegando de novo.
+ *
+ * Existe porque fechar por verificação passou a exigir fato, não ausência. Sem
+ * ele, os testes de varredura provariam o contrário do que o produto faz — e
+ * era exatamente essa confusão (ausência tratada como prova) que a revisão
+ * pegou.
+ */
+async function eventosVoltaram() {
+  await inserir(
+    `with s as (
+       insert into sessions (account_id, site_id, visitor_id, started_at, last_seen_at)
+       select account_id, id, 'volta', now(), now() from sites where id = $1
+       returning id, account_id, site_id
+     )
+     insert into events (account_id, site_id, session_id, type, occurred_at, event_uid, is_test)
+     select account_id, site_id, id, 'page_view', now(), gen_random_uuid(), false from s`,
+    [siteEscrita],
+  );
+}
+
 describe('acompanhamento: a marcação acrescenta situação, e não esconde o sinal', () => {
   /*
    * `optimizations` existia inteira — status, check de cinco valores,
@@ -425,6 +446,8 @@ describe('fechamento por verificação: quem conclui é a medição', () => {
       ),
     );
 
+    // O fato positivo: os eventos reais voltaram a chegar.
+    await eventosVoltaram();
     expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita))).toBe(1);
 
     const [linha] = await lerAcompanhamento(siteEscrita, 'coleta');
@@ -438,7 +461,7 @@ describe('fechamento por verificação: quem conclui é a medição', () => {
     await medicaoBoa();
     await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita));
 
-    const resolvidas = await withAccount(contaId, (db) => resolvidasPorVerificacao(db, 30));
+    const { itens: resolvidas } = await withAccount(contaId, (db) => resolvidasPorVerificacao(db, 30, 20));
     const nossa = resolvidas.find((r) => r.url?.includes('/lenta'));
     expect(nossa, 'a resolução precisa aparecer na listagem').toBeTruthy();
     expect(nossa!.antes).toContain('30');
@@ -461,7 +484,7 @@ describe('fechamento por verificação: quem conclui é a medição', () => {
     );
     await admin.end();
 
-    const resolvidas = await withAccount(contaId, (db) => resolvidasPorVerificacao(db, 30));
+    const { itens: resolvidas } = await withAccount(contaId, (db) => resolvidasPorVerificacao(db, 30, 20));
     expect(resolvidas.filter((r) => r.titulo === 'Segredo alheio')).toHaveLength(0);
 
     const limpeza = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
@@ -790,6 +813,7 @@ describe('varredura: o que não some por medição também precisa fechar', () =
 
   it('a varredura fecha o acompanhamento que nenhuma análise alcançaria', async () => {
     await coletaMarcada();
+    await eventosVoltaram();
     const fechadas = await withAccount(contaId, (db) => fecharPorVerificacao(db, null, 'varredura'));
     expect(fechadas).toBe(1);
     expect((await acompanhamento('coleta'))!.status).toBe('resolvida_por_verificacao');
@@ -800,10 +824,11 @@ describe('varredura: o que não some por medição também precisa fechar', () =
     // mostrou a ausência. A varredura só NOTOU a ausência naquele dia — o dado
     // pode ter mudado bem antes.
     await coletaMarcada();
+    await eventosVoltaram();
     await withAccount(contaId, (db) => fecharPorVerificacao(db, null, 'varredura'));
     expect((await acompanhamento('coleta'))!.evidencia.resolvidoPor).toBe('varredura diária');
 
-    const lista = await withAccount(contaId, (db) => resolvidasPorVerificacao(db, 30));
+    const { itens: lista } = await withAccount(contaId, (db) => resolvidasPorVerificacao(db, 30, 20));
     expect(lista.find((r) => r.titulo.includes('Sem eventos'))!.resolvidoPor).toBe('varredura diária');
   });
 
@@ -871,6 +896,7 @@ describe('varredura: o que não some por medição também precisa fechar', () =
     await admin.end();
 
     await coletaMarcada();
+    await eventosVoltaram();
     // Fecha 1: o da própria conta. O da rival não é nem visto.
     expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, null, 'varredura'))).toBe(1);
 
@@ -883,5 +909,112 @@ describe('varredura: o que não some por medição também precisa fechar', () =
     await limpeza.query('delete from optimizations where site_id = $1', [rival]);
     await limpeza.end();
     expect(rows[0]!.status).toBe('em_andamento');
+  });
+});
+
+describe('ausência de sinal NÃO é prova de que a medição resolveu', () => {
+  /*
+   * O defeito que este bloco trava, achado numa revisão: o fechamento
+   * equiparava "o sinal não é mais derivado" a "uma medição mostrou que
+   * acabou". São coisas diferentes, e há pelo menos três jeitos de o sinal
+   * sumir sem ninguém ter medido nada de bom:
+   *
+   *   1. a URL sai de `monitored_urls` — o sinal de atualização depende dela;
+   *   2. o site é arquivado — o sinal de coleta exige `archived_at is null`;
+   *   3. a análise nova vem SEM nota — o sinal técnico exige
+   *      `performance is not null`, então ele some, e o "depois" cai na nota
+   *      anterior (a ruim): a tela leria "de 34 para 34, resolvido".
+   *
+   * Em todos, o painel afirmaria uma medição que não houve — que é exatamente
+   * o que este projeto recusa em todo lugar. Fechar exige FATO POSITIVO.
+   */
+
+  async function statusDe(tipo: string): Promise<string | null> {
+    const admin = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+    await admin.connect();
+    const { rows } = await admin.query<{ status: string }>(
+      'select status from optimizations where site_id = $1 and tipo = $2',
+      [siteEscrita, tipo],
+    );
+    await admin.end();
+    return rows[0]?.status ?? null;
+  }
+
+  it('análise nova SEM nota não fecha nada', async () => {
+    // `performance` pode ser nulo numa análise bem-sucedida: a API devolve a
+    // categoria sem score quando não conseguiu avaliá-la, e `registrarSucesso`
+    // grava isso. O sinal some porque exige nota; não porque melhorou.
+    const item = await comSinalTecnico('mobile');
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        {
+          siteId: item.siteId, tipo: item.tipo, url: item.url,
+          dispositivo: item.dispositivo, titulo: item.titulo,
+        },
+        'em_andamento', '', item.evidencia,
+      ),
+    );
+
+    await inserir(
+      `insert into lighthouse_results
+         (account_id, site_id, url_solicitada, url_final, strategy, performance, medido_em)
+       values ($1,$2,'https://escrita.teste/lenta','https://escrita.teste/lenta','mobile', null, now() + interval '1 minute')`,
+      [contaId, siteEscrita],
+    );
+
+    const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
+    expect(lista.find((o) => o.siteId === siteEscrita && o.tipo === 'tecnico'), 'o sinal some')
+      .toBeUndefined();
+
+    expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, siteEscrita))).toBe(0);
+    expect(await statusDe('tecnico')).toBe('em_andamento');
+  });
+
+  it('URL que sai do monitoramento não vira "resolvida por verificação"', async () => {
+    await inserir(
+      `insert into monitored_urls (account_id, site_id, url, prioritaria)
+       values ($1,$2,'https://escrita.teste/planos', true)`,
+      [contaId, siteEscrita],
+    );
+    const lista = await withAccount(contaId, (db) => listarOtimizacoes(db));
+    const item = lista.find((o) => o.tipo === 'atualizacao' && o.dispositivo === 'mobile')!;
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        {
+          siteId: item.siteId, tipo: item.tipo, url: item.url,
+          dispositivo: item.dispositivo, titulo: item.titulo,
+        },
+        'em_andamento', '', item.evidencia,
+      ),
+    );
+
+    // Descadastrar a URL é um gesto do operador, não uma medição.
+    await inserir('delete from monitored_urls where site_id = $1', [siteEscrita]);
+
+    expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, null, 'varredura'))).toBe(0);
+    expect(await statusDe('atualizacao')).toBe('em_andamento');
+  });
+
+  it('site arquivado não fecha o acompanhamento de coleta', async () => {
+    await withAccount(contaId, (db) =>
+      marcarOtimizacao(
+        db,
+        {
+          siteId: siteEscrita, tipo: 'coleta', url: null, dispositivo: null,
+          titulo: 'Sem eventos recentes num site que coletava',
+        },
+        'em_andamento', '', 'Último evento em 01/01/2026 · 400 eventos no histórico',
+      ),
+    );
+
+    await inserir('update sites set archived_at = now() where id = $1', [siteEscrita]);
+    try {
+      expect(await withAccount(contaId, (db) => fecharPorVerificacao(db, null, 'varredura'))).toBe(0);
+      expect(await statusDe('coleta')).toBe('em_andamento');
+    } finally {
+      await inserir('update sites set archived_at = null where id = $1', [siteEscrita]);
+    }
   });
 });
