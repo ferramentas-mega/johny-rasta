@@ -14,6 +14,9 @@ import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso } from '@/components/Cartoes';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { PaginaDoSinal, SiteInteiro } from '@/components/PaginaDoSinal';
+import { listarTarefas, tarefaDoSinal, ABERTAS, DIAS_DE_FECHADAS_NA_TELA } from '@/server/services/tarefas';
+import { CriarTarefa, EtiquetaTarefa } from '@/components/Tarefas';
+import { TabelaDeTarefas } from '@/components/TabelaDeTarefas';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,11 +39,12 @@ export default async function PaginaOtimizacoes({
   const tipoFiltro = typeof busca.tipo === 'string' ? busca.tipo : '';
   const usuario = await exigirSessao();
 
-  const { todas, resolvidas } = await withAccount(usuario.accountId, async (db) => ({
+  const { todas, resolvidas, tarefas } = await withAccount(usuario.accountId, async (db) => ({
     todas: await listarOtimizacoes(db),
     // Trinta dias: prazo suficiente para a análise semanal de uma URL
     // prioritária ter rodado pelo menos quatro vezes desde a correção.
     resolvidas: await resolvidasPorVerificacao(db, DIAS_DE_RESOLVIDAS, RESOLVIDAS_NA_TELA),
+    tarefas: await listarTarefas(db, { recentes: true }),
   }));
   const itens = tipoFiltro ? todas.filter((o) => o.tipo === tipoFiltro) : todas;
 
@@ -72,6 +76,22 @@ export default async function PaginaOtimizacoes({
     { chave: 'evidencia', titulo: 'Evidência', render: (o) => <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)' }}>{o.evidencia}</span> },
     { chave: 'acao', titulo: 'Próxima ação', render: (o) => <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)' }}>{o.proximaAcao}</span> },
     { chave: 'status', titulo: 'Situação', quebraLinha: true, render: (o) => <Situacao item={o} /> },
+    {
+      chave: 'tarefa', titulo: 'Tarefa', quebraLinha: true,
+      ajuda: 'Problema e tarefa não são a mesma coisa: a tarefa é o que alguém decidiu fazer. Concluí-la oferece a reanálise; quem fecha o problema é a medição.',
+      render: (o) => {
+        const chave = { siteId: o.siteId, tipo: o.tipo, url: o.url, dispositivo: o.dispositivo, titulo: o.titulo };
+        const aberta = tarefas.find((t) => ABERTAS.includes(t.status) && tarefaDoSinal(t, chave));
+        return aberta ? (
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+            <EtiquetaTarefa tarefa={aberta} />
+            <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx2)' }}>{aberta.titulo}</span>
+          </span>
+        ) : (
+          <CriarTarefa siteId={o.siteId} sinal={chave} sugestao={o.proximaAcao} />
+        );
+      },
+    },
     { chave: 'quando', titulo: 'Desde', render: (o) => <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>{dataHora(o.detectadoEm)}</span> },
   ];
 
@@ -166,6 +186,13 @@ export default async function PaginaOtimizacoes({
             Marcar um item como resolvido <strong>não altera nenhuma medição</strong>: a nota só muda quando
             uma nova análise é executada.
           </p>
+        </Painel>
+
+        <Painel
+          titulo="Tarefas"
+          subtitulo={`Abertas, e as fechadas nos últimos ${DIAS_DE_FECHADAS_NA_TELA} dias — concluir oferece a reanálise, e a medição é quem fecha o problema`}
+        >
+          <TabelaDeTarefas tarefas={tarefas} />
         </Painel>
 
         {resolvidas.total > 0 && (

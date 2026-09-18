@@ -7,6 +7,8 @@ import { getKpis, resolvePeriod } from '@/server/metrics/queries';
 import { ESTADO_LABEL, ESTADO_TOM } from '@/server/services/sites';
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { listarOtimizacoes, STATUS_LABEL, TIPO_LABEL, type Otimizacao } from '@/server/qualidade/otimizacoes';
+import { listarTarefas } from '@/server/services/tarefas';
+import { TabelaDeTarefas } from '@/components/TabelaDeTarefas';
 import { num, pct, dataHora } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso, CartaoNumero } from '@/components/Cartoes';
@@ -91,9 +93,11 @@ export default async function PaginaCliente({
    * parametrizar o SQL por cliente criaria uma segunda versão da definição.
    */
   const idsDoCliente = new Set(sites.map((s) => s.id));
-  const problemas: Otimizacao[] = (
-    await withAccount(usuario.accountId, (db) => listarOtimizacoes(db))
-  ).filter((o) => idsDoCliente.has(o.siteId));
+  const { sinais, tarefas } = await withAccount(usuario.accountId, async (db) => ({
+    sinais: await listarOtimizacoes(db),
+    tarefas: await listarTarefas(db, { apenasAbertas: true, siteIds: [...idsDoCliente] }),
+  }));
+  const problemas: Otimizacao[] = sinais.filter((o) => idsDoCliente.has(o.siteId));
 
   const soma = (f: (l: LinhaSite) => number | null) => linhas.reduce((t, l) => t + (f(l) ?? 0), 0);
   const sessoes = soma((l) => l.sessoes);
@@ -176,6 +180,10 @@ export default async function PaginaCliente({
       nota: problemas.length === 0 ? 'nenhum sinal derivado para os sites deste cliente' : 'sinais derivados, não declarados',
       tom: problemas.length > 0 ? 'atencao' : 'neutro',
     },
+    {
+      rotulo: 'Tarefas abertas', valor: num(tarefas.length),
+      nota: tarefas.length === 0 ? 'nenhuma decisão pendente' : 'o que alguém decidiu fazer',
+    },
   ];
 
   return (
@@ -220,6 +228,10 @@ export default async function PaginaCliente({
               />
             }
           />
+        </Painel>
+
+        <Painel titulo="Tarefas abertas" subtitulo="Concluir oferece a reanálise; a medição é quem fecha o problema">
+          <TabelaDeTarefas tarefas={tarefas} comCliente={false} />
         </Painel>
 
         <Painel titulo="Sites" subtitulo="Os mesmos números que a tela de cada site mostra">

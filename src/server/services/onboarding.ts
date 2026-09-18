@@ -154,7 +154,7 @@ export class SiteForaDaConta extends Error {
  * A consulta roda sob RLS: `sites` só devolve os sites da conta corrente, então
  * site de outra conta e site inexistente dão o mesmo "nenhuma linha".
  */
-async function exigirSiteDaConta(db: Queryable, siteId: string): Promise<void> {
+export async function exigirSiteDaConta(db: Queryable, siteId: string): Promise<void> {
   const site = await db.one<{ id: string }>('select id from sites where id = $1', [siteId]);
   if (!site) throw new SiteForaDaConta();
 }

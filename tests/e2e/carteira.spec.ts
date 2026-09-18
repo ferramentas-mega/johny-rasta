@@ -103,6 +103,34 @@ test('busca e filtro de saúde em Sites preservam o cliente, e o cartão da Vis�
   await expect(page.getByRole('button', { name: /^Críticos/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('um problema vira tarefa pelo clique, e concluir a tarefa não fecha o problema', async ({ page }) => {
+  await page.goto('/otimizacoes');
+  const linha = page.locator('table tbody tr').filter({ hasText: 'alfa.teste' }).first();
+  await expect(linha).toBeVisible();
+  const problema = (await linha.getByRole('cell').nth(4).innerText()).trim();
+
+  await linha.getByRole('button', { name: '+ Criar tarefa' }).click();
+  const titulo = `Tarefa e2e ${Date.now()}`;
+  await linha.getByLabel('Título da tarefa').fill(titulo);
+  await linha.getByRole('button', { name: 'Criar', exact: true }).click();
+
+  // A tarefa aparece na linha do problema e no painel de tarefas.
+  await expect(linha.getByText(titulo)).toBeVisible();
+  const tarefas = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Tarefas', exact: true }) });
+  await expect(tarefas.getByText(titulo)).toBeVisible();
+
+  // Concluir: a confirmação diz o que aconteceu com a reanálise, a tarefa
+  // continua visível (fechada), e o problema continua na lista — só a medição
+  // o fecha.
+  await tarefas.getByLabel(`Tarefa "${titulo}": situação`).selectOption('concluida');
+  await expect(page.getByRole('status').filter({ hasText: /Tarefa concluída/ })).toBeVisible();
+  await page.reload();
+  await expect(page.locator('table tbody tr').filter({ hasText: problema }).first()).toBeVisible();
+  await expect(tarefas.getByLabel(`Tarefa "${titulo}": situação`)).toHaveValue('concluida');
+  // E a linha do problema volta a oferecer "criar tarefa": a concluída não conta como aberta.
+  await expect(linha.getByRole('button', { name: '+ Criar tarefa' })).toBeVisible();
+});
+
 test('na aba Clientes, o nome do cliente leva ao painel dele, e o painel lista os problemas', async ({ page }) => {
   await page.goto('/clientes');
   await page.getByRole('link', { name: 'Cliente Um', exact: true }).click();

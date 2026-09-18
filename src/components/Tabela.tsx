@@ -42,6 +42,7 @@ export function Tabela<T>({
   linhas,
   vazio = 'Nenhum registro no período.',
   rotuloTotal = 'Total',
+  chave,
 }: {
   colunas: Coluna<T>[];
   linhas: T[];
@@ -54,6 +55,13 @@ export function Tabela<T>({
    */
   vazio?: ReactNode;
   rotuloTotal?: string;
+  /**
+   * Chave estável da linha. Sem ela a chave é a posição — e uma linha com
+   * formulário (situação de tarefa) que muda de posição depois de uma Action
+   * REMONTA, levando junto a confirmação que a própria Action devolveu. É a
+   * armadilha da remontagem por `key` do CLAUDE.md, aplicada à tabela.
+   */
+  chave?: (linha: T) => string;
 }) {
   const temTotais = colunas.some((c) => c.total);
 
@@ -106,7 +114,7 @@ export function Tabela<T>({
         </thead>
         <tbody>
           {linhas.map((linha, i) => (
-            <tr key={i} className="tabela-linha" style={{ borderBottom: '1px solid var(--rowbd)' }}>
+            <tr key={chave ? chave(linha) : i} className="tabela-linha" style={{ borderBottom: '1px solid var(--rowbd)' }}>
               {colunas.map((c) => (
                 <td key={c.chave} className={c.mono ? 'mono' : undefined} style={celula(c)}>
                   {c.render(linha)}
