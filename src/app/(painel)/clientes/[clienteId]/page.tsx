@@ -8,6 +8,8 @@ import { ESTADO_LABEL, ESTADO_TOM } from '@/server/services/sites';
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
 import { listarOtimizacoes, STATUS_LABEL, TIPO_LABEL, type Otimizacao } from '@/server/qualidade/otimizacoes';
 import { listarTarefas } from '@/server/services/tarefas';
+import { listarHistorico } from '@/server/services/historico';
+import { Historico } from '@/components/Historico';
 import { TabelaDeTarefas } from '@/components/TabelaDeTarefas';
 import { num, pct, dataHora } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
@@ -93,9 +95,10 @@ export default async function PaginaCliente({
    * parametrizar o SQL por cliente criaria uma segunda versão da definição.
    */
   const idsDoCliente = new Set(sites.map((s) => s.id));
-  const { sinais, tarefas } = await withAccount(usuario.accountId, async (db) => ({
+  const { sinais, tarefas, historico } = await withAccount(usuario.accountId, async (db) => ({
     sinais: await listarOtimizacoes(db),
     tarefas: await listarTarefas(db, { apenasAbertas: true, siteIds: [...idsDoCliente] }),
+    historico: await listarHistorico(db, { siteIds: [...idsDoCliente], limite: 40 }),
   }));
   const problemas: Otimizacao[] = sinais.filter((o) => idsDoCliente.has(o.siteId));
 
@@ -252,6 +255,14 @@ export default async function PaginaCliente({
             medimos e não houve. A taxa do Total é a soma das sessões convertidas dividida pela soma das
             sessões, não a média das taxas dos sites.
           </p>
+        </Painel>
+
+        <Painel
+          titulo="Histórico"
+          subtitulo="Os 40 acontecimentos mais recentes nos sites deste cliente — derivados, não registrados à mão"
+          acoes={<Link href={`/clientes/${clienteId}/relatorio?periodo=${periodoInput.key}`} style={{ fontSize: 'var(--tipo-apoio)' }}>Relatório do cliente →</Link>}
+        >
+          <Historico eventos={historico} />
         </Painel>
 
         <footer style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>

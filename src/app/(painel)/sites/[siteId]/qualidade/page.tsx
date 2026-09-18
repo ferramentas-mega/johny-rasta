@@ -20,6 +20,8 @@ import { SeletorSiteRota } from '@/components/filtros';
 import { Correcoes } from '@/components/Correcoes';
 import { Evidencias, type SerieDeEvidencia } from '@/components/Evidencias';
 import { PainelDeAnalise } from './PainelDeAnalise';
+import { listarHistorico } from '@/server/services/historico';
+import { Historico } from '@/components/Historico';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +57,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
   if (!site) notFound();
   const sites = await listarSites(usuario.accountId);
 
-  const { urls, analises, auditorias, historico, campoHistorico, fila, campo } =
+  const { urls, analises, auditorias, historico, campoHistorico, fila, campo, linhaDoTempo } =
     await withAccount(usuario.accountId, async (db) => ({
     urls: await db.query<UrlMonitorada>(
       'select id, url, prioritaria from monitored_urls where site_id = $1 order by prioritaria desc, url',
@@ -66,6 +68,7 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
     historico: await historicoDeAnalises(db, siteId, MEDICOES_NA_EVIDENCIA),
     campoHistorico: await historicoDeCampo(db, siteId, MEDICOES_NA_EVIDENCIA),
     campo: await ultimosCrux(db, siteId),
+    linhaDoTempo: await listarHistorico(db, { siteIds: [siteId], limite: 30 }),
     fila: await db.query<Job>(
       `select id, url, strategy, status, erro, criado_em from audit_jobs
         where site_id = $1 order by criado_em desc limit 10`,
@@ -335,6 +338,10 @@ export default async function PaginaQualidade({ params }: { params: Promise<{ si
             </p>
           </Painel>
         )}
+
+        <Painel titulo="Histórico" subtitulo="Os 30 acontecimentos mais recentes deste site — medições, marcações, tarefas e verificações">
+          <Historico eventos={linhaDoTempo} comSite={false} fuso={site.timezone} />
+        </Painel>
 
         <footer style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
           <Aviso tom={configurada ? 'ok' : 'warn'}>

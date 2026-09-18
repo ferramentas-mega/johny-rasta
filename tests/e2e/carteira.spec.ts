@@ -144,6 +144,32 @@ test('na aba Clientes, o nome do cliente leva ao painel dele, e o painel lista o
   await expect(cartao).toBeVisible();
 });
 
+test('o painel do cliente tem histórico derivado e leva ao relatório, que imprime a tela', async ({ page }) => {
+  await page.goto('/clientes');
+  await page.getByRole('link', { name: 'Cliente Um', exact: true }).click();
+  await page.waitForURL(/\/clientes\//);
+
+  const historico = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Histórico' }) });
+  await expect(historico.getByText('Site cadastrado').first()).toBeVisible();
+
+  await page.getByRole('link', { name: 'Relatório do cliente →' }).click();
+  await page.waitForURL(/\/relatorio/);
+  await expect(page.locator('h1')).toHaveText('Cliente Um');
+  await expect(page.getByText('Saúde do cliente')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Problemas em aberto' })).toBeVisible();
+
+  // O botão imprime a própria tela: nada é gerado no servidor.
+  await page.evaluate(() => { (window as unknown as { __imprimiu?: boolean }).__imprimiu = false; window.print = () => { (window as unknown as { __imprimiu?: boolean }).__imprimiu = true; }; });
+  await page.getByRole('button', { name: 'IMPRIMIR / PDF' }).click();
+  expect(await page.evaluate(() => (window as unknown as { __imprimiu?: boolean }).__imprimiu)).toBe(true);
+
+  // Na impressão o menu some e o conteúdo fica.
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('aside.lateral')).toBeHidden();
+  await expect(page.locator('h1')).toBeVisible();
+  await page.emulateMedia({ media: 'screen' });
+});
+
 test('abrir um cliente mostra os sites dele, e só os dele', async ({ page }) => {
   await page.goto('/visao-geral');
   const nome = (await page.locator('table tbody tr a').first().innerText()).trim();

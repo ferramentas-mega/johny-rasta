@@ -1679,3 +1679,56 @@ svg:has(.funil-etapa:hover) .funil-etapa:not(:hover) text {
     fill-opacity: revert;
   }
 }
+
+/* ==========================================================================
+   Impressão (relatório do cliente)
+   ==========================================================================
+
+   O PDF é o navegador imprimindo esta tela. Some o que é ferramenta (menu,
+   controles do cabeçalho, botões); fica o conteúdo, em fundo branco e texto
+   escuro — tinta preta sobre papel, não tema. */
+@media print {
+  .lateral,
+  .menu-inferior,
+  .nao-imprime,
+  .botao-recolher,
+  .sino-avisos,
+  .cabecalho canvas,
+  .cabecalho button,
+  .cabecalho form,
+  .cabecalho time {
+    display: none !important;
+  }
+  :root,
+  :root[data-tema='escuro'] {
+    color-scheme: light;
+  }
+  body,
+  .casca-painel,
+  .conteudo-painel,
+  .cabecalho,
+  .cartao,
+  .pagina {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+  .cabecalho h1 {
+    text-shadow: none !important;
+    color: black !important;
+  }
+  .cartao {
+    border: 1px solid #bbb !important;
+    break-inside: avoid;
+  }
+  .cartao::before {
+    display: none;
+  }
+  a {
+    color: black !important;
+    text-decoration: none !important;
+  }
+  .tabela-linha {
+    animation: none !important;
+  }
+}
