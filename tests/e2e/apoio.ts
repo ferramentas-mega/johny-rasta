@@ -48,7 +48,9 @@ export async function percentualDoCartao(page: Page, chave: string): Promise<num
 export function vigiarConsole(page: Page): string[] {
   const erros: string[] = [];
   page.on('console', (m) => {
-    if (m.type() === 'error') erros.push(m.text());
+    // Com a URL de origem: "Failed to load resource: 404" sem dizer QUAL
+    // recurso obrigava a reproduzir o fluxo inteiro à mão para descobrir.
+    if (m.type() === 'error') erros.push(`${m.text()}${m.location().url ? ` (${m.location().url})` : ''}`);
   });
   page.on('pageerror', (e) => erros.push(`pageerror: ${e.message}`));
   return erros;

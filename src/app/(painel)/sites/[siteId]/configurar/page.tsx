@@ -135,6 +135,8 @@ export default async function PaginaConfigurar({
           detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento, site.timezone)}` : undefined,
         }}
         meta={`${site.domain} · ${PLATAFORMA_LABEL[config.plataforma]}`}
+        // A etapa de verificação é uma espera pelo evento do diagnóstico.
+        atualizarACada={etapa === 'verificacao' ? 15 : undefined}
       />
 
       <div className="abas">

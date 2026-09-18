@@ -1,6 +1,7 @@
 import { CabecalhoFx } from '@/components/CabecalhoFx';
 import { Sobrelinha } from '@/components/Sobrelinha';
 import { ControlesAparencia } from '@/components/ControlesAparencia';
+import { BotaoAtualizar } from '@/components/BotaoAtualizar';
 import { ESTADO_LABEL, ESTADO_TOM, type EstadoRastreamento } from '@/server/services/sites';
 
 const COR_PONTO = { ok: 'var(--gold)', aguardando: 'var(--warn-tx)', inativo: 'var(--tx3)' } as const;
@@ -17,13 +18,25 @@ export function Cabecalho({
   estado,
   meta,
   filtros,
+  atualizarACada,
 }: {
   kicker: string;
   titulo: string;
   estado?: { tipo: EstadoRastreamento; detalhe?: string };
   meta?: string;
   filtros?: React.ReactNode;
+  /**
+   * Segundos entre atualizações automáticas. Só para telas de ESPERA (o
+   * primeiro evento de um site), onde quem olha quer ver o dado chegar. Nas
+   * demais o botão existe e a hora dos dados fica à vista, mas nada se move
+   * sozinho debaixo do cursor.
+   */
+  atualizarACada?: number;
 }) {
+  // Carimbado no render do servidor: é a hora em que ESTES números foram
+  // buscados. `router.refresh()` renderiza de novo e o carimbo avança.
+  const geradoEm = new Date();
+
   return (
     <header
       className="cabecalho"
@@ -77,6 +90,7 @@ export function Cabecalho({
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           {filtros}
+          <BotaoAtualizar geradoEm={geradoEm} aCadaSegundos={atualizarACada} />
           <ControlesAparencia />
         </div>
       </div>

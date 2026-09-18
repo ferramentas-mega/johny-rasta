@@ -198,6 +198,10 @@ export default async function PaginaRastreamento({ params }: { params: Promise<{
         }}
         meta={`${num(site.totalEventos)} evento(s) recebido(s) desde o cadastro`}
         filtros={<SeletorSiteRota sites={sites} atual={site.id} aba="rastreamento" />}
+        // Só enquanto se espera o primeiro evento: é o momento em que alguém
+        // está com o site aberto na outra aba, olhando para cá. Depois disso,
+        // atualização é gesto de quem quer, não movimento sob o cursor.
+        atualizarACada={site.totalEventos === 0 ? 15 : undefined}
       />
 
       <div className="abas">

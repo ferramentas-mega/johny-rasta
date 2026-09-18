@@ -122,6 +122,26 @@ test('recarregar e abrir a rota diretamente preservam o mesmo estado', async ({ 
   await expect(page.getByRole('button', { name: '30 dias' })).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('atualizar busca os dados de novo sem recarregar a página, e diz de quando eles são', async ({ page }) => {
+  await page.goto('/visao-geral');
+  const carimbo = page.getByTestId('dados-de');
+  await expect(carimbo).toHaveText(/DADOS DE \d\d:\d\d:\d\d/);
+  const antes = await carimbo.innerText();
+
+  // Marca a janela: um recarregamento inteiro a apagaria. É a diferença entre
+  // `router.refresh()` e `location.reload()`, e o que o teste protege.
+  await page.evaluate(() => { (window as unknown as { __marca: number }).__marca = 1; });
+
+  // Um segundo de folga para o carimbo (com segundos) ter como avançar.
+  await page.waitForTimeout(1100);
+  await page.getByRole('button', { name: 'Atualizar os dados desta tela' }).click();
+  await expect(carimbo).not.toHaveText(antes);
+  await expect(carimbo).toHaveText(/DADOS DE \d\d:\d\d:\d\d/);
+
+  expect(await page.evaluate(() => (window as unknown as { __marca?: number }).__marca)).toBe(1);
+  await expect(page).toHaveURL(/visao-geral/);
+});
+
 test('voltar e avançar no navegador funcionam', async ({ page }) => {
   await page.goto('/visao-geral');
   await page.getByRole('link', { name: /^Clientes/ }).click();
