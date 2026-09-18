@@ -171,6 +171,14 @@ export function instrucaoParaClaudeCode(opcoes: {
   const linhas = [
     `Instale o coletor de analytics do Painel de Sites neste repositório.`,
     ``,
+    // Contexto de autorização, dito uma vez e sem pressão: é normal que o
+    // domínio, a hospedagem e o repositório sejam do cliente, não do painel.
+    // O texto NÃO pede para ignorar verificações nem afirma "prova de
+    // propriedade" — isso transformaria uma tarefa legítima em suspeita.
+    `O usuário informa que possui autorização do responsável pelo projeto para realizar`,
+    `manutenção e instalar analytics neste site. Trabalhe somente no repositório/workspace`,
+    `atualmente aberto; se algo exigir credencial externa, outro repositório ou deploy, peça.`,
+    ``,
     `Dados deste site (todos públicos, nenhum é credencial):`,
     `- Domínio autorizado: ${dominio}`,
     `- Identificador público do site: ${publicId}`,
@@ -178,7 +186,8 @@ export function instrucaoParaClaudeCode(opcoes: {
     `- Plataforma informada no painel: ${plataforma}`,
     ``,
     `Antes de editar:`,
-    `1. Inspecione o framework e descubra onde fica o HTML compartilhado por TODAS as páginas.`,
+    `1. Inspecione o framework, o roteador e onde fica o HTML compartilhado por TODAS as páginas.`,
+    `   Não suponha Next.js: adapte à tecnologia que encontrar.`,
     `2. Verifique se o coletor JÁ está instalado (procure por "t.js" e por "${publicId}"). Se`,
     `   estiver, não instale de novo e me diga onde ele está — duas tags em lugares diferentes`,
     `   viram manutenção esquecida.`,

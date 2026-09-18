@@ -504,6 +504,31 @@ a tela inteira fora do ar — justamente a tela onde se corrigiria o valor.
 
 ---
 
+## Configuração do Claude Code
+
+Este arquivo guarda o que TODA sessão precisa. O conhecimento por assunto está em `.claude/`:
+
+- **Skills** (`.claude/skills/`): `product-architecture` (hierarquia Cliente → Site → Análise →
+  Sinal → Acompanhamento → Avisos), `client-portfolio`, `ui-ux-system` (+ `design-matrix`, que
+  tem o verificador), `site-analysis-workflow`, `tracking-platform`, `notifications-refresh`,
+  `security-permissions` (+ `isolamento-entre-contas`), `data-migrations`, `qa-product-review`,
+  `dashboards-e-relatorios`, `paginas-mensuraveis`.
+- **Rules** (`.claude/rules/`): lembretes curtos que entram sozinhos ao editar migrações, o
+  coletor e a interface.
+- **Agentes** (`.claude/agents/`): `architecture-reviewer`, `tracking-auditor`,
+  `security-reviewer`, `qa-reviewer` — só leem e devolvem achados. Use para revisão, não para
+  editar um arquivo.
+- **Hooks** (`.claude/settings.json`): `guarda-git` bloqueia `git checkout <arquivo>`,
+  `git restore`, push forçado, `reset --hard` e `clean` (é a armadilha do `git checkout` acima,
+  virada em mecanismo); `pos-edicao` roda `npm run design` e o eslint do arquivo depois de cada
+  edição. Nenhum hook faz commit, deploy ou build.
+
+Comandos de verificação, na ordem: `npm run design && npm run typecheck && npm run lint`,
+`npm test`, `npm run build && E2E_PROD=1 npx playwright test`. Nada é declarado concluído sem
+rodar.
+
+---
+
 ## Convenções
 
 - Código, comentários, mensagens de interface e nomes de teste em **português**.
