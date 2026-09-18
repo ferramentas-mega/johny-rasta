@@ -3,7 +3,10 @@ import { contextoPainel, type ParametrosBusca } from '@/server/contexto';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel } from '@/components/Cartoes';
 import { CartaoSite } from '@/components/CartaoSite';
+import { Avatar } from '@/components/Avatar';
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
+import { agruparSitesPorCliente } from '@/lib/clientes';
+import { estadoDaConfiguracao } from '@/lib/recursos';
 import { FormularioSite } from './FormularioSite';
 
 export const dynamic = 'force-dynamic';
@@ -23,6 +26,15 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
     ctx.usuario.accountId,
     ctx.sites.map((s) => s.id),
   );
+
+  // A unidade de trabalho é o CLIENTE. A grade plana respondia "quais sites
+  // existem" e escondia "como está o cliente X" numa carteira de vinte sites.
+  // Cada grupo diz quantos sites ainda pedem ação — derivado do resumo, nunca
+  // guardado.
+  const grupos = agruparSitesPorCliente(ctx.sites).map((g) => ({
+    ...g,
+    pendentes: g.sites.filter((s) => estadoDaConfiguracao(resumos.get(s.id)) !== 'completa').length,
+  }));
 
   return (
     <>
@@ -75,9 +87,31 @@ export default async function PaginaSites({ searchParams }: { searchParams: Prom
                 : 'Nenhum site cadastrado para este filtro.'}
             </p>
           ) : (
-            <div className="grade-sites">
-              {ctx.sites.map((site) => (
-                <CartaoSite key={site.id} site={site} resumo={resumos.get(site.id)} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--esp-7)' }}>
+              {grupos.map((g) => (
+                <section key={g.clienteId} aria-labelledby={`cliente-${g.clienteId}`}>
+                  <header className="grupo-cliente-topo">
+                    <Avatar nome={g.clienteNome} tamanho={28} />
+                    <h3 id={`cliente-${g.clienteId}`} className="grupo-cliente-nome">
+                      {/* O nome leva ao PAINEL do cliente, não ao filtro desta
+                          tela: quem clica no cliente quer o cliente inteiro —
+                          números, problemas, sites — e não a mesma grade com
+                          menos cartões. O filtro continua no cartão. */}
+                      <Link href={`/clientes/${g.clienteId}`}>{g.clienteNome}</Link>
+                    </h3>
+                    <span className="mono grupo-cliente-meta">
+                      {g.sites.length} site(s)
+                      {g.pendentes > 0 && (
+                        <span style={{ color: 'var(--warn-tx)' }}> · {g.pendentes} pede(m) ação</span>
+                      )}
+                    </span>
+                  </header>
+                  <div className="grade-sites">
+                    {g.sites.map((site) => (
+                      <CartaoSite key={site.id} site={site} resumo={resumos.get(site.id)} />
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           )}

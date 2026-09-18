@@ -6,11 +6,13 @@ import { listarSites } from '@/server/services/sites';
 import { getKpis, resolvePeriod } from '@/server/metrics/queries';
 import { ESTADO_LABEL, ESTADO_TOM } from '@/server/services/sites';
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
-import { num, pct } from '@/lib/formato';
+import { listarOtimizacoes, STATUS_LABEL, TIPO_LABEL, type Otimizacao } from '@/server/qualidade/otimizacoes';
+import { num, pct, dataHora } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso, CartaoNumero } from '@/components/Cartoes';
 import { EstadoVazio } from '@/components/EstadoVazio';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
+import { PaginaDoSinal, SiteInteiro } from '@/components/PaginaDoSinal';
 import { SeletorPeriodo } from '@/components/filtros';
 import { parsePeriodParams, type PeriodKey } from '@/lib/periodo';
 
@@ -82,6 +84,17 @@ export default async function PaginaCliente({
     return saida;
   });
 
+  /**
+   * Problemas do cliente: os MESMOS sinais da tela de Otimizações, recortados
+   * pelos sites dele. A definição é uma só (`SINAIS_SQL`); aqui só se filtra.
+   * A consulta varre a conta inteira e o filtro fica em memória de propósito:
+   * parametrizar o SQL por cliente criaria uma segunda versão da definição.
+   */
+  const idsDoCliente = new Set(sites.map((s) => s.id));
+  const problemas: Otimizacao[] = (
+    await withAccount(usuario.accountId, (db) => listarOtimizacoes(db))
+  ).filter((o) => idsDoCliente.has(o.siteId));
+
   const soma = (f: (l: LinhaSite) => number | null) => linhas.reduce((t, l) => t + (f(l) ?? 0), 0);
   const sessoes = soma((l) => l.sessoes);
   const convertidas = soma((l) => l.convertidas);
@@ -126,11 +139,43 @@ export default async function PaginaCliente({
       total: () => (taxa === null ? 'Sem base' : pct(taxa)) },
   ];
 
-  const cartoes = [
+  const TOM_TIPO: Record<string, 'ok' | 'warn' | 'soft'> = {
+    tecnico: 'warn', comercial: 'warn', coleta: 'warn', atualizacao: 'soft',
+  };
+  const colunasProblemas: Coluna<Otimizacao>[] = [
+    {
+      chave: 'site', titulo: 'Site',
+      render: (o) => <Link href={`/sites/${o.siteId}/qualidade`}>{o.site}</Link>,
+    },
+    {
+      chave: 'pagina', titulo: 'Página',
+      render: (o) => (o.url ? <PaginaDoSinal url={o.url} dispositivo={o.dispositivo} /> : <SiteInteiro />),
+    },
+    { chave: 'tipo', titulo: 'Tipo', render: (o) => <Etiqueta texto={TIPO_LABEL[o.tipo]} tom={TOM_TIPO[o.tipo] ?? 'soft'} /> },
+    { chave: 'problema', titulo: 'Problema', quebraLinha: true, render: (o) => o.titulo },
+    {
+      chave: 'situacao', titulo: 'Situação',
+      render: (o) => (
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+          <Etiqueta texto={STATUS_LABEL[o.status] ?? o.status} tom={o.status === 'pendente' ? 'warn' : 'soft'} />
+          <span style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>desde {dataHora(o.detectadoEm)}</span>
+        </span>
+      ),
+    },
+  ];
+
+  const cartoes: { rotulo: string; valor: string; nota: string; tom?: 'neutro' | 'atencao' }[] = [
     { rotulo: 'Sites do cliente', valor: num(sites.length), nota: `${linhas.filter((l) => l.sessoes !== null).length} com coleta` },
     { rotulo: 'Sessões', valor: num(sessoes), nota: 'somadas entre os sites' },
     { rotulo: 'Cliques no WhatsApp', valor: num(soma((l) => l.whatsapp)), nota: 'clique não é conversa iniciada' },
     { rotulo: 'Leads', valor: num(soma((l) => l.leads)), nota: 'contatos registrados' },
+    // Zero aqui é afirmação: os sinais foram derivados e nenhum casou com um
+    // site deste cliente. É diferente de "não olhamos".
+    {
+      rotulo: 'Problemas em aberto', valor: num(problemas.length),
+      nota: problemas.length === 0 ? 'nenhum sinal derivado para os sites deste cliente' : 'sinais derivados, não declarados',
+      tom: problemas.length > 0 ? 'atencao' : 'neutro',
+    },
   ];
 
   return (
@@ -149,9 +194,33 @@ export default async function PaginaCliente({
 
         <div className="grade-cartoes">
           {cartoes.map((c) => (
-            <CartaoNumero key={c.rotulo} rotulo={c.rotulo} valor={c.valor} nota={c.nota} />
+            <CartaoNumero key={c.rotulo} rotulo={c.rotulo} valor={c.valor} nota={c.nota} tom={c.tom} />
           ))}
         </div>
+
+        <Painel
+          titulo="Problemas em aberto"
+          subtitulo="Os mesmos sinais da tela de Otimizações, só os deste cliente"
+          acoes={
+            problemas.length > 0 ? (
+              <Link href="/otimizacoes" style={{ fontSize: 'var(--tipo-apoio)' }}>
+                Acompanhar em Otimizações →
+              </Link>
+            ) : undefined
+          }
+        >
+          <Tabela
+            colunas={colunasProblemas}
+            linhas={problemas}
+            vazio={
+              <EstadoVazio
+                icone="tendencia"
+                titulo="Nenhum problema derivado para este cliente"
+                explicacao="Um sinal aparece aqui quando uma medição o sustenta: nota técnica baixa numa URL monitorada, análise vencida ou coleta interrompida num site que já coletava."
+              />
+            }
+          />
+        </Painel>
 
         <Painel titulo="Sites" subtitulo="Os mesmos números que a tela de cada site mostra">
           <Tabela

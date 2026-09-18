@@ -48,6 +48,41 @@ test('a busca filtra, fica na URL e sobrevive a voltar e avançar', async ({ pag
   await expect(page.locator('table tbody tr')).toHaveCount(depois);
 });
 
+test('a aba Sites agrupa por cliente, e o nome do grupo abre o painel do cliente', async ({ page }) => {
+  await page.goto('/sites');
+
+  // Cada grupo é uma seção nomeada pelo cliente; os dois clientes da massa
+  // aparecem, cada um com os próprios cartões dentro.
+  const grupoUm = page.getByRole('region', { name: 'Cliente Um' });
+  const grupoDois = page.getByRole('region', { name: 'Cliente Dois' });
+  await expect(grupoUm).toBeVisible();
+  await expect(grupoDois).toBeVisible();
+  expect(await grupoUm.locator('.cartao-site').count()).toBeGreaterThan(0);
+  expect(await grupoDois.locator('.cartao-site').count()).toBeGreaterThan(0);
+
+  // Nenhum cartão fora do grupo do seu dono.
+  for (const cartao of await grupoUm.locator('.cartao-site').all()) {
+    await expect(cartao.locator('a[href^="/sites?cliente="]')).toHaveText('Cliente Um');
+  }
+
+  await grupoUm.getByRole('link', { name: 'Cliente Um' }).first().click();
+  await page.waitForURL(/\/clientes\//);
+  await expect(page.locator('h1')).toHaveText('Cliente Um');
+});
+
+test('na aba Clientes, o nome do cliente leva ao painel dele, e o painel lista os problemas', async ({ page }) => {
+  await page.goto('/clientes');
+  await page.getByRole('link', { name: 'Cliente Um', exact: true }).click();
+  await page.waitForURL(/\/clientes\//);
+  await expect(page.locator('h1')).toHaveText('Cliente Um');
+
+  // O painel de problemas existe sempre — vazio com explicação, ou com a
+  // tabela dos sinais. O que ele nunca mostra é um número sem origem.
+  await expect(page.getByRole('heading', { name: 'Problemas em aberto', level: 2 })).toBeVisible();
+  const cartao = page.getByText('Problemas em aberto', { exact: true }).first();
+  await expect(cartao).toBeVisible();
+});
+
 test('abrir um cliente mostra os sites dele, e só os dele', async ({ page }) => {
   await page.goto('/visao-geral');
   const nome = (await page.locator('table tbody tr a').first().innerText()).trim();

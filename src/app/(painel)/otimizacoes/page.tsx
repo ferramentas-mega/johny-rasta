@@ -4,9 +4,7 @@ import { exigirSessao } from '@/server/contexto';
 import {
   listarOtimizacoes,
   resolvidasPorVerificacao,
-  DISPOSITIVO_LABEL,
   TIPO_LABEL,
-  type Dispositivo,
   type Otimizacao,
   type ResolvidaPorVerificacao,
 } from '@/server/qualidade/otimizacoes';
@@ -15,6 +13,7 @@ import { dataHora, num } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso } from '@/components/Cartoes';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
+import { PaginaDoSinal, SiteInteiro } from '@/components/PaginaDoSinal';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,25 +26,6 @@ const DIAS_DE_RESOLVIDAS = 30;
 
 /** Teto da lista de resolvidas. O total vem junto, e a tela diz quando corta. */
 const RESOLVIDAS_NA_TELA = 20;
-
-function Pagina({ url, dispositivo }: { url: string; dispositivo: Dispositivo | null }) {
-  return (
-    <>
-      <span className="mono" style={{ fontSize: 'var(--tipo-legenda)' }}>
-        {url.replace(/^https?:\/\/[^/]+/, '') || '/'}
-      </span>
-      {dispositivo && (
-        <span style={{ display: 'block', fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)' }}>
-          no {DISPOSITIVO_LABEL[dispositivo]}
-        </span>
-      )}
-    </>
-  );
-}
-
-function SiteInteiro() {
-  return <span style={{ color: 'var(--tx3)', fontSize: 'var(--tipo-legenda)' }}>site inteiro</span>;
-}
 
 export default async function PaginaOtimizacoes({
   searchParams,
@@ -85,7 +65,7 @@ export default async function PaginaOtimizacoes({
       // A nota técnica pertence a uma URL E A UM DISPOSITIVO: sem o dispositivo
       // à vista, duas linhas da mesma página pareceriam a mesma pendência
       // repetida.
-      render: (o) => (o.url ? <Pagina url={o.url} dispositivo={o.dispositivo} /> : <SiteInteiro />),
+      render: (o) => (o.url ? <PaginaDoSinal url={o.url} dispositivo={o.dispositivo} /> : <SiteInteiro />),
     },
     { chave: 'tipo', titulo: 'Tipo', render: (o) => <Etiqueta texto={TIPO_LABEL[o.tipo]} tom={TOM[o.tipo] ?? 'soft'} /> },
     { chave: 'problema', titulo: 'Problema', render: (o) => o.titulo },
@@ -99,7 +79,7 @@ export default async function PaginaOtimizacoes({
     { chave: 'site', titulo: 'Site', render: (r) => r.site },
     {
       chave: 'pagina', titulo: 'Página',
-      render: (r) => (r.url ? <Pagina url={r.url} dispositivo={r.dispositivo} /> : <SiteInteiro />),
+      render: (r) => (r.url ? <PaginaDoSinal url={r.url} dispositivo={r.dispositivo} /> : <SiteInteiro />),
     },
     { chave: 'problema', titulo: 'Problema', render: (r) => r.titulo },
     {

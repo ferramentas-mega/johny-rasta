@@ -1397,6 +1397,40 @@ select option {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 
+/* Grupo por cliente. O cabeçalho é uma linha só — avatar, nome, contagem —
+   porque o que importa está nos cartões; o grupo só diz DE QUEM eles são. */
+.grupo-cliente-topo {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  margin-bottom: var(--esp-3);
+  padding-bottom: var(--esp-2);
+  border-bottom: 1px solid var(--bd);
+}
+.grupo-cliente-nome {
+  font-size: var(--tipo-secao);
+  font-weight: var(--peso-forte);
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.grupo-cliente-nome a {
+  color: var(--tx);
+  text-decoration: none;
+}
+.grupo-cliente-nome a:hover {
+  color: var(--gold-tx);
+}
+.grupo-cliente-meta {
+  margin-left: auto;
+  flex: none;
+  font-size: var(--tipo-legenda);
+  letter-spacing: var(--trilha-media);
+  color: var(--tx3);
+}
+
 .cartao-site {
   display: flex;
   flex-direction: column;

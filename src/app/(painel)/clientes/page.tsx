@@ -55,7 +55,10 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
     { chave: 'nome', titulo: 'Cliente',
       render: (l) => (
         <span style={{ display: 'inline-flex', gap: 10, alignItems: 'baseline' }}>
-          {l.nome}
+          {/* O nome leva ao painel do cliente. Antes só "editar" era link, e a
+              única porta para o painel ficava na Carteira da Visão geral — a
+              aba chamada Clientes não levava ao cliente. */}
+          <Link href={`/clientes/${l.id}?periodo=${ctx.periodoInput.key}`}>{l.nome}</Link>
           <Link href={`/clientes?editar=${l.id}`} style={{ fontSize: 'var(--tipo-legenda)' }}>
             editar
           </Link>
