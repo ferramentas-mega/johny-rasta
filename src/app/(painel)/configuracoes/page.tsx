@@ -6,6 +6,7 @@ import { Cabecalho } from '@/components/Cabecalho';
 import { Painel, Aviso } from '@/components/Cartoes';
 import { Tabela, Etiqueta, type Coluna } from '@/components/Tabela';
 import { METRICS } from '@/server/metrics/definitions';
+import { AtivarNotificacoes } from '@/components/AtivarNotificacoes';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,6 +115,13 @@ export default async function PaginaConfiguracoes({ searchParams }: { searchPara
       <div className="pagina">
         <Painel titulo="Situação da conta" subtitulo="Cada linha é consultada no banco, não escrita à mão">
           <Tabela colunas={colunas} linhas={linhas} />
+        </Painel>
+
+        <Painel
+          titulo="Notificações neste dispositivo"
+          subtitulo="Aviso de gravidade alta mesmo com o painel fechado — só depois do seu clique, e só neste navegador"
+        >
+          <AtivarNotificacoes />
         </Painel>
 
         <Painel

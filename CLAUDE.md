@@ -549,13 +549,17 @@ rodar.
   `integration_sync_runs` existem para que adicionar um provedor depois seja trabalho aditivo.
 - **Portal do cliente** — o modelo de dados e as políticas suportam, mas não há telas nem login
   para clientes finais. A plataforma é interna.
-- **Exportação de relatórios** — não implementada.
+- **Exportação de relatórios em arquivo** — não há PDF gerado no servidor. O relatório do cliente
+  (`/clientes/[id]/relatorio`) é uma tela com CSS de impressão: o PDF é o navegador imprimindo
+  exatamente o que se vê, das mesmas funções das outras telas.
 - **Conector para serviço externo de formulários** — não existe. RD Station, HubSpot e afins
   precisam entregar o envio ao endpoint de formulários do painel. A tela de configuração diz isso em
   vez de prometer integração automática.
-- **Service worker** — o painel tem manifesto e ícones para instalação, mas nenhum service worker. Um
-  que guarde dados serviria número em cache, e isso mente sobre quando o número foi medido. Se o
-  Chrome exigir um para oferecer a instalação, que seja de repasse puro.
+- **Service worker que guarde dado** — não existe e não deve existir: serviria número em cache, e
+  isso mente sobre quando o número foi medido. O `public/sw.js` que existe é de **repasse puro**
+  (recebe push e abre a tela; sem `fetch`, sem `caches`), e há teste que falha se ganhar cache.
+  O Web Push exige `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e `VAPID_SUBJECT` no servidor
+  (`npx web-push generate-vapid-keys`); sem elas a tela diz "não configurado" em vez de prometer.
 - **Recuperação de senha** — não implementada. Usuários são criados pelo seed ou via SQL. É por isso
   que a tela de login **não** tem "esqueci minha senha": link para rota inexistente é um 404
   fantasiado de funcionalidade.

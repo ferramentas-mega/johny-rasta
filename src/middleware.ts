@@ -89,6 +89,10 @@ export function middleware(request: NextRequest) {
     // As fontes são auto-hospedadas — nenhum domínio externo.
     `font-src 'self'`,
     `connect-src 'self'`,
+    // O service worker de push (`/sw.js`). Sem esta diretiva ele cairia em
+    // `script-src`, cujo `strict-dynamic` ignora `'self'` — e o registro
+    // falharia em silêncio.
+    `worker-src 'self'`,
     // Nada de Flash, applet ou plugin.
     `object-src 'none'`,
     // Impede que um `<base>` injetado reescreva o destino de todo link relativo.

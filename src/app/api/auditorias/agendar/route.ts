@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withAccount, withoutAccount } from '@/server/db';
 import { segredoConfere } from '@/server/segredos';
 import { fecharPorVerificacao } from '@/server/qualidade/otimizacoes';
+import { notificarAvisosCriticos } from '@/server/services/push';
 
 /**
  * Enfileira as auditorias vencidas. Chamado uma vez por dia pelo cron.
@@ -50,6 +51,23 @@ export async function GET(request: Request) {
     db.query<{ conta: string }>('select app.contas_com_acompanhamento_aberto() as conta'),
   )) {
     fechadas += await withAccount(conta, (db) => fecharPorVerificacao(db, null, 'varredura'));
+  }
+
+  /**
+   * Push diário: para cada conta com alguém inscrito, avisa o que é de
+   * gravidade alta e ainda não foi avisado. Deduplicação por mudança de
+   * estado (`push_enviados`); sem chave VAPID, é um no-op que devolve zero.
+   * Falha aqui não pode derrubar o agendamento — catch próprio, só registra.
+   */
+  let notificacoes = 0;
+  try {
+    for (const { conta } of await withoutAccount((db) =>
+      db.query<{ conta: string }>('select app.contas_com_push() as conta'),
+    )) {
+      notificacoes += await withAccount(conta, (db) => notificarAvisosCriticos(db, conta));
+    }
+  } catch (erro) {
+    console.error('[push] falha na varredura diária', String(erro).slice(0, 160));
   }
 
 
@@ -107,5 +125,5 @@ export async function GET(request: Request) {
     enfileiradas += linhas.length;
   }
 
-  return NextResponse.json({ enfileiradas, fechadas, contas: contas.length });
+  return NextResponse.json({ enfileiradas, fechadas, notificacoes, contas: contas.length });
 }

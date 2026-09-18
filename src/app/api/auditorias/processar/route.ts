@@ -7,6 +7,7 @@ import { analisar, IntegracaoNaoConfigurada, FalhaNaAnalise } from '@/server/qua
 import { reivindicarProximo, registrarSucesso, registrarFalha, salvarSnapshotCrux } from '@/server/qualidade/auditoria';
 import { consultarPaginaOuOrigem, CruxNaoConfigurado } from '@/server/qualidade/crux';
 import { fecharPorVerificacao } from '@/server/qualidade/otimizacoes';
+import { notificarAvisosCriticos } from '@/server/services/push';
 
 /**
  * Processa UMA auditoria da fila.
@@ -146,6 +147,15 @@ async function processar(cron: boolean, accountId?: string) {
       acompanhamentosFechados = await executar((db) => fecharPorVerificacao(db, job.site_id));
     } catch (erro) {
       console.error('[auditoria] falha ao fechar acompanhamento de', job.site_id, String(erro).slice(0, 160));
+    }
+
+    // Uma medição nova pode ter criado (ou tirado) um aviso de gravidade
+    // alta: é a mudança de estado que dispara o push. Mesma forma do
+    // fechamento acima — fora da transação da medição, catch só registra.
+    try {
+      await executar((db) => notificarAvisosCriticos(db, contaDoJob!));
+    } catch (erro) {
+      console.error('[push] falha ao notificar', String(erro).slice(0, 160));
     }
 
     // A experiência real vem junto da auditoria, e não a cada carregamento da

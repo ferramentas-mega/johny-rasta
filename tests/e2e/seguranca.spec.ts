@@ -40,6 +40,46 @@ test('a resposta traz os cabeçalhos que não dependem de política', async ({ p
   expect(cabecalhos['permissions-policy']).toContain('camera=()');
 });
 
+test('push: a API exige sessão, o opt-in aparece com contexto e não pede permissão ao carregar', async ({ page, request }) => {
+  // Sem sessão: nada, em nenhum método.
+  expect((await request.get('/api/push', { failOnStatusCode: false })).status()).toBe(401);
+  expect((await request.post('/api/push', { data: { endpoint: 'https://x/y', keys: { p256dh: 'aaaaaaaaaaaa', auth: 'bbbbbbbbbbbb' } }, failOnStatusCode: false })).status()).toBe(401);
+
+  // Vigia: pedir permissão no carregamento é o que este teste proíbe.
+  await page.addInitScript(() => {
+    (window as unknown as { __pediu: number }).__pediu = 0;
+    if ('Notification' in window) {
+      const original = Notification.requestPermission.bind(Notification);
+      Notification.requestPermission = (async (...args: unknown[]) => {
+        (window as unknown as { __pediu: number }).__pediu += 1;
+        return original(...(args as []));
+      }) as typeof Notification.requestPermission;
+    }
+  });
+  await entrar(page);
+  await page.goto('/configuracoes');
+  const bloco = page.getByTestId('ativar-notificacoes');
+  await expect(bloco).toContainText('mesmo com o painel fechado');
+  // Ou o botão de ativar (servidor configurado) ou a explicação honesta de que
+  // não está — nunca um botão que promete sem ter chave.
+  await expect(bloco.getByRole('button', { name: 'Ativar notificações' }).or(bloco.getByRole('status'))).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __pediu: number }).__pediu)).toBe(0);
+
+  // Com sessão, a API responde e nunca entrega chave privada.
+  const r = await page.request.get('/api/push');
+  expect(r.status()).toBe(200);
+  const corpo = await r.json();
+  expect(JSON.stringify(corpo)).not.toMatch(/private|privada/i);
+  expect(Array.isArray(corpo.dispositivos)).toBe(true);
+
+  // O service worker é servido e é de repasse puro: nada de cache nem fetch.
+  const sw = await page.request.get('/sw.js');
+  expect(sw.status()).toBe(200);
+  const texto = await sw.text();
+  expect(texto).toContain("addEventListener('push'");
+  expect(texto).not.toMatch(/caches\.|addEventListener\('fetch'/);
+});
+
 test('o endpoint de coleta não recebe política de página', async ({ request }) => {
   // `/api/*` é consumido por máquina. Uma CSP ali não protege ninguém e ainda
   // apareceria como configuração a manter.

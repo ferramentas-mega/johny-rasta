@@ -22,6 +22,11 @@ Investigue antes de alterar. As entidades já existem; o trabalho quase sempre �
 | Acompanhamento | `optimizations` (o que o operador marcou) | chave = 5 colunas de `ChaveDoSinal` |
 | Nova verificação | `enfileirarReanalise`, `fecharPorVerificacao` | fechar exige FATO POSITIVO |
 | Avisos | `src/lib/avisos.ts` (derivado), sino no cabeçalho, `/avisos` | sem tabela, sem "lido" |
+| Saúde | `src/lib/saude.ts` (derivada: sinais + configuração + rastreamento) | site → cliente (a pior manda); `sem_medicao` ≠ saudável |
+| Tarefa | `tasks`, `src/server/services/tarefas.ts`, em `/otimizacoes` e no cliente | decisão humana; concluir oferece reanálise, não fecha o problema |
+| Histórico | `src/server/services/historico.ts` (union all derivado) | no cliente e na qualidade do site; nada gravado à mão |
+| Relatório | `/clientes/[id]/relatorio` (mesmas funções das telas) | PDF = imprimir a tela |
+| Push | `src/server/services/push.ts`, `/api/push`, `public/sw.js` | opt-in; dedupe por mudança de estado |
 
 ## Regras
 
@@ -36,5 +41,6 @@ Investigue antes de alterar. As entidades já existem; o trabalho quase sempre �
 
 ## O que ainda não existe (não finja que existe)
 
-Tarefas como entidade própria, histórico de eventos gravado, relatório exportável, Web Push,
-workspace de página com abas próprias. Estão registrados em "O que ficou de fora" no CLAUDE.md.
+Workspace de página com abas próprias (a página vive nas abas do site), GitHub App para instalar
+por PR, teste ao vivo de eventos em tempo real (hoje: auto-atualização a cada 15 s na espera),
+detecção heurística de tecnologia pela URL (o painel não busca a página do cliente — SSRF).
