@@ -22,12 +22,14 @@
     "design": "node .claude/skills/design-matrix/scripts/conferir-tokens.mjs"
   },
   "dependencies": {
+    "@types/web-push": "^3.6.4",
     "jose": "^6.2.12",
     "next": "^15.5.25",
     "pg": "^8.23.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "server-only": "^0.0.1",
+    "web-push": "^3.6.7",
     "zod": "^4.6.5"
   },
   "devDependencies": {

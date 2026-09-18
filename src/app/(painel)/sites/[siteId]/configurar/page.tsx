@@ -253,6 +253,25 @@ export default async function PaginaConfigurar({
                 chegue ao servidor.
               </p>
 
+              {config.plataforma === 'wordpress' && (
+                // O plugin é o caminho que sobrevive à atualização do tema. Vem
+                // com o Site ID já preenchido; o operador só envia o arquivo em
+                // Plugins › Adicionar novo › Enviar plugin e ativa.
+                <div className="cartao" style={{ padding: '12px 14px' }}>
+                  <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx)' }}>
+                    <strong>Prefere um plugin?</strong>{' '}
+                    <a href={`/api/wordpress/${site.publicId}`} download>
+                      Baixar o plugin deste site (.php)
+                    </a>
+                  </p>
+                  <p style={{ fontSize: 'var(--tipo-legenda)', color: 'var(--tx3)', lineHeight: 1.6, marginTop: 6 }}>
+                    Compacte o arquivo em .zip, envie em Plugins › Adicionar novo › Enviar plugin, ative, e confira em
+                    Configurações › Painel de Sites. Ele insere a tag uma vez, só no site público (nunca no wp-admin),
+                    e não edita o tema. Também não confirma nada — a verificação continua sendo a etapa seguinte.
+                  </p>
+                </div>
+              )}
+
               {/*
                 Instalação assistida (§5).
                 Não é "conectar o GitHub": não há OAuth aqui, e fingir que há

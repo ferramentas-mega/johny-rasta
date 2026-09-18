@@ -28,11 +28,11 @@ export function instrucaoDaPlataforma(plataforma: Plataforma): Instrucao {
   switch (plataforma) {
     case 'wordpress':
       return {
-        onde: 'No tema, dentro do <head> — ou por um plugin de inserção de código.',
+        onde: 'Pelo plugin gerado abaixo (recomendado), por um plugin de inserção de código, ou no tema, dentro do <head>.',
         passos: [
-          'Abra Aparência › Editor de temas, ou instale um plugin do tipo "inserir cabeçalho e rodapé".',
-          'Cole o código na área de CABEÇALHO do site inteiro, não de uma página específica.',
-          'Se o tema for próprio, o lugar é o header.php, antes de </head>.',
+          'Recomendado: baixe o plugin deste site (abaixo), envie em Plugins › Adicionar novo › Enviar plugin e ative. Ele já vem com o Site ID.',
+          'Alternativa: abra Aparência › Editor de temas, ou instale um plugin do tipo "inserir cabeçalho e rodapé", e cole o código na área de CABEÇALHO do site inteiro.',
+          'Se o tema for próprio, o lugar é o header.php, antes de </head> — mas a alteração se perde na atualização do tema.',
         ],
         publicar: 'Salve e limpe o cache do site e do plugin de cache, se houver. Cache antigo serve HTML sem o script.',
         observacao:

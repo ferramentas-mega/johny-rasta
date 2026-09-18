@@ -169,6 +169,33 @@ test('a instrução acompanha a plataforma: Tag Manager recebe o passo do contê
   await expect(page.getByText(/instalar aqui E no tema é instalar duas vezes/)).toBeVisible();
 });
 
+test('WordPress oferece o plugin gerado, que só a conta dona baixa', async ({ page, request }) => {
+  await entrar(page);
+  const { siteId } = await cadastrarSite(page, 'wp');
+  await page.goto(`/sites/${siteId}/configurar`);
+  await page.selectOption('select[name=plataforma]', 'wordpress');
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await expect(page.locator('h2').first()).toHaveText('Escolher o que acompanhar');
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=instalacao`);
+  const link = page.getByRole('link', { name: 'Baixar o plugin deste site (.php)' });
+  await expect(link).toBeVisible();
+  const href = (await link.getAttribute('href'))!;
+  const publicId = href.split('/').pop()!;
+
+  // Com a sessão: o arquivo vem com o Site ID deste site, e sem segredo.
+  const ok = await page.request.get(href);
+  expect(ok.status()).toBe(200);
+  expect(ok.headers()['content-disposition']).toContain('attachment');
+  const php = await ok.text();
+  expect(php).toContain(publicId);
+  expect(php).toContain('Plugin Name:');
+
+  // Sem sessão: nada — a porta de download é do painel.
+  const anonimo = await request.get(href, { failOnStatusCode: false });
+  expect(anonimo.status()).toBe(401);
+});
+
 test('o snippet traz o identificador do site certo, e copiar não conclui a instalação', async ({ page }) => {
   await entrar(page);
   const a = await cadastrarSite(page, 'snipA');
