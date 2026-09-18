@@ -1,8 +1,9 @@
 'use client';
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { PERIOD_KEYS, type PeriodKey } from '@/lib/periodo';
+import { FILTROS_SAUDE, type FiltroSaude as FiltroSaudeValor, type Saude } from '@/lib/saude';
 
 /**
  * Filtros de site e período.
@@ -67,6 +68,85 @@ export function SeletorPeriodo({ atual }: { atual: PeriodKey }) {
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Filtro por saúde (Sites). Mesma mecânica do período: o valor vai para a URL,
+ * e "todos" é a ausência do parâmetro — link sem filtro continua limpo.
+ */
+export function FiltroSaude({
+  atual,
+  contagens,
+}: {
+  atual: FiltroSaudeValor;
+  contagens: Record<Saude, number>;
+}) {
+  const { atualizar, pendente } = useAtualizarBusca();
+  const rotulo: Record<FiltroSaudeValor, string> = {
+    todos: 'Todos',
+    critico: 'Críticos',
+    atencao: 'Atenção',
+    saudavel: 'Saudáveis',
+    sem_medicao: 'Sem medição',
+  };
+
+  return (
+    <div role="group" aria-label="Saúde" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', opacity: pendente ? 0.6 : 1 }}>
+      {FILTROS_SAUDE.map((chave) => {
+        const on = chave === atual;
+        const n = chave === 'todos' ? null : contagens[chave];
+        return (
+          <button
+            key={chave}
+            type="button"
+            aria-pressed={on}
+            onClick={() => atualizar({ saude: chave === 'todos' ? null : chave })}
+            style={{
+              cursor: 'pointer',
+              fontSize: 'var(--tipo-apoio)',
+              padding: '8px 12px',
+              borderRadius: 'var(--raio-p)',
+              background: on ? 'var(--gold)' : 'var(--elev)',
+              color: on ? 'var(--on-gold)' : 'var(--tx2)',
+              border: `1px solid ${on ? 'var(--gold)' : 'var(--bd)'}`,
+              fontWeight: on ? 600 : 400,
+            }}
+          >
+            {rotulo[chave]}
+            {n !== null && <span className="mono" style={{ marginLeft: 6, opacity: 0.8 }}>{n}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Busca textual genérica: o termo vai para `?q=` da rota atual. A busca da
+ * Carteira tem o próprio componente porque nasceu antes; esta serve às demais.
+ */
+export function Busca({ valor, rotulo, placeholder }: { valor: string; rotulo: string; placeholder: string }) {
+  const { atualizar } = useAtualizarBusca();
+  const [texto, setTexto] = useState(valor);
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); atualizar({ q: texto.trim() || null }); }}
+      style={{ display: 'flex', gap: 6 }}
+    >
+      <input
+        type="search"
+        name="q"
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        placeholder={placeholder}
+        aria-label={rotulo}
+        style={{
+          background: 'var(--elev)', border: '1px solid var(--bd)', borderRadius: 'var(--raio-p)',
+          padding: '7px 10px', fontSize: 'var(--tipo-apoio)', color: 'var(--tx)', width: 200,
+        }}
+      />
+    </form>
   );
 }
 

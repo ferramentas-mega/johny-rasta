@@ -70,6 +70,39 @@ test('a aba Sites agrupa por cliente, e o nome do grupo abre o painel do cliente
   await expect(page.locator('h1')).toHaveText('Cliente Um');
 });
 
+test('busca e filtro de saúde em Sites preservam o cliente, e o cartão da Visão geral abre o filtro', async ({ page }) => {
+  await page.goto('/sites');
+  // Buscar pelo domínio de UMA página devolve a página dentro do grupo do cliente.
+  await page.getByLabel('Buscar cliente ou página').fill('alfa.teste');
+  await page.keyboard.press('Enter');
+  await page.waitForURL(/q=alfa/);
+  await expect(page.getByRole('region', { name: 'Cliente Um' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Cliente Dois' })).toHaveCount(0);
+  await expect(page.locator('.cartao-site')).toHaveCount(1);
+
+  // Filtro por saúde: fica na URL e sobrevive a recarregar.
+  await page.goto('/sites');
+  await page.getByRole('button', { name: /^Sem medição/ }).click();
+  await page.waitForURL(/saude=sem_medicao/);
+  for (const c of await page.locator('.cartao-site-saude').all()) {
+    await expect(c).toHaveAttribute('data-saude', 'sem_medicao');
+  }
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Sem medição/ })).toHaveAttribute('aria-pressed', 'true');
+
+  // Filtro sem resultado explica e oferece limpar.
+  await page.goto('/sites?q=nao-existe-zzz');
+  await expect(page.getByText('Nenhum site casa com a busca ou o filtro')).toBeVisible();
+  await page.getByRole('link', { name: 'Limpar filtros' }).click();
+  await expect(page).toHaveURL(/\/sites$/);
+
+  // O cartão de saúde da Visão geral é acionável e abre a aba filtrada.
+  await page.goto('/visao-geral');
+  await page.getByTestId('cartao-Saúde crítica').click();
+  await page.waitForURL(/\/sites\?saude=critico/);
+  await expect(page.getByRole('button', { name: /^Críticos/ })).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('na aba Clientes, o nome do cliente leva ao painel dele, e o painel lista os problemas', async ({ page }) => {
   await page.goto('/clientes');
   await page.getByRole('link', { name: 'Cliente Um', exact: true }).click();

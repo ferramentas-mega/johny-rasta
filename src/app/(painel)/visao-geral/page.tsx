@@ -8,6 +8,8 @@ import {
   type LinhaCarteira,
 } from '@/server/metrics/queries';
 import { resumoDeConfiguracao } from '@/server/services/onboarding';
+import { listarOtimizacoes } from '@/server/qualidade/otimizacoes';
+import { saudeDoSite, agregarSaude, contarSaude, SAUDE_LABEL, SAUDE_TOM, type Saude } from '@/lib/saude';
 import { num, pct } from '@/lib/formato';
 import { Avatar } from '@/components/Avatar';
 import type { Ponto } from '@/lib/evidencias';
@@ -93,6 +95,28 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
   }
   const sitesPendentes = [...pendentesPorCliente.values()].reduce((t, n) => t + n, 0);
 
+  /**
+   * Saúde por cliente: a pior página manda. Mesma derivação da aba Sites
+   * (`saudeDoSite` + `agregarSaude`), sobre os mesmos sinais — os cartões
+   * abaixo abrem a aba Sites já filtrada, e o número precisa bater com o que
+   * ela vai listar.
+   */
+  const sinais = await withAccount(ctx.usuario.accountId, (db) => listarOtimizacoes(db));
+  const saudePorCliente = new Map<string, Saude[]>();
+  for (const site of ctx.sites) {
+    const d = saudeDoSite({
+      totalEventos: site.totalEventos,
+      estado: site.estado,
+      resumo: resumos.get(site.id),
+      sinais: sinais.filter((o) => o.siteId === site.id),
+    });
+    saudePorCliente.set(site.clientId, [...(saudePorCliente.get(site.clientId) ?? []), d.saude]);
+  }
+  const clientesVisiveis = new Set(linhas.map((l) => l.clienteId));
+  const saudeClientes = contarSaude(
+    [...saudePorCliente.entries()].filter(([id]) => clientesVisiveis.has(id)).map(([, s]) => agregarSaude(s)),
+  );
+
   const colunas: Coluna<LinhaCarteira>[] = [
     {
       chave: 'cliente', titulo: 'Cliente', total: () => 'Total',
@@ -138,9 +162,24 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
       total: () => (sitesPendentes === 0 ? 'Sem pendência' : `${num(sitesPendentes)} site(s)`),
     },
     {
+      chave: 'saude', titulo: 'Saúde',
+      ajuda: 'A pior página do cliente manda: crítico > atenção > saudável. Sem medição quando nada chegou nem foi analisado.',
+      render: (l) => {
+        const s = agregarSaude(saudePorCliente.get(l.clienteId) ?? []);
+        return <Link href={`/sites?cliente=${l.clienteId}`}><Etiqueta texto={SAUDE_LABEL[s]} tom={SAUDE_TOM[s]} /></Link>;
+      },
+    },
+    {
       chave: 'prioridade', titulo: 'Atenção',
       render: (l) => { const p = prioridade(l); return <Etiqueta texto={p.texto} tom={p.tom} />; },
     },
+  ];
+
+  // Acionáveis: cada número abre a aba Sites com o filtro que o explica.
+  const cartoesDeSaude = [
+    { rotulo: 'Saúde crítica', valor: num(saudeClientes.critico), nota: 'clientes com nota técnica ruim ou erro de configuração', tom: saudeClientes.critico > 0 ? ('atencao' as const) : ('neutro' as const), href: '/sites?saude=critico' },
+    { rotulo: 'Saúde em atenção', valor: num(saudeClientes.atencao), nota: 'clientes com análise vencida, coleta parada ou verificação pendente', tom: saudeClientes.atencao > 0 ? ('atencao' as const) : ('neutro' as const), href: '/sites?saude=atencao' },
+    { rotulo: 'Saúde boa', valor: num(saudeClientes.saudavel), nota: `clientes sem sinal aberto · ${saudeClientes.sem_medicao} sem medição, que não é saudável, é desconhecido`, href: '/sites?saude=saudavel' },
   ];
 
   /**
@@ -240,6 +279,12 @@ export default async function PaginaVisaoGeral({ searchParams }: { searchParams:
               tom={c.tom}
               serie={c.serie}
             />
+          ))}
+        </div>
+
+        <div className="grade-cartoes">
+          {cartoesDeSaude.map((c) => (
+            <CartaoNumero key={c.rotulo} rotulo={c.rotulo} valor={c.valor} nota={c.nota} tom={c.tom} href={c.href} />
           ))}
         </div>
 

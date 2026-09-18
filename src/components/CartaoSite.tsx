@@ -8,6 +8,7 @@ import {
   type ResumoDeConfiguracao,
 } from '@/lib/recursos';
 import { ESTADO_LABEL, ESTADO_TOM, type Site } from '@/server/services/sites';
+import { SAUDE_LABEL, SAUDE_TOM, type Diagnostico } from '@/lib/saude';
 import { Etiqueta } from '@/components/Tabela';
 
 /**
@@ -45,9 +46,16 @@ const CORES: Record<EstadoDaConfiguracao, { traco: string; texto: string; fundo:
 export function CartaoSite({
   site,
   resumo,
+  saude,
 }: {
   site: Site;
   resumo: ResumoDeConfiguracao | undefined;
+  /**
+   * Saúde derivada (`saudeDoSite`), com o motivo. Opcional porque nem toda
+   * tela que mostra o cartão tem os sinais em mãos — e sem eles a saúde seria
+   * um chute.
+   */
+  saude?: Diagnostico;
 }) {
   const estado = estadoDaConfiguracao(resumo);
   const cor = CORES[estado];
@@ -82,6 +90,15 @@ export function CartaoSite({
         </h3>
         <p className="mono cartao-site-dominio">{site.domain}</p>
       </div>
+
+      {saude && (
+        // A saúde vem com o MOTIVO: "Atenção" sozinho manda a pessoa procurar;
+        // "Atenção · Análise desatualizada" diz onde olhar.
+        <p className="cartao-site-saude" data-saude={saude.saude}>
+          <Etiqueta texto={SAUDE_LABEL[saude.saude]} tom={SAUDE_TOM[saude.saude]} />
+          <span>{saude.motivo}</span>
+        </p>
+      )}
 
       {progresso !== null ? (
         <div>

@@ -163,11 +163,14 @@ export function CartaoNumero({
   tom = 'neutro',
   serie,
   variacao,
+  href,
 }: {
   rotulo: string;
   valor: string;
   nota: string;
   tom?: 'neutro' | 'atencao';
+  /** Para onde o número leva. Um número acionável abre a lista que o explica. */
+  href?: string;
   /**
    * A série por trás do número, quando ela EXISTE.
    *
@@ -181,8 +184,8 @@ export function CartaoNumero({
   /** Texto da variação, já calculado pela camada de métricas. */
   variacao?: string;
 }) {
-  return (
-    <div className="cartao" style={{ padding: '16px 18px', overflow: 'hidden' }}>
+  const conteudo = (
+    <>
       <div style={{ fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>{rotulo}</div>
       {/* A receita do número da referência: peso leve, trilha fechada, verde
           com brilho. */}
@@ -224,6 +227,17 @@ export function CartaoNumero({
           />
         </div>
       )}
+    </>
+  );
+
+  const estilo = { padding: '16px 18px', overflow: 'hidden', display: 'block', color: 'inherit', textDecoration: 'none' } as const;
+  return href ? (
+    <Link href={href} className="cartao cartao-elevado" style={estilo} data-testid={`cartao-${rotulo}`}>
+      {conteudo}
+    </Link>
+  ) : (
+    <div className="cartao" style={estilo}>
+      {conteudo}
     </div>
   );
 }

@@ -1442,6 +1442,20 @@ select option {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 
+.cartao-site-saude {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  font-size: var(--tipo-legenda);
+  color: var(--tx2);
+  min-width: 0;
+}
+.cartao-site-saude > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Grupo por cliente. O cabeçalho é uma linha só — avatar, nome, contagem —
    porque o que importa está nos cartões; o grupo só diz DE QUEM eles são. */
 .grupo-cliente-topo {
