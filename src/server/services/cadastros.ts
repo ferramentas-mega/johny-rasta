@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { withAccount } from '@/server/db';
 import { FUSO_PADRAO, MENSAGEM_FUSO_INVALIDO, fusoValido } from '@/lib/fusos';
+import type { Plataforma } from '@/lib/recursos';
 
 /**
  * Cadastro de clientes e sites.
@@ -127,7 +128,7 @@ export async function criarSite(accountId: string, entrada: SiteEntrada): Promis
  * é o que garante isso.
  */
 export type ExtrasDoSite = {
-  plataforma?: 'wordpress' | 'react_next' | 'html' | 'desconhecida';
+  plataforma?: Plataforma;
   urlPrincipal?: string | null;
 };
 

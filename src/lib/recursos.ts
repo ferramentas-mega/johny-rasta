@@ -105,11 +105,30 @@ export const ESTADO_RECURSO_TOM: Record<EstadoRecurso, 'ok' | 'warn' | 'soft' | 
   erro: 'neg',
 };
 
-export type Plataforma = 'wordpress' | 'react_next' | 'html' | 'desconhecida';
+/**
+ * A plataforma decide QUAIS instruções de instalação aparecem — e só isso. O
+ * coletor é o mesmo em todas; o que muda é onde a tag entra e o que costuma
+ * dar errado ali. `PLATAFORMAS` é a fonte do `<select>`, do esquema da Action
+ * e da restrição do banco (migração `20260918000018`): três lugares, uma lista.
+ */
+export const PLATAFORMAS = [
+  'wordpress',
+  'react_next',
+  'vite_spa',
+  'gtm',
+  'construtor',
+  'html',
+  'desconhecida',
+] as const;
+
+export type Plataforma = (typeof PLATAFORMAS)[number];
 
 export const PLATAFORMA_LABEL: Record<Plataforma, string> = {
   wordpress: 'WordPress',
   react_next: 'React / Next.js',
+  vite_spa: 'SPA com Vite (React, Vue, Svelte)',
+  gtm: 'Google Tag Manager',
+  construtor: 'Construtor (Wix, Webflow, Framer, Squarespace)',
   html: 'HTML ou outra plataforma',
   desconhecida: 'Não sei informar',
 };

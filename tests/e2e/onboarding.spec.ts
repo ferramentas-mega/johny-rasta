@@ -150,6 +150,25 @@ test('configuração incompleta é salva e retomada na etapa certa', async ({ pa
   await expect(page.locator('input[name="recurso:visitas"]')).toBeChecked();
 });
 
+test('a instrução acompanha a plataforma: Tag Manager recebe o passo do contêiner, não o do </head>', async ({ page }) => {
+  await entrar(page);
+  const { siteId } = await cadastrarSite(page, 'gtm');
+
+  // Sem `?etapa=` na URL: a etapa mostrada é a primeira pendente, e num site
+  // recém-cadastrado ela é a identificação. Com a etapa fixa na URL, salvar
+  // não avança — a URL manda.
+  await page.goto(`/sites/${siteId}/configurar`);
+  await expect(page.locator('h2').first()).toHaveText('Identificar o site');
+  await page.selectOption('select[name=plataforma]', 'gtm');
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await expect(page.locator('h2').first()).toHaveText('Escolher o que acompanhar');
+
+  await page.goto(`/sites/${siteId}/configurar?etapa=instalacao`);
+  await expect(page.getByText(/HTML personalizado/).first()).toBeVisible();
+  // E o aviso específico deste caminho: instalar no GTM e no tema é duas vezes.
+  await expect(page.getByText(/instalar aqui E no tema é instalar duas vezes/)).toBeVisible();
+});
+
 test('o snippet traz o identificador do site certo, e copiar não conclui a instalação', async ({ page }) => {
   await entrar(page);
   const a = await cadastrarSite(page, 'snipA');

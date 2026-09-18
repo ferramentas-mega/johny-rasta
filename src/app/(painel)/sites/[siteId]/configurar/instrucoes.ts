@@ -52,6 +52,46 @@ export function instrucaoDaPlataforma(plataforma: Plataforma): Instrucao {
           'Navegação entre rotas não recarrega a página. O coletor já cobre isso: ele observa pushState, replaceState e o botão voltar, e conta uma visualização por rota — sem duplicar quando só o hash muda.',
       };
 
+    case 'vite_spa':
+      return {
+        onde: 'No index.html da raiz do projeto, dentro do <head>.',
+        passos: [
+          'Abra o index.html que o Vite usa como entrada (fica na raiz, ao lado do vite.config).',
+          'Cole o código antes de </head>. Numa SPA há UM documento só, então isto cobre todas as rotas.',
+          'Não importe o script dentro de um componente: ele carregaria de novo a cada montagem e o coletor desistiria da segunda cópia — mas a primeira montagem já teria contado.',
+        ],
+        publicar: 'Rode o build e publique a pasta gerada. Confira o HTML servido em produção: o index.html do build precisa trazer a tag.',
+        observacao:
+          'A navegação por rotas (React Router, Vue Router) não recarrega a página. O coletor já trata isso: observa pushState, replaceState e o botão voltar, e conta uma visualização por rota.',
+      };
+
+    case 'gtm':
+      return {
+        onde: 'No Google Tag Manager, como uma tag "HTML personalizado", disparada em todas as páginas.',
+        passos: [
+          'No contêiner do site, crie uma tag do tipo HTML personalizado e cole o código inteiro nela.',
+          'Acionador: "All Pages" (visualização de página). Não use um acionador de clique — o coletor mede os cliques sozinho.',
+          'Se o contêiner usa o modo de consentimento, associe a tag à categoria de análise para que ela só dispare com consentimento.',
+          'Publique o contêiner. Uma tag salva e não publicada não existe para o visitante.',
+        ],
+        publicar: 'Publique a versão do contêiner e confira no modo de visualização do GTM que a tag disparou na página inicial.',
+        observacao:
+          'Se o GTM já está no site, este caminho não mexe no código do site — o que é a vantagem. O risco é o inverso: instalar aqui E no tema é instalar duas vezes. Confira o inventário de tags depois.',
+      };
+
+    case 'construtor':
+      return {
+        onde: 'No campo de "código personalizado no <head>" do construtor, aplicado ao site inteiro.',
+        passos: [
+          'Wix: Configurações › Código personalizado › Adicionar código, em "Head", para "Todas as páginas".',
+          'Webflow: Site settings › Custom code › Head code. Framer: Site settings › General › Custom code › Start of <head>.',
+          'Squarespace: Settings › Advanced › Code injection › Header. Em outros construtores, procure por "head", "código" ou "scripts".',
+        ],
+        publicar: 'Publique o site pelo construtor. Alterar o campo sem publicar deixa o visitante com a versão anterior.',
+        observacao:
+          'Alguns planos gratuitos de construtor não permitem código no head. Nesse caso o caminho é o Google Tag Manager, se o construtor o aceitar — ou o plano que libera o campo.',
+      };
+
     case 'html':
     case 'desconhecida':
     default:

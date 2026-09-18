@@ -8,6 +8,7 @@ import { conferenciaNoConsole } from '@/lib/snippets';
 import type { Diagnostico as DiagnosticoDeInstalacao } from '@/lib/instalacao';
 import { atualizarSite, criarCliente, ClienteEntrada } from '@/server/services/cadastros';
 import { SiteEntrada } from '@/server/services/cadastros';
+import { PLATAFORMAS } from '@/lib/recursos';
 import {
   RECURSOS,
   salvarRecursos,
@@ -86,7 +87,7 @@ const UrlPrincipal = z
   );
 
 const Identificacao = SiteEntrada.extend({
-  plataforma: z.enum(['wordpress', 'react_next', 'html', 'desconhecida']),
+  plataforma: z.enum(PLATAFORMAS),
   urlPrincipal: UrlPrincipal.optional().or(z.literal('')),
 });
 
