@@ -20,7 +20,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         // As telas autenticadas não devem sequer ser tentadas.
-        disallow: ['/visao-geral', '/clientes', '/sites', '/leads', '/configuracoes', '/api/'],
+        disallow: ['/visao-geral', '/clientes', '/sites', '/leads', '/otimizacoes', '/avisos', '/configuracoes', '/api/'],
       },
     ],
   };

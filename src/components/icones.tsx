@@ -16,6 +16,7 @@ const PATHS = {
   cursor: 'M4 4l6.5 15 2.3-6.2 6.2-2.3z',
   mais: 'M12 5v14 M5 12h14',
   relogio: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20 M12 6v6l4 2',
+  sino: 'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9 M13.7 21a2 2 0 0 1-3.4 0',
 } as const;
 
 export type IconeNome = keyof typeof PATHS;

@@ -2,6 +2,7 @@ import { CabecalhoFx } from '@/components/CabecalhoFx';
 import { Sobrelinha } from '@/components/Sobrelinha';
 import { ControlesAparencia } from '@/components/ControlesAparencia';
 import { BotaoAtualizar } from '@/components/BotaoAtualizar';
+import { SinoAvisos } from '@/components/SinoAvisos';
 import { ESTADO_LABEL, ESTADO_TOM, type EstadoRastreamento } from '@/server/services/sites';
 
 const COR_PONTO = { ok: 'var(--gold)', aguardando: 'var(--warn-tx)', inativo: 'var(--tx3)' } as const;
@@ -91,6 +92,7 @@ export function Cabecalho({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           {filtros}
           <BotaoAtualizar geradoEm={geradoEm} aCadaSegundos={atualizarACada} />
+          <SinoAvisos />
           <ControlesAparencia />
         </div>
       </div>

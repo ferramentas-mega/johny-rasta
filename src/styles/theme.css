@@ -990,6 +990,51 @@ select option {
   }
 }
 
+/* ── Sino de avisos (cabeçalho) ── */
+
+.sino-avisos {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--bd);
+  border-radius: var(--raio-p);
+  background: var(--elev);
+  color: var(--tx2);
+  text-decoration: none;
+  transition:
+    color var(--mov-rapido) ease,
+    border-color var(--mov-rapido) ease;
+}
+.sino-avisos:hover,
+.sino-avisos:focus-visible {
+  color: var(--gold-tx);
+  border-color: var(--gold-bd);
+}
+/* A contagem é um selo sobre o canto, como a contagem do menu recolhido. A
+   cor diz a pior gravidade presente: vermelho só quando há aviso alto. */
+.sino-avisos-contagem {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--raio-pilula);
+  font-size: var(--tipo-micro);
+  line-height: 18px;
+  text-align: center;
+  background: var(--warn-bg);
+  border: 1px solid var(--bd);
+  color: var(--warn-tx);
+}
+.sino-avisos-contagem[data-gravidade='alta'] {
+  background: var(--neg-bg);
+  color: var(--neg-tx);
+}
+
 /* ── Estado recolhido ── */
 
 [data-menu='recolhido'] .lateral {

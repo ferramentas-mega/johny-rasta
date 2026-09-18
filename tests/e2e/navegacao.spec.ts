@@ -142,6 +142,37 @@ test('atualizar busca os dados de novo sem recarregar a página, e diz de quando
   await expect(page).toHaveURL(/visao-geral/);
 });
 
+test('o sino do cabeçalho conta os avisos, e a central lista cada um com uma porta para agir', async ({ page }) => {
+  await page.goto('/visao-geral');
+  const sino = page.getByTestId('sino-avisos');
+  await expect(sino).toBeVisible();
+  const nome = await sino.getAttribute('aria-label');
+  expect(nome).toMatch(/^Avisos: (nenhum|\d+)/);
+
+  await sino.click();
+  await page.waitForURL(/\/avisos/);
+  await expect(page.locator('h1')).toHaveText('Central de avisos');
+
+  const linhas = page.locator('table tbody tr');
+  const total = await linhas.count();
+  if (nome === 'Avisos: nenhum') {
+    // Vazio explicado, não uma tabela sem linhas.
+    await expect(page.getByText('Nenhum aviso pendente')).toBeVisible();
+    expect(total).toBe(0);
+    return;
+  }
+  // A contagem do sino é a contagem da central — uma fonte só.
+  expect(nome).toContain(`Avisos: ${total}`);
+  // Todo aviso tem uma porta, e a porta abre uma tela deste painel.
+  const portas = page.getByRole('link', { name: 'Resolver →' });
+  await expect(portas).toHaveCount(total);
+  const href = await portas.first().getAttribute('href');
+  expect(href).toMatch(/^\/sites\//);
+  await portas.first().click();
+  await page.waitForURL(new RegExp(href!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  await expect(page.locator('h1')).toBeVisible();
+});
+
 test('voltar e avançar no navegador funcionam', async ({ page }) => {
   await page.goto('/visao-geral');
   await page.getByRole('link', { name: /^Clientes/ }).click();
