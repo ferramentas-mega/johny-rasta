@@ -15,7 +15,9 @@ Leia as duas antes de mexer em tela.
 | Cartão de número / indicador | `CartaoNumero`, `CartaoIndicador` (`Cartoes.tsx`) |
 | Painel com título | `Painel` |
 | Tabela com total, hover, sticky | `Tabela` (+ `Etiqueta`) |
-| Estado vazio com explicação/CTA | `EstadoVazio` |
+| Estado vazio com explicação/CTA | `EstadoVazio` (`tom` aguardando/erro, `kicker`) |
+| Cabeçalho de coluna ordenável (ordem na URL) | `CabecalhoOrdenavel`, via `Tabela` + `ordenacao` |
+| Anel de participação (origem) | `Donut` (+ `lib/origens.ts`) |
 | Cabeçalho de página (h1, estado, filtros, atualizar, sino) | `Cabecalho` |
 | Botão atualizar / hora dos dados | `BotaoAtualizar` (já dentro do `Cabecalho`) |
 | Sino de avisos | `SinoAvisos` (já dentro do `Cabecalho`) |

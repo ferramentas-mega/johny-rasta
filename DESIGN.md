@@ -30,7 +30,12 @@ os dois temas cobrem o mesmo conjunto. Esta tabela é para leitura, não é a fo
 | `--tx2` | `#A1B5A6` | Texto secundário |
 | `--tx3` | `#809887` | Texto terciário, notas |
 | `--pos` / `--neg` | `#39C965` / `#FF8585` | Variação positiva / negativa |
-| `--glow` | `0 0 18px rgba(112,255,139,.28)` | Brilho dos títulos |
+| `--glow` | `0 0 18px rgba(112,255,139,.28)` | Brilho do número em destaque (o `h1` usa `--titulo-grad`) |
+| `--c1` … `--c5` | `#70ff8b` `#5bd1ff` `#ffd86b` `#ff7a7a` `#8fa394` | Paleta de DADOS: métrica, linha, pilha, etiqueta, fatia |
+| `--f1` … `--f5` | as mesmas, em alfa `.14` | Fundo das etiquetas e da fatia inativa |
+| `--tip` | `#08130b` | Fundo da dica do gráfico |
+| `--titulo-grad` / `--botao-grad` | gradientes de `--gold` | Título do cabeçalho; botão primário |
+| `--cabecalho-vidro` | `rgba(3,7,3,.72)` | Cabeçalho fixo translúcido (com `backdrop-filter`) |
 
 O tema claro redefine os mesmos tokens. Como toda a interface consome apenas variáveis, alternar o
 tema não exige nenhuma regra condicional nos componentes.

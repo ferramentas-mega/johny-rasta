@@ -9,6 +9,7 @@ import { TextoMatrix } from '@/components/TextoMatrix';
 import { BotaoRecolher } from '@/components/BotaoRecolher';
 import { Avatar } from '@/components/Avatar';
 import { MenuInferior } from '@/components/MenuInferior';
+import { ControlesAparencia } from '@/components/ControlesAparencia';
 
 /**
  * Menu lateral.
@@ -144,6 +145,12 @@ export function MenuLateral({
           );
         })}
       </nav>
+
+      {/* Tema e efeitos vivem no rodapé do menu (desktop). No celular o menu
+          não existe, e eles continuam no cabeçalho — `.controles-cabecalho`. */}
+      <div className="controles-lateral">
+        <ControlesAparencia />
+      </div>
 
       <div className="lateral-rodape">
         {/* Iniciais do USUÁRIO, ao lado do nome da CONTA. São duas informações

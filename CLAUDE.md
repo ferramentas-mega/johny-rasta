@@ -153,8 +153,8 @@ Medido: o tema CLARO reprovava em sete pares de contraste — `--tx3` sobre
 `--elev` dava 3,78:1, abaixo dos 4,5:1 que a WCAG pede para texto de corpo, e
 `--tx3` é o token de toda legenda da interface. O escuro passava inteiro. O
 defeito não era a paleta: `--gold-tx` já existia exatamente para texto (6,33:1) e
-quase todo componente usava `--gold` (4,14:1). `npm run design` mede os 22 pares
-nos dois temas e roda no CI.
+quase todo componente usava `--gold` (4,14:1). `npm run design` mede os pares
+nos dois temas (39 hoje) e roda no CI.
 
 **A escala visual é um conjunto FECHADO, e quem a defende é o verificador.** Cor sempre esteve sob
 controle aqui; forma, não. Medido: **19 tamanhos de fonte distintos em 291 usos**, quinze deles num
@@ -223,9 +223,33 @@ não podia escurecer um passo sequer porque `--tx3` (#607064) tinha folga de 0,0
 escurecer o TEXTO para #56655a foi o que liberou a superfície.
 
 **Brilho é hierarquia, não acabamento.** `--glow` em todo número de indicador é o mesmo que glow em
-nenhum: com tudo brilhando, nada se destaca. Fica no `h1` (um por tela) e no número que PEDE atenção
-— nunca no indicador normal, onde o verde da marca já basta. E nunca em texto pequeno: `--glow` tem
-18px de borrão, desenhado para um título de 28px; em 11,5px ele borra a letra.
+nenhum: com tudo brilhando, nada se destaca. Fica só no número que PEDE atenção — nunca no indicador
+normal, onde a cor de dados já basta. E nunca em texto pequeno: `--glow` tem 18px de borrão,
+desenhado para um título de 28px; em 11,5px ele borra a letra. O `h1` do cabeçalho **perdeu** o
+brilho na v2: ele agora é gradiente recortado no texto (`--titulo-grad` + `background-clip: text`), e
+`text-shadow` pintaria por cima do recorte. Um ou outro.
+
+**Cor de DADOS não é cor de MARCA.** A v2 trouxe `--c1`..`--c5` (e os fundos `--f1`..`--f5`): a cor
+de cada métrica, a mesma no cartão, na linha do gráfico, na pilha por ação, na etiqueta da tabela e
+na fatia do anel — visitas e WhatsApp em `c1`, taxas em `c2`, formulários em `c3`, e-mail/negativo em
+`c4`, neutro em `c5`. `--gold` continua sendo a marca (item ativo, botão, foco). Os valores do tema
+claro NÃO são os da referência: `c2`, `c3`, `c4` e `c5` foram escurecidos até 4,5:1 sobre `--elev`,
+porque escritos como texto (o número do cartão) os originais reprovavam. Os pares estão no
+verificador, que hoje mede 39.
+
+**Ordenação de tabela vive na URL, e a seta é desenho.** `?ordem_paginas=sessoes:asc` — recarregar,
+voltar e abrir link direto devolvem a mesma tabela, e o servidor manda o HTML já ordenado. Cada tabela
+da página tem o próprio parâmetro. A seta do cabeçalho ativo é `::after` por `data-direcao`, de
+propósito: assim o TEXTO do `<th>` continua sendo só o título (as provas que localizam a coluna pelo
+texto seguem valendo) e o nome acessível vem do `aria-label` do link, nunca do desenho. `null` vai
+sempre para o fim: "indisponível" não é menor que zero.
+
+**Estimativa de gráfico continua sendo número da consulta.** O modo "barras por ação" empilha
+`cliquesWhatsapp`, `aberturasFormulario`, `cliquesTelefone` e `cliquesEmail` — quatro colunas NOVAS de
+`getDailySeries`, não uma decomposição feita no componente. A linha do período anterior é a mesma
+consulta sobre a janela anterior (a que já alimenta a variação dos cartões). E a curva de Catmull-Rom
+tem os pontos de controle presos à faixa do eixo: uma sequência `3, 0, 0, 3` desenhava um vale
+NEGATIVO, um número que não existe.
 
 **Conteúdo gerado por CSS entra no nome acessível — e isso esconde defeito de acessibilidade.** A
 barra lateral recolhida tira o rótulo da TELA com `clip-path`, nunca com `display: none`, para o link

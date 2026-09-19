@@ -8,7 +8,8 @@ import { num, pct, dataHora } from '@/lib/formato';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Abas } from '@/components/Abas';
 import { Painel, Aviso } from '@/components/Cartoes';
-import { SeletorPeriodo, SeletorSiteRota } from '@/components/filtros';
+import { SeletorSiteRota } from '@/components/filtros';
+import { EstadoVazio } from '@/components/EstadoVazio';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,12 +102,7 @@ export default async function PaginaComportamento({
           detalhe: site.ultimoEvento ? `último evento em ${dataHora(site.ultimoEvento, site.timezone)}` : undefined,
         }}
         meta={`Horários no fuso do site: ${site.timezone}`}
-        filtros={
-          <>
-            <SeletorSiteRota sites={sites} atual={site.id} aba="comportamento" />
-            <SeletorPeriodo atual={entrada.key} />
-          </>
-        }
+        filtros={<SeletorSiteRota sites={sites} atual={site.id} aba="comportamento" />}
       />
 
       <div className="abas">
@@ -115,15 +111,17 @@ export default async function PaginaComportamento({
 
       <div className="pagina">
         {totalSessoes === 0 ? (
-          <Painel
+          // Site que coleta e só não teve sessão na janela é vazio NEUTRO —
+          // período curto num site pequeno é normal. Sem instalação é vermelho;
+          // instalado e sem evento real, amarelo.
+          <EstadoVazio
+            tom={site.estado === 'coletando' ? 'neutro' : site.estado === 'aguardando_instalacao' ? 'erro' : 'aguardando'}
+            kicker={ESTADO_LABEL[site.estado]}
+            icone="cursor"
             titulo="Sem sessões neste período"
-            subtitulo={`Situação do rastreamento: ${ESTADO_LABEL[site.estado]}.`}
-          >
-            <p style={{ fontSize: 'var(--tipo-corpo)', color: 'var(--tx2)' }}>
-              Nenhuma sessão foi registrada na janela selecionada. Experimente um período maior, ou verifique a
-              instalação na aba Rastreamento.
-            </p>
-          </Painel>
+            explicacao="Nenhuma sessão foi registrada na janela selecionada. Experimente um período maior, ou verifique a instalação na aba Rastreamento."
+            acao={site.estado === 'coletando' ? undefined : { rotulo: 'Verificar a instalação', href: `/sites/${site.id}/rastreamento` }}
+          />
         ) : (
           <>
             <div className="grade-cartoes">

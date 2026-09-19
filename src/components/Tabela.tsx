@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { EstadoVazio } from '@/components/EstadoVazio';
+import { CabecalhoOrdenavel } from '@/components/CabecalhoOrdenavel';
+import { ordenar, type Ordem } from '@/lib/ordenacao';
 
 /**
  * Tabela de dados.
@@ -10,6 +12,13 @@ import { EstadoVazio } from '@/components/EstadoVazio';
  *
  * Rola horizontalmente em telas estreitas, dentro do próprio contêiner — a
  * página nunca ganha barra de rolagem lateral.
+ *
+ * v2: colunas com `valor` são ORDENÁVEIS quando a tabela recebe `ordenacao`; a
+ * ordem vive na URL (`lib/ordenacao.ts`) e o cabeçalho ativo fica verde, com a
+ * seta do sentido. Colunas com `barra` desenham, sob o número, uma barra
+ * proporcional ao MAIOR valor da coluna — a régua é a própria coluna, não
+ * um total inventado. Ordenar e desenhar barras não são contas: o número
+ * continua vindo da consulta.
  */
 
 export type Coluna<T> = {
@@ -35,6 +44,15 @@ export type Coluna<T> = {
   render: (linha: T) => ReactNode;
   /** Valor do rodapé de totais. Ausente = célula vazia. */
   total?: (linhas: T[]) => ReactNode;
+  /**
+   * Valor cru para ORDENAR. Presente = a coluna é ordenável (quando a tabela
+   * tem `ordenacao`). `null` é "indisponível" e vai sempre para o fim.
+   */
+  valor?: (linha: T) => number | string | null;
+  /** Valor da barra proporcional desenhada sob o conteúdo da célula. */
+  barra?: (linha: T) => number;
+  /** Cor da barra, na paleta de dados. Padrão: a primeira. */
+  corDaBarra?: 'c1' | 'c2' | 'c3' | 'c4' | 'c5';
 };
 
 export function Tabela<T>({
@@ -43,6 +61,7 @@ export function Tabela<T>({
   vazio = 'Nenhum registro no período.',
   rotuloTotal = 'Total',
   chave,
+  ordenacao,
 }: {
   colunas: Coluna<T>[];
   linhas: T[];
@@ -62,6 +81,11 @@ export function Tabela<T>({
    * armadilha da remontagem por `key` do CLAUDE.md, aplicada à tabela.
    */
   chave?: (linha: T) => string;
+  /**
+   * Liga a ordenação pelo cabeçalho. `parametro` é o nome na URL (cada tabela
+   * da página tem o seu); `atual` é a ordem lida de lá pela tela.
+   */
+  ordenacao?: { parametro: string; atual: Ordem };
 }) {
   const temTotais = colunas.some((c) => c.total);
 
@@ -73,6 +97,15 @@ export function Tabela<T>({
     return typeof vazio === 'string' ? <EstadoVazio titulo={vazio} /> : <>{vazio}</>;
   }
 
+  const colunaAtiva = ordenacao ? colunas.find((c) => c.chave === ordenacao.atual.coluna && c.valor) : undefined;
+  const ordenadas = ordenacao && colunaAtiva ? ordenar(linhas, colunaAtiva.valor!, ordenacao.atual.direcao) : linhas;
+
+  // A régua de cada barra é o maior valor da PRÓPRIA coluna.
+  const maiores = new Map<string, number>();
+  for (const c of colunas) {
+    if (c.barra) maiores.set(c.chave, Math.max(0, ...linhas.map((l) => c.barra!(l))));
+  }
+
   const celula = (c: Coluna<T>): React.CSSProperties => ({
     padding: '11px 10px',
     textAlign: c.alinhamento === 'direita' ? 'right' : 'left',
@@ -80,6 +113,9 @@ export function Tabela<T>({
     whiteSpace: c.quebraLinha ? 'normal' : 'nowrap',
     // Sem um teto, a coluna que quebra ocupa toda a sobra e espreme as demais.
     ...(c.quebraLinha ? { maxWidth: 340 } : {}),
+    // Número alinhado à direita em algarismos tabulares: as colunas de dígitos
+    // formam coluna de verdade, e o olho compara sem ler.
+    ...(c.alinhamento === 'direita' ? { fontVariantNumeric: 'tabular-nums' } : {}),
   });
 
   return (
@@ -93,33 +129,61 @@ export function Tabela<T>({
       >
         <thead>
           <tr>
-            {colunas.map((c) => (
-              <th
-                key={c.chave}
-                scope="col"
-                title={c.ajuda}
-                style={{
-                  ...celula(c),
-                  fontSize: 'var(--tipo-legenda)',
-                  fontWeight: 500,
-                  color: 'var(--tx2)',
-                  borderBottom: '1px solid var(--bd)',
-                  cursor: c.ajuda ? 'help' : undefined,
-                }}
-              >
-                {c.titulo}
-              </th>
-            ))}
+            {colunas.map((c) => {
+              const ordenavel = Boolean(ordenacao && c.valor);
+              const ativa = ordenavel && ordenacao!.atual.coluna === c.chave;
+              return (
+                <th
+                  key={c.chave}
+                  scope="col"
+                  title={c.ajuda}
+                  aria-sort={ativa ? (ordenacao!.atual.direcao === 'desc' ? 'descending' : 'ascending') : undefined}
+                  style={{
+                    ...celula(c),
+                    fontSize: 'var(--tipo-legenda)',
+                    fontWeight: 500,
+                    color: 'var(--tx2)',
+                    borderBottom: '1px solid var(--bd)',
+                    cursor: c.ajuda && !ordenavel ? 'help' : undefined,
+                  }}
+                >
+                  {ordenavel ? (
+                    <CabecalhoOrdenavel
+                      parametro={ordenacao!.parametro}
+                      coluna={c.chave}
+                      titulo={c.titulo}
+                      atual={ordenacao!.atual}
+                      tipo={c.alinhamento === 'direita' ? 'numero' : 'texto'}
+                    />
+                  ) : (
+                    c.titulo
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
-          {linhas.map((linha, i) => (
+          {ordenadas.map((linha, i) => (
             <tr key={chave ? chave(linha) : i} className="tabela-linha" style={{ borderBottom: '1px solid var(--rowbd)' }}>
-              {colunas.map((c) => (
-                <td key={c.chave} className={c.mono ? 'mono' : undefined} style={celula(c)}>
-                  {c.render(linha)}
-                </td>
-              ))}
+              {colunas.map((c) => {
+                const maior = maiores.get(c.chave);
+                const largura = c.barra && maior && maior > 0 ? (c.barra(linha) / maior) * 100 : null;
+                return (
+                  <td key={c.chave} className={c.mono ? 'mono' : undefined} style={celula(c)}>
+                    {largura === null ? (
+                      c.render(linha)
+                    ) : (
+                      <span className="celula-com-barra">
+                        <span>{c.render(linha)}</span>
+                        <span className="celula-barra" aria-hidden="true">
+                          <i style={{ width: `${largura}%`, background: `var(--${c.corDaBarra ?? 'c1'})` }} />
+                        </span>
+                      </span>
+                    )}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
@@ -143,22 +207,30 @@ export function Tabela<T>({
   );
 }
 
+export type TomDeEtiqueta = 'soft' | 'ok' | 'warn' | 'neg' | 'c1' | 'c2' | 'c3' | 'c4';
+
 /**
  * `neg` entrou com o estado por recurso: "Erro identificado" é diferente de
  * "aguardando", e pintar os dois de amarelo esconderia justamente o que exige
  * ação agora.
+ *
+ * `c1`..`c4` são a paleta de DADOS: a etiqueta da ação (WhatsApp, abertura de
+ * formulário, telefone, e-mail) usa a mesma cor da pilha do gráfico, para que a
+ * tabela e o desenho falem a mesma língua.
  */
-export function Etiqueta({ texto, tom = 'soft' }: { texto: string; tom?: 'soft' | 'ok' | 'warn' | 'neg' }) {
+export function Etiqueta({ texto, tom = 'soft' }: { texto: string; tom?: TomDeEtiqueta }) {
   const fundo =
     tom === 'ok' ? 'var(--ok-bg)'
     : tom === 'warn' ? 'var(--warn-bg)'
     : tom === 'neg' ? 'var(--neg-bg)'
-    : 'var(--soft-bg)';
+    : tom === 'soft' ? 'var(--soft-bg)'
+    : `var(--f${tom.slice(1)})`;
   const cor =
     tom === 'ok' ? 'var(--ok-tx)'
     : tom === 'warn' ? 'var(--warn-tx)'
     : tom === 'neg' ? 'var(--neg)'
-    : 'var(--soft-tx)';
+    : tom === 'soft' ? 'var(--soft-tx)'
+    : `var(--${tom})`;
   return (
     <span
       style={{
@@ -175,3 +247,11 @@ export function Etiqueta({ texto, tom = 'soft' }: { texto: string; tom?: 'soft' 
     </span>
   );
 }
+
+/** A cor de dados de cada ação de clique — a mesma nas etiquetas e nas pilhas do gráfico. */
+export const TOM_DA_ACAO: Record<string, TomDeEtiqueta> = {
+  whatsapp: 'c1',
+  form_open: 'c2',
+  phone: 'c3',
+  email: 'c4',
+};

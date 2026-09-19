@@ -46,24 +46,29 @@ export function Minigrafico({
   pontos,
   id,
   cor = 'var(--gold)',
+  largura = LARGURA,
+  altura = ALTURA,
 }: {
   pontos: Ponto[];
   /** Precisa ser único na página: `<linearGradient>` é referenciado por id. */
   id: string;
   cor?: string;
+  /** Dimensões do desenho. O padrão é a faixa de rodapé do cartão de número. */
+  largura?: number;
+  altura?: number;
 }) {
   // A altura útil é menor que a do desenho: sem esse respiro o pico encosta na
   // borda de cima e parece cortado.
-  const util = ALTURA - PAD * 2;
-  const { segmentos, pontosIsolados } = segmentosDaSerie(pontos, LARGURA, util);
+  const util = altura - PAD * 2;
+  const { segmentos, pontosIsolados } = segmentosDaSerie(pontos, largura, util);
   if (segmentos.length === 0 && pontosIsolados.length === 0) return null;
 
   return (
     <svg
-      viewBox={`0 0 ${LARGURA} ${ALTURA}`}
+      viewBox={`0 0 ${largura} ${altura}`}
       preserveAspectRatio="none"
       width="100%"
-      height={ALTURA}
+      height={altura}
       // Decorativo: o número e a variação estão escritos ao lado, e são eles
       // que um leitor de tela precisa anunciar. Um SVG de série sem rótulo não
       // acrescentaria leitura — acrescentaria ruído.

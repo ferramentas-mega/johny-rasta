@@ -150,6 +150,28 @@ describe('coerência entre cartão, gráfico e tabelas', () => {
     expect(serie.reduce((t, d) => t + d.sessoes, 0)).toBe(kpis.atual.sessoes);
   });
 
+  it('as colunas por ação da série (WhatsApp, telefone, e-mail, abertura) batem com os cartões e nunca passam do total de cliques', async () => {
+    // As pilhas do modo "barras por ação" do gráfico e os sparklines dos
+    // cartões saem daqui. Se uma coluna somasse um subtipo a mais, o desenho
+    // discordaria do cartão sem erro nenhum.
+    const p = await periodo7d();
+    const { kpis, serie } = await withAccount(accountId, async (db) => ({
+      kpis: await getKpis(db, site, { ...p, label: '' }),
+      serie: await getDailySeries(db, site, { ...p, label: '' }),
+    }));
+    const soma = (campo: (d: (typeof serie)[number]) => number) => serie.reduce((t, d) => t + campo(d), 0);
+
+    expect(soma((d) => d.cliquesWhatsapp)).toBe(kpis.atual.cliquesWhatsapp);
+    expect(soma((d) => d.cliquesTelefone + d.cliquesEmail)).toBe(kpis.atual.cliquesContato);
+    expect(soma((d) => d.visualizacoes)).toBe(kpis.atual.visualizacoes);
+    // Visitante único é por DIA na série e por PERÍODO no cartão: quem voltou
+    // noutro dia conta duas vezes na série, uma no cartão. A soma nunca é menor.
+    expect(soma((d) => d.visitantesUnicos)).toBeGreaterThanOrEqual(kpis.atual.visitantesUnicos);
+    for (const d of serie) {
+      expect(d.cliquesWhatsapp + d.cliquesTelefone + d.cliquesEmail + d.aberturasFormulario).toBeLessThanOrEqual(d.cliquesCta);
+    }
+  });
+
   it('a tabela por página e a tabela por botão somam o mesmo total de cliques', async () => {
     // Era a discrepância 169 contra 207 da captura: escopos diferentes sem que
     // a tela dissesse. Agora as duas contam o mesmo conjunto de eventos.

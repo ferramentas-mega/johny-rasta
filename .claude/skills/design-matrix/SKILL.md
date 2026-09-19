@@ -22,7 +22,7 @@ o sistema visual inteiro. Já aconteceu duas vezes nesta base (um funil e uma
 chuva Matrix): nas duas, aproveitar a ideia em SVG com os tokens do tema custou
 menos e não trouxe dependência.
 
-O sistema de COR são **35 tokens**, definidos duas vezes em
+O sistema de COR são **49 tokens**, definidos duas vezes em
 `src/styles/theme.css` — uma por tema:
 
 | Grupo | Tokens |
@@ -34,7 +34,8 @@ O sistema de COR são **35 tokens**, definidos duas vezes em
 | Estado | `--pos` `--neg` `--pos-tx` `--neg-tx` `--ok-bg` `--ok-tx` `--soft-bg` `--soft-tx` `--warn-bg` `--warn-tx` |
 | Estado (cont.) | `--neg-bg` |
 | Elevação | `--sombra-1` `--sombra-2` `--sombra-cartao` `--lustro` `--costura` `--gold-bd` |
-| Fundos compostos | `--header-bg` `--brand-bg` |
+| Fundos compostos | `--header-bg` `--brand-bg` `--cabecalho-vidro` |
+| Dados (v2) | `--c1` `--c2` `--c3` `--c4` `--c5` `--f1` `--f2` `--f3` `--f4` `--f5` `--tip` `--titulo-grad` `--botao-grad` |
 
 Os valores são os do protótipo, preservados de propósito — com as duas exceções
 de contraste listadas adiante. `--gold` é **verde** (`#70ff8b` no escuro,

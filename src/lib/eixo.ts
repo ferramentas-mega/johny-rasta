@@ -110,3 +110,20 @@ export function escalasDoGrafico(
     direita: eixoDeContagem(Math.max(...formularios, 0)),
   };
 }
+
+/**
+ * Quais dias ganham rótulo no eixo X: um a cada `ceil(n / 7)` a partir de 12
+ * dias, sempre com o primeiro e o último — e sem um penúltimo colado no último,
+ * que viraria dois números sobrepostos. Em 30 dias mostrar todo dia vira borrão.
+ */
+export function diasRotulados(n: number): number[] {
+  if (n <= 0) return [];
+  const passo = n > 12 ? Math.ceil(n / 7) : 1;
+  const dias: number[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const ultimo = i === n - 1;
+    const colado = !ultimo && n - 1 - i < Math.ceil(passo / 2);
+    if (ultimo || (i % passo === 0 && !colado)) dias.push(i);
+  }
+  return dias;
+}

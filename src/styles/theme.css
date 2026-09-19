@@ -69,6 +69,35 @@
      não trocava no claro. */
   --neg-bg: rgba(255, 133, 133, 0.14);
   /*
+   * ─── Paleta de DADOS (v2) ───
+   *
+   * O verde deixa de ser a única cor. Cinco cores com SIGNIFICADO fixo —
+   * nunca "variedade":
+   *   c1 verde    métrica principal, WhatsApp, positivo
+   *   c2 azul     métricas secundárias, abertura de formulário
+   *   c3 amarelo  alerta, telefone, aguardando
+   *   c4 vermelho erro, e-mail, não conectado
+   *   c5 cinza    período anterior, não identificado
+   * `--f*` são as mesmas cores a ~14% para fundo de etiqueta. Todas as `--c*`
+   * são usadas como TEXTO e número, então entram nos pares de contraste do
+   * verificador (sobre --card e --elev, nos dois temas).
+   */
+  --c1: #70ff8b;
+  --c2: #5bd1ff;
+  --c3: #ffd86b;
+  --c4: #ff7a7a;
+  --c5: #8fa394;
+  --f1: rgba(112, 255, 139, 0.14);
+  --f2: rgba(91, 209, 255, 0.14);
+  --f3: rgba(255, 216, 107, 0.14);
+  --f4: rgba(255, 122, 122, 0.14);
+  --f5: rgba(143, 163, 148, 0.14);
+  --tip: #08130b;
+  --titulo-grad: linear-gradient(180deg, #ffffff 0%, #eef8f0 42%, rgba(238, 248, 240, 0.5) 100%);
+  --botao-grad: linear-gradient(180deg, #a8ffbc 0%, #70ff8b 55%, #4fe477 100%);
+  /* Cabeçalho fixo translúcido: o conteúdo passa por trás, desfocado. */
+  --cabecalho-vidro: rgba(3, 7, 3, 0.72);
+  /*
    * ─── Vocabulário extraído da referência ───
    *
    * `--lustro` é o brilho que LEVANTA o cartão. A referência usa painel
@@ -156,6 +185,23 @@
   --warn-bg: rgba(160, 120, 20, 0.14);
   --warn-tx: #7a5c10;
   --neg-bg: rgba(168, 50, 50, 0.12);
+  /* Paleta de dados no claro. Os valores são mais escuros que os da
+     especificação porque são TEXTO sobre --elev (#e4ece6), e ali #0F6FA8 dava
+     4,45:1 e #9A6B00 3,9:1 — abaixo do mínimo. Medido pelo verificador. */
+  --c1: #186e34;
+  --c2: #0c5f92;
+  --c3: #7a5c10;
+  --c4: #a33232;
+  --c5: #56655a;
+  --f1: rgba(31, 143, 67, 0.16);
+  --f2: rgba(15, 111, 168, 0.16);
+  --f3: rgba(154, 107, 0, 0.16);
+  --f4: rgba(163, 50, 50, 0.16);
+  --f5: rgba(107, 125, 111, 0.14);
+  --tip: #ffffff;
+  --titulo-grad: linear-gradient(180deg, #0e1710 0%, #0e1710 42%, rgba(14, 23, 16, 0.5) 100%);
+  --botao-grad: linear-gradient(180deg, #2fb059 0%, #1f8f43 55%, #177235 100%);
+  --cabecalho-vidro: rgba(247, 251, 247, 0.78);
   /* No claro o lustro é tinta, não luz: o cartão é branco sobre fundo
      acinzentado, e quem o levanta é a sombra projetada, não o brilho. */
   --lustro: rgba(14, 23, 16, 0.02);
@@ -392,6 +438,7 @@ select option {
   padding: 0 32px;
   overflow-x: auto;
   scrollbar-width: none;
+  border-bottom: 1px solid var(--bd);
 }
 .abas::-webkit-scrollbar {
   display: none;
@@ -1731,4 +1778,358 @@ svg:has(.funil-etapa:hover) .funil-etapa:not(:hover) text {
   .tabela-linha {
     animation: none !important;
   }
+}
+
+/* ==========================================================================
+   Layout v2: menu fixo, cabeçalho de uma linha, cartões KPI
+   ========================================================================== */
+
+/* Menu lateral FIXO: a navegação rola dentro dele; marca e rodapé (tema, FX,
+   conta) ficam sempre à vista. */
+@media (min-width: 861px) {
+  .lateral {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+  }
+  .lateral-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .controles-cabecalho {
+    display: none;
+  }
+}
+@media (max-width: 860px) {
+  .controles-lateral {
+    display: none;
+  }
+}
+.controles-lateral {
+  display: flex;
+  gap: var(--esp-2);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--esp-3);
+}
+[data-menu='recolhido'] .controles-lateral {
+  flex-direction: column;
+}
+
+/* Cabeçalho de UMA linha, fixo no topo do conteúdo, translúcido. O que não
+   cabe numa linha (kicker, fuso, meta) desce para `.sub-cabecalho`. */
+.cabecalho {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 72px;
+  padding-top: var(--esp-3);
+  padding-bottom: var(--esp-3);
+  background: var(--cabecalho-vidro);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.cabecalho-linha {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--esp-4);
+  min-width: 0;
+}
+.cabecalho-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.cabecalho h1 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Gradiente recortado no texto. Incompatível com `text-shadow` (o brilho
+     pintaria por cima do recorte), então o `--glow` sai do h1 nesta versão. */
+  background-image: var(--titulo-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.cabecalho-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  font-size: var(--tipo-apoio);
+  color: var(--tx2);
+  white-space: nowrap;
+}
+.cabecalho-acoes {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--esp-2);
+  flex: none;
+}
+.sub-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--esp-2) var(--esp-4);
+  padding: var(--esp-3) 32px 0;
+  font-size: var(--tipo-apoio);
+  color: var(--tx2);
+}
+@media (max-width: 640px) {
+  .sub-cabecalho {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .cabecalho-status .cabecalho-status-texto {
+    display: none;
+  }
+}
+/* No celular o cabeçalho pode precisar de duas linhas: título em cima,
+   ações embaixo. Melhor que cortar o seletor de site. */
+@media (max-width: 860px) {
+  .cabecalho-linha {
+    flex-wrap: wrap;
+  }
+  .cabecalho-acoes {
+    flex-wrap: wrap;
+    flex: 1 1 100%;
+  }
+}
+
+/* Ponto de status pulsando: é o único elemento do cabeçalho que se move, e
+   se move porque afirma um estado vivo. */
+.ponto-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+  animation: pulsa-status 2.4s ease-in-out infinite;
+}
+@keyframes pulsa-status {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.55; box-shadow: 0 0 0 4px transparent; }
+}
+
+/* Abas + chips de período na mesma linha, chips à direita. */
+.abas-linha {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-4);
+  min-width: max-content;
+}
+.abas-direita {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  padding-left: var(--esp-4);
+}
+/* No celular a linha das abas rola, e os chips ficariam fora da tela, à
+   direita de "Configuração". Eles descem para uma segunda linha, à esquerda,
+   onde o polegar os alcança sem rolar. */
+@media (max-width: 640px) {
+  .abas-linha {
+    flex-wrap: wrap;
+    gap: var(--esp-2) 0;
+  }
+  .abas-direita {
+    flex: 1 1 100%;
+    margin-left: 0;
+    padding: 0 0 var(--esp-2);
+    position: sticky;
+    left: 0;
+  }
+}
+
+/* Cartão de indicador v2: filete de acento no topo, número tabular, rodapé
+   com variação + sparkline. */
+.cartao-kpi {
+  position: relative;
+  transition:
+    transform var(--mov-medio) var(--curva-saida),
+    box-shadow var(--mov-medio) var(--curva-saida),
+    border-color var(--mov-medio) ease;
+}
+.cartao-kpi::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--acento, var(--c1));
+}
+.cartao-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sombra-2);
+}
+.kpi-numero {
+  font-variant-numeric: tabular-nums;
+}
+.kpi-rodape {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  margin-top: var(--esp-2);
+}
+.kpi-rodape > .kpi-sparkline {
+  flex: none;
+  width: 120px;
+  opacity: 0.9;
+}
+.cartao-kpi[data-secundario='true'] .kpi-sparkline {
+  opacity: 0.5;
+}
+
+/* Botão primário com gradiente: cresce ao apontar, encolhe ao clicar. */
+.botao-primario {
+  background: var(--botao-grad);
+  color: var(--on-gold);
+  border: none;
+  border-radius: var(--raio-p);
+  font-weight: var(--peso-forte);
+  cursor: pointer;
+  transition: transform var(--mov-rapido) ease, box-shadow var(--mov-rapido) ease;
+}
+.botao-primario:hover { transform: scale(1.03); box-shadow: var(--sombra-1); }
+.botao-primario:active { transform: scale(0.97); }
+
+/* Transição global curta nos controles. O bloco prefers-reduced-motion acima
+   zera a duração de tudo isto. */
+button, a, th, tr, input, select {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
+
+/* ==========================================================================
+   Gráfico de evolução v2: traço que se desenha, barras que crescem, dica.
+   Nada aqui precisa de guarda própria: o bloco `prefers-reduced-motion` no
+   topo zera a duração de toda animação e transição da página.
+   ========================================================================== */
+.grafico-svg:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+  border-radius: var(--raio-p);
+}
+/* A linha principal se desenha da esquerda para a direita. `pathLength=1` no
+   SVG faz o traço inteiro valer 1 unidade, e o deslocamento vai de 1 a 0. */
+.grafico-linha {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: traca-linha 1.1s var(--curva-saida) forwards;
+}
+@keyframes traca-linha {
+  to { stroke-dashoffset: 0; }
+}
+.grafico-area {
+  animation: entrada-suave var(--mov-lento) ease both;
+}
+/* Cada dia cresce a partir do chão, com atraso de 22ms por dia (inline). */
+.grafico-barra {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: barra-cresce var(--mov-lento) var(--curva-saida) both;
+  transition: opacity var(--mov-rapido) ease;
+}
+@keyframes barra-cresce {
+  from { transform: scaleY(0); }
+}
+.grafico-dica {
+  background: var(--tip);
+  color: var(--tx);
+  border: 1px solid var(--bd);
+  border-radius: var(--raio-p);
+  box-shadow: var(--sombra-2);
+  padding: var(--esp-2) var(--esp-3);
+  font-size: var(--tipo-legenda);
+  line-height: 1.5;
+  white-space: nowrap;
+  animation: dica-entra var(--mov-rapido) ease both;
+}
+@keyframes dica-entra {
+  from { opacity: 0; }
+}
+
+/* ==========================================================================
+   Tabela v2: cabeçalho ordenável, barra proporcional na célula
+   ========================================================================== */
+.ordenar {
+  color: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  /* Alvo de toque: o link do cabeçalho tem a altura mínima, sem engordar
+     visualmente a linha — o padding negativo compensa o da célula. */
+  min-height: 44px;
+  margin: -11px 0;
+  border-radius: var(--raio-p);
+}
+.ordenar:hover,
+.ordenar:focus-visible {
+  color: var(--tx);
+}
+.ordenar-ativa,
+.ordenar-ativa:hover {
+  color: var(--gold-tx);
+  font-weight: var(--peso-forte);
+}
+.ordenar::after {
+  content: '\2195';
+  font-size: var(--tipo-legenda);
+  opacity: 0.55;
+}
+.ordenar[data-direcao='desc']::after { content: '\2193'; opacity: 1; }
+.ordenar[data-direcao='asc']::after { content: '\2191'; opacity: 1; }
+.celula-com-barra {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  min-width: 56px;
+}
+.celula-barra {
+  display: block;
+  height: 3px;
+  border-radius: var(--raio-pilula);
+  background: var(--elev);
+  overflow: hidden;
+}
+.celula-barra > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--raio-pilula);
+  animation: barra-avanca var(--mov-lento) var(--curva-saida) both;
+}
+@keyframes barra-avanca {
+  from { width: 0; }
+}
+
+/* Fatias do anel de origem: cada arco cresce a partir do topo. */
+.donut-fatia {
+  animation: entrada-suave var(--mov-lento) ease both;
+}
+
+/* Cartões KPI entram em cascata, como as linhas da tabela: 60ms por cartão. */
+.grade-cartoes > .cartao-kpi:nth-child(2) { animation-delay: 60ms; }
+.grade-cartoes > .cartao-kpi:nth-child(3) { animation-delay: 120ms; }
+.grade-cartoes > .cartao-kpi:nth-child(4) { animation-delay: 180ms; }
+.grade-cartoes > .cartao-kpi:nth-child(n + 5) { animation-delay: 240ms; }
+.grade-cartoes > .cartao-kpi {
+  animation-name: entrada-suave;
+  animation-duration: var(--mov-lento);
+  animation-timing-function: var(--curva-saida);
+  animation-fill-mode: both;
 }

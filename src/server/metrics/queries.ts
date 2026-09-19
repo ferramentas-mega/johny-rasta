@@ -178,6 +178,17 @@ export type DailyPoint = {
   sessoes: number;
   cliquesCta: number;
   formularios: number;
+  /**
+   * Os cliques por SUBTIPO de CTA, por dia — para o gráfico em barras por ação
+   * e para as sparklines dos cartões. Somam `cliquesCta` (whatsapp + phone +
+   * email + form_open + outros); há teste afirmando isso.
+   */
+  cliquesWhatsapp: number;
+  cliquesTelefone: number;
+  cliquesEmail: number;
+  aberturasFormulario: number;
+  visualizacoes: number;
+  visitantesUnicos: number;
 };
 
 /**
@@ -204,9 +215,24 @@ export async function getDailySeries(
          from eligible group by 1
      ),
      cli as (
-       select (e.started_at at time zone $4)::date as dia, count(*)::int as n
+       select (e.started_at at time zone $4)::date as dia,
+              count(*)::int                                                   as n,
+              count(*) filter (where ev.subtype = 'whatsapp')::int            as whatsapp,
+              count(*) filter (where ev.subtype = 'phone')::int               as telefone,
+              count(*) filter (where ev.subtype = 'email')::int               as email,
+              count(*) filter (where ev.subtype = 'form_open')::int           as form_open
          from ev join eligible e on e.id = ev.session_id
         where ev.type = 'cta_click' group by 1
+     ),
+     vis as (
+       select (e.started_at at time zone $4)::date as dia,
+              count(*) filter (where ev.type = 'page_view')::int as n
+         from ev join eligible e on e.id = ev.session_id
+        group by 1
+     ),
+     uni as (
+       select (started_at at time zone $4)::date as dia, count(distinct visitor_id)::int as n
+         from eligible group by 1
      ),
      frm as (
        select (created_at at time zone $4)::date as dia, count(*)::int as n
@@ -215,10 +241,18 @@ export async function getDailySeries(
      select to_char(d.dia, 'YYYY-MM-DD')      as dia,
             coalesce(ses.n, 0)                as "sessoes",
             coalesce(cli.n, 0)                as "cliquesCta",
-            coalesce(frm.n, 0)                as "formularios"
+            coalesce(frm.n, 0)                as "formularios",
+            coalesce(cli.whatsapp, 0)         as "cliquesWhatsapp",
+            coalesce(cli.telefone, 0)         as "cliquesTelefone",
+            coalesce(cli.email, 0)            as "cliquesEmail",
+            coalesce(cli.form_open, 0)        as "aberturasFormulario",
+            coalesce(vis.n, 0)                as "visualizacoes",
+            coalesce(uni.n, 0)                as "visitantesUnicos"
        from dias d
        left join ses on ses.dia = d.dia
        left join cli on cli.dia = d.dia
+       left join vis on vis.dia = d.dia
+       left join uni on uni.dia = d.dia
        left join frm on frm.dia = d.dia
       order by d.dia`,
     [site.id, period.from, period.to, site.timezone],

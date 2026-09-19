@@ -5,13 +5,21 @@ import { BotaoAtualizar } from '@/components/BotaoAtualizar';
 import { SinoAvisos } from '@/components/SinoAvisos';
 import { ESTADO_LABEL, ESTADO_TOM, type EstadoRastreamento } from '@/server/services/sites';
 
-const COR_PONTO = { ok: 'var(--gold)', aguardando: 'var(--warn-tx)', inativo: 'var(--tx3)' } as const;
+const COR_PONTO = { ok: 'var(--c1)', aguardando: 'var(--c3)', inativo: 'var(--c5)' } as const;
 
 /**
- * Cabeçalho de página.
+ * Cabeçalho de página — v2: UMA linha, fixa no topo, translúcida.
  *
- * As animações decorativas ficam concentradas aqui, como pede o briefing — o
- * resto da interface não se move.
+ * Na linha: título (com reticências, nunca quebra), ponto de status pulsando
+ * com o nome do estado, e as ações (filtros da tela, atualizar, sino, e —
+ * só no celular — tema e efeitos, que no desktop vivem no rodapé do menu).
+ *
+ * O que não cabe numa linha desce para o `sub-cabecalho`, no topo do conteúdo
+ * rolável: o kicker da seção e a linha de meta (fuso, contagens). É informação
+ * de contexto, não de identidade — não precisa ficar fixa.
+ *
+ * O título leva gradiente recortado no texto, e por isso NÃO leva mais o
+ * `--glow`: brilho e recorte de fundo não convivem no mesmo elemento.
  */
 export function Cabecalho({
   kicker,
@@ -39,63 +47,50 @@ export function Cabecalho({
   const geradoEm = new Date();
 
   return (
-    <header
-      className="cabecalho"
-      style={{
-        position: 'relative',
-        overflow: 'hidden',
-        borderBottom: '1px solid var(--bd)',
-        background: 'var(--header-bg)',
-      }}
-    >
-      <CabecalhoFx />
-      <i aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, width: 22, height: 22, borderTop: '1px solid var(--gold)', borderLeft: '1px solid var(--gold)', opacity: 0.55 }} />
-      <i aria-hidden="true" style={{ position: 'absolute', top: 0, right: 0, width: 22, height: 22, borderTop: '1px solid var(--gold)', borderRight: '1px solid var(--gold)', opacity: 0.55 }} />
+    <>
+      <header className="cabecalho" style={{ overflow: 'hidden', borderBottom: '1px solid var(--bd)' }}>
+        <CabecalhoFx />
+        <i aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, width: 22, height: 22, borderTop: '1px solid var(--gold)', borderLeft: '1px solid var(--gold)', opacity: 0.55 }} />
+        <i aria-hidden="true" style={{ position: 'absolute', top: 0, right: 0, width: 22, height: 22, borderTop: '1px solid var(--gold)', borderRight: '1px solid var(--gold)', opacity: 0.55 }} />
 
-      <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
-        <div style={{ minWidth: 0 }}>
-          <Sobrelinha>{kicker}</Sobrelinha>
-          <h1
-            className="mono"
-            /* Peso LEVE, e é a mudança de identidade mais visível desta rodada.
-               A referência abre com `text-7xl font-extralight tracking-tight
-               leading-[1.1]`; aqui o peso cai de 600 para 300 e a trilha fecha.
-               A monoespaçada e o verde ficam: muda o peso, não a fonte nem a
-               cor. Título de PAINEL continua em 600 — se ele afinasse junto,
-               os dois competiriam, e hierarquia é o que sobra quando o peso
-               some. */
-            style={{
-              fontWeight: 'var(--peso-leve)',
-              fontSize: 'var(--tipo-display)',
-              letterSpacing: 'var(--trilha-justa)',
-              lineHeight: 1.1,
-              margin: '4px 0 0',
-              color: 'var(--tx)',
-              textShadow: 'var(--glow)',
-              wordBreak: 'break-word',
-            }}
-          >
-            {titulo}
-          </h1>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', marginTop: 6, fontSize: 'var(--tipo-apoio)', color: 'var(--tx2)' }}>
+        <div className="cabecalho-linha">
+          <div className="cabecalho-titulo">
+            <h1
+              className="mono"
+              title={titulo}
+              style={{
+                fontWeight: 'var(--peso-leve)',
+                fontSize: 'var(--tipo-display)',
+                letterSpacing: 'var(--trilha-justa)',
+                lineHeight: 1.1,
+              }}
+            >
+              {titulo}
+            </h1>
             {estado && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                <i style={{ width: 7, height: 7, borderRadius: '50%', background: COR_PONTO[ESTADO_TOM[estado.tipo]], display: 'inline-block', flex: 'none' }} />
-                {ESTADO_LABEL[estado.tipo]}
-                {estado.detalhe && <span style={{ color: 'var(--tx3)' }}>· {estado.detalhe}</span>}
+              <span className="cabecalho-status" title={estado.detalhe}>
+                <i className="ponto-status" style={{ background: COR_PONTO[ESTADO_TOM[estado.tipo]], color: COR_PONTO[ESTADO_TOM[estado.tipo]] }} />
+                <span className="cabecalho-status-texto">{ESTADO_LABEL[estado.tipo]}</span>
               </span>
             )}
-            {meta && <span>{meta}</span>}
+          </div>
+
+          <div className="cabecalho-acoes">
+            {filtros}
+            <BotaoAtualizar geradoEm={geradoEm} aCadaSegundos={atualizarACada} />
+            <SinoAvisos />
+            <span className="controles-cabecalho" style={{ display: 'contents' }}>
+              <ControlesAparencia />
+            </span>
           </div>
         </div>
+      </header>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-          {filtros}
-          <BotaoAtualizar geradoEm={geradoEm} aCadaSegundos={atualizarACada} />
-          <SinoAvisos />
-          <ControlesAparencia />
-        </div>
+      <div className="sub-cabecalho">
+        <Sobrelinha>{kicker}</Sobrelinha>
+        {estado?.detalhe && <span style={{ color: 'var(--tx3)' }}>{estado.detalhe}</span>}
+        {meta && <span>{meta}</span>}
       </div>
-    </header>
+    </>
   );
 }

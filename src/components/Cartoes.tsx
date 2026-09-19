@@ -11,6 +11,13 @@ import type { Variacao } from '@/lib/formato';
  * Recebe valor e variação já calculados pela camada de métricas. Não faz conta
  * nenhuma: se este componente pudesse calcular, dois cartões poderiam discordar.
  */
+/**
+ * Cor de acento de um indicador — a paleta de DADOS da v2, com significado
+ * fixo: c1 verde (principal, WhatsApp), c2 azul (secundário, taxa), c3 amarelo
+ * (formulários, telefone), c4 vermelho (e-mail, erro), c5 cinza.
+ */
+export type Acento = 'c1' | 'c2' | 'c3' | 'c4' | 'c5';
+
 export function CartaoIndicador({
   chave,
   rotulo,
@@ -20,6 +27,9 @@ export function CartaoIndicador({
   variacao,
   destaque = false,
   href,
+  cor: acento = 'c1',
+  serie,
+  secundario = false,
 }: {
   /** Chave do indicador em METRICS. Vira identificador estável para os testes. */
   chave: string;
@@ -30,9 +40,20 @@ export function CartaoIndicador({
   variacao: Variacao;
   destaque?: boolean;
   href?: string;
+  /** Acento da métrica: filete no topo, ícone e número. */
+  cor?: Acento;
+  /**
+   * A série diária por trás do número, quando existe. Vira a sparkline do
+   * rodapé (120×26, sem eixo). Ausente = sem gráfico, nunca inventado.
+   */
+  serie?: Ponto[];
+  /** Secundário: número menor, na cor de texto, sparkline mais discreta. */
+  secundario?: boolean;
 }) {
   const cor =
     variacao.tom === 'alta' ? 'var(--pos)' : variacao.tom === 'baixa' ? 'var(--neg)' : 'var(--tx3)';
+  const corAcento = `var(--${acento})`;
+  const fundoAcento = `var(--f${acento.slice(1)})`;
 
   const conteudo = (
     <>
@@ -46,9 +67,9 @@ export function CartaoIndicador({
             width: 26,
             height: 26,
             borderRadius: 'var(--raio-p)',
-            background: 'var(--ok-bg)',
-            border: '1px solid var(--gold-bd)',
-            color: 'var(--gold-tx)',
+            background: fundoAcento,
+            border: `1px solid ${corAcento}`,
+            color: corAcento,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -86,28 +107,35 @@ export function CartaoIndicador({
         </span>
       </div>
       <div
-        className="mono"
+        className="mono kpi-numero"
         data-testid={`kpi-valor-${chave}`}
-        /* A receita literal da referência:
-             text-7xl font-light tracking-tighter text-emerald-400 leading-none
-             drop-shadow-[0_0_12px_rgba(52,211,153,.6)]
-           Peso 300 com trilha fechada — em peso leve a letra solta desmancha o
-           número. O verde com brilho já era nosso; o que faltava era o peso. */
+        /* v2: número na COR DA MÉTRICA, peso 600, dígitos tabulares (a série
+           de cartões alinha coluna a coluna). O tamanho vem da escala fechada:
+           `--tipo-numero` (40) no primário, `--tipo-display` (28) no
+           secundário — a especificação pedia 38/26, e ninguém enxerga 2px; o
+           que se enxerga é a escala furada. */
         style={{
-          fontSize: 'var(--tipo-numero)',
-          fontWeight: 'var(--peso-leve)',
-          letterSpacing: 'var(--trilha-fechada)',
+          fontSize: secundario ? 'var(--tipo-display)' : 'var(--tipo-numero)',
+          fontWeight: 'var(--peso-forte)',
+          letterSpacing: 'var(--trilha-justa)',
           lineHeight: 1,
           margin: '14px 0 8px',
-          color: 'var(--gold-tx)',
+          color: secundario ? 'var(--tx)' : corAcento,
           // Só o cartão em destaque brilha — ver a nota sobre hierarquia acima.
-          textShadow: destaque ? 'var(--glow)' : 'none',
+          textShadow: destaque && !secundario ? 'var(--glow)' : 'none',
         }}
       >
         {valor}
       </div>
-      <div className="mono" style={{ fontSize: 'var(--tipo-legenda)', color: cor }}>
-        {variacao.texto}
+      <div className="kpi-rodape">
+        <div className="mono" style={{ fontSize: 'var(--tipo-legenda)', color: cor, minWidth: 0 }}>
+          {variacao.texto}
+        </div>
+        {serie && serie.length > 1 && (
+          <div className="kpi-sparkline">
+            <Minigrafico pontos={serie} id={`spark-kpi-${chave}`} cor={corAcento} largura={120} altura={26} />
+          </div>
+        )}
       </div>
     </>
   );
@@ -116,28 +144,22 @@ export function CartaoIndicador({
     display: 'block',
     padding: '18px 18px 16px',
     // Raio e borda vêm da classe `.cartao`; o destaque só REFORÇA a borda.
-    ...(destaque ? { border: '1px solid var(--gold)' } : null),
-    // `var(--gold-fill)`, e não a cor escrita à mão que estava aqui
-    // (`rgba(112,255,139,.10)`): aquele é o verde do tema ESCURO, e ele não
-    // trocava no claro — o cartão de destaque puxava para um verde que não é o
-    // da paleta clara. Não dava erro, e o verificador não pegava: ele conferia
-    // hexadecimal, e isto é `rgba`. Hoje confere os dois.
-    ...(destaque
-      ? { background: 'linear-gradient(180deg, var(--gold-fill), var(--card) 62%)' }
-      : null),
+    ...(destaque ? { border: `1px solid ${corAcento}` } : null),
+    ...(destaque ? { background: `linear-gradient(180deg, ${fundoAcento}, var(--card) 62%)` } : null),
     textDecoration: 'none',
     color: 'inherit',
-  } as const;
+    // O filete de 2px no topo (`.cartao-kpi::after`) lê esta variável.
+    ['--acento' as string]: corAcento,
+  } as React.CSSProperties;
 
-  // A classe existe só pelo que estilo inline não faz: `:hover`. O cartão que
-  // LEVA a algum lugar sobe ao nível 2 quando apontado; o que não leva fica
-  // parado, porque movimento sem destino promete clique que não existe.
+  // `.cartao-kpi` sobe 2px ao apontar em todo cartão; o que LEVA a algum lugar
+  // também ganha a sombra de nível 2 (`.cartao-elevado`).
   return href ? (
-    <Link href={href} className="cartao cartao-elevado" data-testid={`kpi-${chave}`} style={estilo}>
+    <Link href={href} className="cartao cartao-kpi cartao-elevado" data-testid={`kpi-${chave}`} data-secundario={secundario} style={estilo}>
       {conteudo}
     </Link>
   ) : (
-    <div className="cartao" data-testid={`kpi-${chave}`} style={estilo}>
+    <div className="cartao cartao-kpi" data-testid={`kpi-${chave}`} data-secundario={secundario} style={estilo}>
       {conteudo}
     </div>
   );

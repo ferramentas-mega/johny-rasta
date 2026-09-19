@@ -206,6 +206,11 @@ for (const caminho of arquivos(join(RAIZ, 'src'))) {
 // Os pares que a interface realmente usa. Fundo com alfa é composto sobre
 // `--bg` antes de medir: `rgba(…, .12)` sobre preto não é a cor que se vê.
 const PARES = [
+  // Paleta de dados: número e etiqueta escritos em --c1..--c5 sobre cartão e superfície levantada.
+  ['--c1', '--card'], ['--c2', '--card'], ['--c3', '--card'], ['--c4', '--card'], ['--c5', '--card'],
+  ['--c1', '--elev'], ['--c2', '--elev'], ['--c3', '--elev'], ['--c4', '--elev'], ['--c5', '--elev'],
+  ['--tx', '--tip'], ['--tx3', '--tip'],
+  ['--c1', '--f1'], ['--c2', '--f2'], ['--c3', '--f3'], ['--c4', '--f4'],
   ['--tx', '--bg'], ['--tx', '--card'], ['--tx', '--side'], ['--tx', '--elev'], ['--tx', '--hover'],
   ['--tx2', '--bg'], ['--tx2', '--card'], ['--tx2', '--side'], ['--tx2', '--elev'],
   ['--tx3', '--bg'], ['--tx3', '--card'], ['--tx3', '--side'], ['--tx3', '--elev'],
