@@ -39,7 +39,8 @@ describe('identificação do build', () => {
     // fora da Vercel — e o diagnóstico diria "local" em produção.
     semVercel();
     process.env.BUILD_COMMIT = '9f8e7d6c5b4a39281706f5e4d3c2b1a0';
-    process.env.NODE_ENV = 'production';
+    // `NODE_ENV` é somente-leitura no tipo; no runtime é uma string comum.
+    Object.assign(process.env, { NODE_ENV: 'production' });
     expect(buildAtual()).toEqual({ commit: '9f8e7d6', deployment: null, ambiente: 'production' });
     expect(descricaoDoBuild()).toBe('production · 9f8e7d6');
   });
