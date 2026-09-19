@@ -130,6 +130,8 @@ Documentação complementar:
 - [`docs/instalacao-rastreamento.md`](docs/instalacao-rastreamento.md) — instalar o coletor num site
 - [`docs/deploy-supabase.md`](docs/deploy-supabase.md) — subir para o Supabase
 - [`docs/deploy-vercel.md`](docs/deploy-vercel.md) — publicar na Vercel, clique a clique
+- [`docs/deploy-hostinger.md`](docs/deploy-hostinger.md) — publicar na hospedagem Node.js da
+  Hostinger: variáveis, SSL e os agendamentos via GitHub Actions
 - [`docs/relatorio-testes.md`](docs/relatorio-testes.md) — o que foi testado, e o que não foi
 - [`docs/spec-rastreamento/`](docs/spec-rastreamento/README.md) — especificação portável do rastreamento
   de botões, para reimplementar em outro aplicativo

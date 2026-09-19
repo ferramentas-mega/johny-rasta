@@ -19,7 +19,10 @@ jobs:
     steps:
       - name: Esperar a publicação e comparar o commit
         env:
-          ENDERECO: https://johny-rasta.vercel.app
+          # A variável APP_URL do repositório (Settings › Secrets and variables ›
+          # Actions › Variables) decide qual domínio é a produção. Sem ela, o
+          # endereço da Vercel de antes.
+          ENDERECO: ${{ vars.APP_URL || 'https://johny-rasta.vercel.app' }}
           ESPERADO: ${{ github.sha }}
         run: |
           curto="${ESPERADO:0:7}"

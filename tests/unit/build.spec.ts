@@ -30,7 +30,18 @@ describe('identificação do build', () => {
 
   it('fora da Vercel não inventa commit nem deployment, e diz que é local', () => {
     semVercel();
+    delete process.env.BUILD_COMMIT;
     expect(buildAtual()).toEqual({ commit: null, deployment: null, ambiente: 'local' });
+  });
+
+  it('noutra hospedagem (Hostinger, VPS), o commit vem do BUILD_COMMIT embutido no build, e produção é produção', () => {
+    // Sem isto, o `pos-deploy.yml` nunca conseguiria conferir o que está no ar
+    // fora da Vercel — e o diagnóstico diria "local" em produção.
+    semVercel();
+    process.env.BUILD_COMMIT = '9f8e7d6c5b4a39281706f5e4d3c2b1a0';
+    process.env.NODE_ENV = 'production';
+    expect(buildAtual()).toEqual({ commit: '9f8e7d6', deployment: null, ambiente: 'production' });
+    expect(descricaoDoBuild()).toBe('production · 9f8e7d6');
   });
 
   it('distingue preview de produção — a variável salva num não vale no outro', () => {

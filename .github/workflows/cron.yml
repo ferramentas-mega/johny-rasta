@@ -1,0 +1,56 @@
+# Os dois agendamentos diários, para hospedagem SEM cron próprio.
+#
+# Na Vercel quem dispara é o `vercel.json`. Na Hostinger (Node.js), num VPS
+# ou em Docker não há cron da plataforma — e sem estes dois toques o painel
+# para de agendar análises, de fechar acompanhamentos e de avisar por push,
+# em silêncio. Este workflow chama os mesmos endpoints, com o mesmo segredo,
+# nos mesmos horários (06:00 e 06:30 UTC).
+#
+# Exige, no GitHub do repositório:
+#   Settings › Secrets and variables › Actions
+#     - secret  CRON_SECRET  — o MESMO valor definido na hospedagem
+#     - variable APP_URL     — ex.: https://app.johnyweb.com
+#
+# Se a hospedagem tiver cron próprio (Vercel), rodar os dois é inofensivo: o
+# endpoint deduplica pela fila e pela varredura, e uma chamada a mais não
+# enfileira duas vezes.
+name: Agendamentos diários
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  tocar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar o endpoint do horário
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          HORARIO: ${{ github.event.schedule }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::Defina a variável APP_URL e o segredo CRON_SECRET no repositório."
+            exit 1
+          fi
+          # 06:00 agenda (e varre acompanhamentos, e avisa por push); 06:30
+          # processa UMA análise da fila. Disparo manual roda os dois, em ordem.
+          if [ "$HORARIO" = "30 6 * * *" ]; then rotas="processar"
+          elif [ "$HORARIO" = "0 6 * * *" ]; then rotas="agendar"
+          else rotas="agendar processar"; fi
+
+          for rota in $rotas; do
+            echo "→ $APP_URL/api/auditorias/$rota"
+            codigo=$(curl -s -o /tmp/resposta.json -w '%{http_code}' --max-time 120 \
+                          -H "Authorization: Bearer $CRON_SECRET" \
+                          "$APP_URL/api/auditorias/$rota" || echo 000)
+            echo "  HTTP $codigo"
+            cat /tmp/resposta.json; echo
+            if [ "$codigo" != "200" ]; then
+              echo "::error::$rota respondeu HTTP $codigo"
+              exit 1
+            fi
+          done

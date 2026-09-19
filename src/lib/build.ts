@@ -39,11 +39,18 @@ function encurtarDeployment(id: string | undefined): string | null {
 }
 
 export function buildAtual(): Build {
-  const sha = process.env.VERCEL_GIT_COMMIT_SHA;
+  // Vercel informa o commit por variável; em qualquer outra hospedagem
+  // (Hostinger, VPS, Docker) quem informa é o `next.config`, que lê o git no
+  // momento do build e embute em BUILD_COMMIT. Sem nenhum dos dois, `null` —
+  // e o `pos-deploy.yml` acusa, em vez de fingir que conferiu.
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.BUILD_COMMIT;
+  const ambiente =
+    process.env.VERCEL_ENV ??
+    (process.env.VERCEL ? 'desconhecido' : process.env.NODE_ENV === 'production' ? 'production' : 'local');
   return {
     commit: sha ? sha.slice(0, 7) : null,
     deployment: encurtarDeployment(process.env.VERCEL_DEPLOYMENT_ID),
-    ambiente: process.env.VERCEL_ENV ?? (process.env.VERCEL ? 'desconhecido' : 'local'),
+    ambiente,
   };
 }
 

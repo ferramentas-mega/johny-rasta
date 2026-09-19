@@ -1,7 +1,27 @@
 import type { NextConfig } from 'next';
+import { execSync } from 'node:child_process';
+
+/**
+ * O commit do build, lido do git NA HORA DO BUILD e embutido como variável.
+ *
+ * Existe para as hospedagens que não informam o commit por variável (a Vercel
+ * informa; Hostinger, VPS e Docker não). É o que deixa `/api/diagnostico` dizer
+ * qual código está no ar, e o `pos-deploy.yml` conferir. Sem git no ambiente
+ * de build, fica vazio — nunca inventa um valor.
+ */
+function commitDoGit(): string {
+  try {
+    return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return '';
+  }
+}
 
 const config: NextConfig = {
   serverExternalPackages: ['pg'],
+  env: {
+    BUILD_COMMIT: process.env.BUILD_COMMIT ?? commitDoGit(),
+  },
   /**
    * Nada de `X-Powered-By: Next.js`.
    *
