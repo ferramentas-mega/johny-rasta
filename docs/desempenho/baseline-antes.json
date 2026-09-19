@@ -1,0 +1,1832 @@
+{
+  "geradoEm": "2026-09-19T02:23:42.826Z",
+  "ambiente": "next start (build de produção) em localhost:3123 contra Postgres 16 local (painel_matrix_test, massa de scripts/test-db.ts); Chromium headless via Playwright; contexto novo (cache frio) a cada corrida; prefetches do <Link> bloqueados nas corridas medidas (não geram SQL — confirmado pela corrida comPrefetch) e contados à parte",
+  "metodo": {
+    "ttfb": "PerformanceNavigationTiming.responseStart",
+    "dcl": "domContentLoadedEventEnd",
+    "load": "loadEventEnd",
+    "bytes": "encodedBodySize (fio) e decodedBodySize somados de navigation + resource entries",
+    "sql": "log_min_duration_statement=0 no Postgres local, fatiado por offset do arquivo antes/depois de cada page.goto; statement = linhas execute/statement (parse/bind entram só no tempo)",
+    "mediana": "3 corridas por rota; listas (repetidas/lentas) da corrida com tempo SQL mediano"
+  },
+  "naoMedido": [
+    "produção (app.johnyweb.com) — inalcançável deste sandbox",
+    "latência de rede até o Supabase (us-east-1) — o custo real de cada statement em produção é RTT × statements, e o RTT não foi medido",
+    "compressão do proxy da Hostinger (aqui é o gzip do next start)"
+  ],
+  "ids": {
+    "clienteId": "7bc75830-e1b7-4746-a36f-9e5037ca0b7e",
+    "siteId": "5f89d00a-da97-4b27-ad76-5617acd43cc1"
+  },
+  "loginMaisVisaoGeral": {
+    "statements": 53,
+    "msSql": 26.225,
+    "msParseBind": 13.652,
+    "distintas": 17,
+    "transacoes": 13,
+    "consultasSessao": 2,
+    "setConfigConta": 10,
+    "repetidas": [
+      {
+        "vezes": 13,
+        "ms": 0.339,
+        "sql": "begin"
+      },
+      {
+        "vezes": 13,
+        "ms": 3.557,
+        "sql": "commit"
+      },
+      {
+        "vezes": 10,
+        "ms": 0.098,
+        "sql": "select set_config('?', $?, true)"
+      },
+      {
+        "vezes": 2,
+        "ms": 0.476,
+        "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+      },
+      {
+        "vezes": 2,
+        "ms": 0.122,
+        "sql": "select s.id as site_id, coalesce(sum(case when f.selecionado and f.verificado_em is null then ? else ? end), ?)::int as pendentes, coalesce(sum(case when f.sele"
+      },
+      {
+        "vezes": 2,
+        "ms": 0.574,
+        "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- ?. Desempenho ruim numa URL moni"
+      }
+    ],
+    "maisLentas": [
+      {
+        "ms": 1.785,
+        "sql": "select app.consumir_limite($1, $2) as consumir_limite"
+      },
+      {
+        "ms": 1.727,
+        "sql": "commit"
+      },
+      {
+        "ms": 1.521,
+        "sql": "select c.id, c.name, c.notes, c.created_at as \"createdAt\", (select count(*)::int from sites s where s.client_id = c.id and s.archived_at is null) as sites from "
+      },
+      {
+        "ms": 0.833,
+        "sql": "commit"
+      },
+      {
+        "ms": 0.608,
+        "sql": "select user_id, password_hash from app.find_user_for_login($1)"
+      }
+    ]
+  },
+  "rotas": [
+    {
+      "rota": "/visao-geral",
+      "h1": "Agência Teste",
+      "ttfbMs": 41.5,
+      "dclMs": 82.1,
+      "loadMs": 170.2,
+      "requests": 18,
+      "prefetchesBloqueados": 8,
+      "kbFio": 315.9,
+      "kbDecodificado": 663.9,
+      "kbJsFio": 117,
+      "kbJsDecodificado": 383,
+      "jsRequests": 12,
+      "kbHtmlFio": 19.7,
+      "kbHtmlDecodificado": 81.3,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 46,
+      "sqlMs": 13.205,
+      "sqlDistintas": 14,
+      "sqlTransacoes": 11,
+      "sqlOverheadTransacao": 32,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 11,
+          "ms": 0.223,
+          "sql": "begin"
+        },
+        {
+          "vezes": 11,
+          "ms": 0.366,
+          "sql": "commit"
+        },
+        {
+          "vezes": 10,
+          "ms": 0.073,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.441,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "vezes": 2,
+          "ms": 0.116,
+          "sql": "select s.id as site_id, coalesce(sum(case when f.selecionado and f.verificado_em is null then ? else ? end), ?)::int as pendentes, coalesce(sum(case when f.sele"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.579,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- ?. Desempenho ruim numa URL moni"
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.604,
+          "sql": "with ativos as ( select s.id, s.timezone, date_trunc('day', now() at time zone s.timezone)::date as hoje from sites s where s.archived_at is null ), grade as ( "
+        },
+        {
+          "ms": 0.492,
+          "sql": "with janela as ( select s.id, s.client_id, s.timezone, (date_trunc('day', now() at time zone s.timezone) - make_interval(days => $1::int - 1)) at time zone s.ti"
+        },
+        {
+          "ms": 0.404,
+          "sql": "select c.id, c.name, c.notes, c.created_at as \"createdAt\", (select count(*)::int from sites s where s.client_id = c.id and s.archived_at is null) as sites from "
+        },
+        {
+          "ms": 0.308,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.305,
+          "sql": "select id from sites where archived_at is null"
+        }
+      ],
+      "comPrefetch": {
+        "requests": 26,
+        "bytesTransferidos": 324757,
+        "rscRequests": 8,
+        "sqlStatements": 46,
+        "sqlMs": 12.666,
+        "wallMs": 760
+      },
+      "corridas": [
+        {
+          "ttfb": 45.59999999962747,
+          "dcl": 83.09999999962747,
+          "load": 170.1999999997206,
+          "requests": 18,
+          "bytes": 323465,
+          "sqlStatements": 46,
+          "sqlMs": 14.19
+        },
+        {
+          "ttfb": 41.5,
+          "dcl": 75.29999999981374,
+          "load": 166.6999999997206,
+          "requests": 18,
+          "bytes": 323502,
+          "sqlStatements": 46,
+          "sqlMs": 13.035
+        },
+        {
+          "ttfb": 41.5,
+          "dcl": 82.10000000009313,
+          "load": 189,
+          "requests": 18,
+          "bytes": 323492,
+          "sqlStatements": 46,
+          "sqlMs": 13.205
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 12,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/clientes",
+      "h1": "Clientes",
+      "ttfbMs": 34.1,
+      "dclMs": 70.8,
+      "loadMs": 161.9,
+      "requests": 19,
+      "prefetchesBloqueados": 8,
+      "kbFio": 309.3,
+      "kbDecodificado": 628,
+      "kbJsFio": 118.4,
+      "kbJsDecodificado": 386.1,
+      "jsRequests": 13,
+      "kbHtmlFio": 11.7,
+      "kbHtmlDecodificado": 42.4,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 37,
+      "sqlMs": 7.368,
+      "sqlDistintas": 13,
+      "sqlTransacoes": 9,
+      "sqlOverheadTransacao": 26,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 9,
+          "ms": 0.152,
+          "sql": "begin"
+        },
+        {
+          "vezes": 9,
+          "ms": 0.378,
+          "sql": "commit"
+        },
+        {
+          "vezes": 8,
+          "ms": 0.068,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.414,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.426,
+          "sql": "select c.id, c.name, c.notes, c.created_at as \"createdAt\", (select count(*)::int from sites s where s.client_id = c.id and s.archived_at is null) as sites from "
+        },
+        {
+          "ms": 0.303,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.245,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.228,
+          "sql": "select c.id, c.name as nome, count(distinct s.id)::int as sites, count(distinct ses.id)::int as sessoes, count(distinct l.id)::int as leads from clients c left "
+        },
+        {
+          "ms": 0.215,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "comPrefetch": {
+        "requests": 27,
+        "bytesTransferidos": 317962,
+        "rscRequests": 8,
+        "sqlStatements": 37,
+        "sqlMs": 7.282,
+        "wallMs": 775
+      },
+      "corridas": [
+        {
+          "ttfb": 34.10000000009313,
+          "dcl": 70.8000000002794,
+          "load": 166.10000000009313,
+          "requests": 19,
+          "bytes": 316681,
+          "sqlStatements": 37,
+          "sqlMs": 7.274
+        },
+        {
+          "ttfb": 34,
+          "dcl": 65.40000000037253,
+          "load": 161.90000000037253,
+          "requests": 19,
+          "bytes": 316676,
+          "sqlStatements": 37,
+          "sqlMs": 7.399
+        },
+        {
+          "ttfb": 34.60000000009313,
+          "dcl": 89.60000000009313,
+          "load": 152.6999999997206,
+          "requests": 19,
+          "bytes": 316688,
+          "sqlStatements": 37,
+          "sqlMs": 7.368
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 13,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/sites",
+      "h1": "Sites e landing pages",
+      "ttfbMs": 34.9,
+      "dclMs": 66.8,
+      "loadMs": 177.7,
+      "requests": 19,
+      "prefetchesBloqueados": 16,
+      "kbFio": 314,
+      "kbDecodificado": 644.4,
+      "kbJsFio": 119.3,
+      "kbJsDecodificado": 388.8,
+      "jsRequests": 13,
+      "kbHtmlFio": 15.5,
+      "kbHtmlDecodificado": 56,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 41,
+      "sqlMs": 8.691,
+      "sqlDistintas": 12,
+      "sqlTransacoes": 10,
+      "sqlOverheadTransacao": 29,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 10,
+          "ms": 0.137,
+          "sql": "begin"
+        },
+        {
+          "vezes": 10,
+          "ms": 0.293,
+          "sql": "commit"
+        },
+        {
+          "vezes": 9,
+          "ms": 0.066,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.481,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "vezes": 2,
+          "ms": 0.104,
+          "sql": "select s.id as site_id, coalesce(sum(case when f.selecionado and f.verificado_em is null then ? else ? end), ?)::int as pendentes, coalesce(sum(case when f.sele"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.567,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- ?. Desempenho ruim numa URL moni"
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.445,
+          "sql": "select c.id, c.name, c.notes, c.created_at as \"createdAt\", (select count(*)::int from sites s where s.client_id = c.id and s.archived_at is null) as sites from "
+        },
+        {
+          "ms": 0.311,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.283,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "ms": 0.259,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.256,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        }
+      ],
+      "comPrefetch": {
+        "requests": 35,
+        "bytesTransferidos": 324376,
+        "rscRequests": 16,
+        "sqlStatements": 41,
+        "sqlMs": 9.485,
+        "wallMs": 835
+      },
+      "corridas": [
+        {
+          "ttfb": 41.39999999990687,
+          "dcl": 120.29999999981374,
+          "load": 194.79999999981374,
+          "requests": 19,
+          "bytes": 321556,
+          "sqlStatements": 41,
+          "sqlMs": 9.49
+        },
+        {
+          "ttfb": 33.89999999990687,
+          "dcl": 66.79999999981374,
+          "load": 158.79999999981374,
+          "requests": 19,
+          "bytes": 321585,
+          "sqlStatements": 41,
+          "sqlMs": 8.691
+        },
+        {
+          "ttfb": 34.89999999990687,
+          "dcl": 66.20000000018626,
+          "load": 177.70000000018626,
+          "requests": 19,
+          "bytes": 321570,
+          "sqlStatements": 41,
+          "sqlMs": 8.584
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 13,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/leads",
+      "h1": "Leads recebidos",
+      "ttfbMs": 35.3,
+      "dclMs": 75.2,
+      "loadMs": 171.1,
+      "requests": 18,
+      "prefetchesBloqueados": 8,
+      "kbFio": 315.3,
+      "kbDecodificado": 655,
+      "kbJsFio": 116.9,
+      "kbJsDecodificado": 382.3,
+      "jsRequests": 12,
+      "kbHtmlFio": 19.2,
+      "kbHtmlDecodificado": 73.2,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 38,
+      "sqlMs": 8.805,
+      "sqlDistintas": 14,
+      "sqlTransacoes": 9,
+      "sqlOverheadTransacao": 26,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 9,
+          "ms": 0.126,
+          "sql": "begin"
+        },
+        {
+          "vezes": 9,
+          "ms": 0.321,
+          "sql": "commit"
+        },
+        {
+          "vezes": 8,
+          "ms": 0.061,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.412,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.517,
+          "sql": "select c.id, c.name, c.notes, c.created_at as \"createdAt\", (select count(*)::int from sites s where s.client_id = c.id and s.archived_at is null) as sites from "
+        },
+        {
+          "ms": 0.331,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.28,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.242,
+          "sql": "with eligible as ( select s.id, s.visitor_id, s.started_at, s.source, s.medium, s.campaign, s.device, s.entry_page_id from sessions s where s.site_id = $1 and s"
+        },
+        {
+          "ms": 0.222,
+          "sql": "select id from clients where archived_at is null"
+        }
+      ],
+      "comPrefetch": {
+        "requests": 26,
+        "bytesTransferidos": 324142,
+        "rscRequests": 8,
+        "sqlStatements": 38,
+        "sqlMs": 8.739,
+        "wallMs": 778
+      },
+      "corridas": [
+        {
+          "ttfb": 37.3000000002794,
+          "dcl": 83,
+          "load": 200,
+          "requests": 18,
+          "bytes": 322839,
+          "sqlStatements": 38,
+          "sqlMs": 8.805
+        },
+        {
+          "ttfb": 35.299999999813735,
+          "dcl": 75.20000000018626,
+          "load": 171.10000000009313,
+          "requests": 18,
+          "bytes": 322776,
+          "sqlStatements": 38,
+          "sqlMs": 10.496
+        },
+        {
+          "ttfb": 31.5,
+          "dcl": 66,
+          "load": 156.5,
+          "requests": 18,
+          "bytes": 322843,
+          "sqlStatements": 38,
+          "sqlMs": 8.551
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 12,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/otimizacoes",
+      "h1": "Onde atuar primeiro",
+      "ttfbMs": 35.7,
+      "dclMs": 92.2,
+      "loadMs": 160.5,
+      "requests": 19,
+      "prefetchesBloqueados": 7,
+      "kbFio": 316.7,
+      "kbDecodificado": 656.3,
+      "kbJsFio": 120.6,
+      "kbJsDecodificado": 392,
+      "jsRequests": 13,
+      "kbHtmlFio": 16.9,
+      "kbHtmlDecodificado": 64.8,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 28,
+      "sqlMs": 8.435,
+      "sqlDistintas": 13,
+      "sqlTransacoes": 6,
+      "sqlOverheadTransacao": 17,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 6,
+          "ms": 0.146,
+          "sql": "begin"
+        },
+        {
+          "vezes": 6,
+          "ms": 0.248,
+          "sql": "commit"
+        },
+        {
+          "vezes": 5,
+          "ms": 0.048,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.575,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- ?. Desempenho ruim numa URL moni"
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.31,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.309,
+          "sql": "select count(*)::int as total from leads"
+        },
+        {
+          "ms": 0.297,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.265,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.237,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "comPrefetch": {
+        "requests": 26,
+        "bytesTransferidos": 325416,
+        "rscRequests": 7,
+        "sqlStatements": 28,
+        "sqlMs": 7.601,
+        "wallMs": 776
+      },
+      "corridas": [
+        {
+          "ttfb": 33.89999999990687,
+          "dcl": 68,
+          "load": 160.5,
+          "requests": 19,
+          "bytes": 324358,
+          "sqlStatements": 28,
+          "sqlMs": 7.954
+        },
+        {
+          "ttfb": 35.799999999813735,
+          "dcl": 98.89999999990687,
+          "load": 163,
+          "requests": 19,
+          "bytes": 324336,
+          "sqlStatements": 28,
+          "sqlMs": 9.306
+        },
+        {
+          "ttfb": 35.6999999997206,
+          "dcl": 92.1999999997206,
+          "load": 159.60000000009313,
+          "requests": 19,
+          "bytes": 324346,
+          "sqlStatements": 28,
+          "sqlMs": 8.435
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 13,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/avisos",
+      "h1": "Central de avisos",
+      "ttfbMs": 28,
+      "dclMs": 59.8,
+      "loadMs": 148.8,
+      "requests": 18,
+      "prefetchesBloqueados": 9,
+      "kbFio": 307.3,
+      "kbDecodificado": 627.9,
+      "kbJsFio": 115.5,
+      "kbJsDecodificado": 377.8,
+      "jsRequests": 12,
+      "kbHtmlFio": 12.6,
+      "kbHtmlDecodificado": 50.6,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 21,
+      "sqlMs": 4.98,
+      "sqlDistintas": 10,
+      "sqlTransacoes": 5,
+      "sqlOverheadTransacao": 14,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 5,
+          "ms": 0.102,
+          "sql": "begin"
+        },
+        {
+          "vezes": 5,
+          "ms": 0.251,
+          "sql": "commit"
+        },
+        {
+          "vezes": 4,
+          "ms": 0.032,
+          "sql": "select set_config('?', $?, true)"
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.298,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.271,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "ms": 0.254,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.201,
+          "sql": "select id from clients where archived_at is null"
+        },
+        {
+          "ms": 0.131,
+          "sql": "select id from sites where archived_at is null"
+        }
+      ],
+      "comPrefetch": {
+        "requests": 27,
+        "bytesTransferidos": 316080,
+        "rscRequests": 9,
+        "sqlStatements": 21,
+        "sqlMs": 5.298,
+        "wallMs": 741
+      },
+      "corridas": [
+        {
+          "ttfb": 33.39999999990687,
+          "dcl": 66.79999999981374,
+          "load": 147.29999999981374,
+          "requests": 18,
+          "bytes": 314650,
+          "sqlStatements": 21,
+          "sqlMs": 4.98
+        },
+        {
+          "ttfb": 28,
+          "dcl": 59.799999999813735,
+          "load": 164.1999999997206,
+          "requests": 18,
+          "bytes": 314622,
+          "sqlStatements": 21,
+          "sqlMs": 5.118
+        },
+        {
+          "ttfb": 24.100000000093132,
+          "dcl": 57.200000000186265,
+          "load": 148.79999999981374,
+          "requests": 18,
+          "bytes": 314636,
+          "sqlStatements": 21,
+          "sqlMs": 4.857
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 12,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/configuracoes",
+      "h1": "Configurações da conta",
+      "ttfbMs": 32.6,
+      "dclMs": 66.6,
+      "loadMs": 166,
+      "requests": 19,
+      "prefetchesBloqueados": 6,
+      "kbFio": 314.4,
+      "kbDecodificado": 647.1,
+      "kbJsFio": 117.4,
+      "kbJsDecodificado": 383.3,
+      "jsRequests": 12,
+      "kbHtmlFio": 17.8,
+      "kbHtmlDecodificado": 64.1,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 44,
+      "sqlMs": 8.673,
+      "sqlDistintas": 14,
+      "sqlTransacoes": 11,
+      "sqlOverheadTransacao": 31,
+      "consultasSessao": 2,
+      "repetidas": [
+        {
+          "vezes": 11,
+          "ms": 0.162,
+          "sql": "begin"
+        },
+        {
+          "vezes": 11,
+          "ms": 0.347,
+          "sql": "commit"
+        },
+        {
+          "vezes": 9,
+          "ms": 0.07,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.538,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($?)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.482,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 1.015,
+          "sql": "select (select count(*)::int from sites where archived_at is null) as sites, (select count(*)::int from sites s where s.archived_at is null and not exists (sele"
+        },
+        {
+          "ms": 0.462,
+          "sql": "select c.id, c.name, c.notes, c.created_at as \"createdAt\", (select count(*)::int from sites s where s.client_id = c.id and s.archived_at is null) as sites from "
+        },
+        {
+          "ms": 0.291,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.283,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.261,
+          "sql": "select count(*)::int as total from leads"
+        }
+      ],
+      "comPrefetch": {
+        "requests": 25,
+        "bytesTransferidos": 322852,
+        "rscRequests": 6,
+        "sqlStatements": 44,
+        "sqlMs": 8.359,
+        "wallMs": 754
+      },
+      "corridas": [
+        {
+          "ttfb": 32.5,
+          "dcl": 66.59999999962747,
+          "load": 166,
+          "requests": 19,
+          "bytes": 321950,
+          "sqlStatements": 44,
+          "sqlMs": 9.045
+        },
+        {
+          "ttfb": 34.40000000037253,
+          "dcl": 66,
+          "load": 156.5,
+          "requests": 19,
+          "bytes": 321939,
+          "sqlStatements": 44,
+          "sqlMs": 8.673
+        },
+        {
+          "ttfb": 32.60000000009313,
+          "dcl": 73.8000000002794,
+          "load": 191.3000000002794,
+          "requests": 19,
+          "bytes": 321978,
+          "sqlStatements": 44,
+          "sqlMs": 8.175
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 12,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 1,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/clientes/7bc75830-e1b7-4746-a36f-9e5037ca0b7e",
+      "h1": "Cliente Dois",
+      "ttfbMs": 43.7,
+      "dclMs": 87.9,
+      "loadMs": 173.8,
+      "requests": 19,
+      "prefetchesBloqueados": 7,
+      "kbFio": 319.1,
+      "kbDecodificado": 673.5,
+      "kbJsFio": 121,
+      "kbJsDecodificado": 393.6,
+      "jsRequests": 13,
+      "kbHtmlFio": 18.9,
+      "kbHtmlDecodificado": 80.3,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 41,
+      "sqlMs": 12.19,
+      "sqlDistintas": 14,
+      "sqlTransacoes": 9,
+      "sqlOverheadTransacao": 26,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 9,
+          "ms": 0.15,
+          "sql": "begin"
+        },
+        {
+          "vezes": 9,
+          "ms": 0.345,
+          "sql": "commit"
+        },
+        {
+          "vezes": 8,
+          "ms": 0.062,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.366,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "vezes": 2,
+          "ms": 0.104,
+          "sql": "select s.id as site_id, coalesce(sum(case when f.selecionado and f.verificado_em is null then ? else ? end), ?)::int as pendentes, coalesce(sum(case when f.sele"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.17,
+          "sql": "with eligible as ( select s.id, s.visitor_id, s.started_at, s.source, s.medium, s.campaign, s.device, s.entry_page_id from sessions s where s.site_id = $? and s"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.536,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- ?. Desempenho ruim numa URL moni"
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.28,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.265,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.256,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.211,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "ms": 0.174,
+          "sql": "select id from clients where archived_at is null"
+        }
+      ],
+      "comPrefetch": {
+        "requests": 26,
+        "bytesTransferidos": 327745,
+        "rscRequests": 7,
+        "sqlStatements": 41,
+        "sqlMs": 12.625,
+        "wallMs": 762
+      },
+      "corridas": [
+        {
+          "ttfb": 43.6999999997206,
+          "dcl": 110,
+          "load": 173.79999999981374,
+          "requests": 19,
+          "bytes": 326754,
+          "sqlStatements": 41,
+          "sqlMs": 12.19
+        },
+        {
+          "ttfb": 51.39999999990687,
+          "dcl": 87.89999999990687,
+          "load": 182.89999999990687,
+          "requests": 19,
+          "bytes": 326784,
+          "sqlStatements": 41,
+          "sqlMs": 13.804
+        },
+        {
+          "ttfb": 37.700000000186265,
+          "dcl": 72.39999999990687,
+          "load": 158.10000000009313,
+          "requests": 19,
+          "bytes": 326748,
+          "sqlStatements": 41,
+          "sqlMs": 11.411
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 13,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/clientes/7bc75830-e1b7-4746-a36f-9e5037ca0b7e/relatorio",
+      "h1": "Cliente Dois",
+      "ttfbMs": 38.8,
+      "dclMs": 103.5,
+      "loadMs": 164.5,
+      "requests": 18,
+      "prefetchesBloqueados": 8,
+      "kbFio": 313.5,
+      "kbDecodificado": 659.8,
+      "kbJsFio": 117,
+      "kbJsDecodificado": 382.7,
+      "jsRequests": 12,
+      "kbHtmlFio": 17.3,
+      "kbHtmlDecodificado": 77.5,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 40,
+      "sqlMs": 11.806,
+      "sqlDistintas": 14,
+      "sqlTransacoes": 8,
+      "sqlOverheadTransacao": 23,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 8,
+          "ms": 0.158,
+          "sql": "begin"
+        },
+        {
+          "vezes": 8,
+          "ms": 0.291,
+          "sql": "commit"
+        },
+        {
+          "vezes": 7,
+          "ms": 0.056,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 3,
+          "ms": 0.026,
+          "sql": "with hoje as (select date_trunc('?', now() at time zone $?) as d) select (d - make_interval(days => $?::int - ?)) at time zone $? as \"from\", (d + interval '?') "
+        },
+        {
+          "vezes": 2,
+          "ms": 0.342,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "vezes": 2,
+          "ms": 0.106,
+          "sql": "select s.id as site_id, coalesce(sum(case when f.selecionado and f.verificado_em is null then ? else ? end), ?)::int as pendentes, coalesce(sum(case when f.sele"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.507,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- ?. Desempenho ruim numa URL moni"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.159,
+          "sql": "with eligible as ( select s.id, s.visitor_id, s.started_at, s.source, s.medium, s.campaign, s.device, s.entry_page_id from sessions s where s.site_id = $? and s"
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.28,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.261,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.246,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.225,
+          "sql": "select id from clients where archived_at is null"
+        },
+        {
+          "ms": 0.221,
+          "sql": "with eventos as ( -- Medições, com a anterior do mesmo par. select r.medido_em as quando, 'analise'::text as tipo, r.site_id, r.url_solicitada as url, r.strateg"
+        }
+      ],
+      "comPrefetch": {
+        "requests": 26,
+        "bytesTransferidos": 322199,
+        "rscRequests": 8,
+        "sqlStatements": 40,
+        "sqlMs": 12.186,
+        "wallMs": 764
+      },
+      "corridas": [
+        {
+          "ttfb": 44,
+          "dcl": 103.5,
+          "load": 164.5,
+          "requests": 18,
+          "bytes": 320987,
+          "sqlStatements": 40,
+          "sqlMs": 12.662
+        },
+        {
+          "ttfb": 38.799999999813735,
+          "dcl": 73.1999999997206,
+          "load": 159.39999999990687,
+          "requests": 18,
+          "bytes": 321009,
+          "sqlStatements": 40,
+          "sqlMs": 11.498
+        },
+        {
+          "ttfb": 38,
+          "dcl": 130.8000000002794,
+          "load": 197.70000000018626,
+          "requests": 18,
+          "bytes": 320995,
+          "sqlStatements": 40,
+          "sqlMs": 11.806
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 12,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/sites/5f89d00a-da97-4b27-ad76-5617acd43cc1/desempenho?periodo=30d",
+      "h1": "alfa.teste",
+      "ttfbMs": 57.4,
+      "dclMs": 135.4,
+      "loadMs": 214.8,
+      "requests": 18,
+      "prefetchesBloqueados": 11,
+      "kbFio": 337.7,
+      "kbDecodificado": 770.9,
+      "kbJsFio": 120.5,
+      "kbJsDecodificado": 393.2,
+      "jsRequests": 12,
+      "kbHtmlFio": 38,
+      "kbHtmlDecodificado": 178.1,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 40,
+      "sqlMs": 13.508,
+      "sqlDistintas": 17,
+      "sqlTransacoes": 8,
+      "sqlOverheadTransacao": 23,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 8,
+          "ms": 0.156,
+          "sql": "begin"
+        },
+        {
+          "vezes": 8,
+          "ms": 0.265,
+          "sql": "commit"
+        },
+        {
+          "vezes": 7,
+          "ms": 0.055,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.46,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "vezes": 2,
+          "ms": 0.26,
+          "sql": "with eligible as ( select s.id, s.visitor_id, s.started_at, s.source, s.medium, s.campaign, s.device, s.entry_page_id from sessions s where s.site_id = $? and s"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.385,
+          "sql": "with eligible as ( select s.id, s.visitor_id, s.started_at, s.source, s.medium, s.campaign, s.device, s.entry_page_id from sessions s where s.site_id = $? and s"
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.316,
+          "sql": "select id from clients where archived_at is null"
+        },
+        {
+          "ms": 0.316,
+          "sql": "with eligible as ( select s.id, s.visitor_id, s.started_at, s.source, s.medium, s.campaign, s.device, s.entry_page_id from sessions s where s.site_id = $1 and s"
+        },
+        {
+          "ms": 0.266,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.261,
+          "sql": "with eligible as ( select s.id, s.visitor_id, s.started_at, s.source, s.medium, s.campaign, s.device, s.entry_page_id from sessions s where s.site_id = $1 and s"
+        },
+        {
+          "ms": 0.252,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "comPrefetch": {
+        "requests": 29,
+        "bytesTransferidos": 347651,
+        "rscRequests": 11,
+        "sqlStatements": 40,
+        "sqlMs": 13.858,
+        "wallMs": 878
+      },
+      "corridas": [
+        {
+          "ttfb": 57.39999999990687,
+          "dcl": 135.39999999990687,
+          "load": 204.70000000018626,
+          "requests": 18,
+          "bytes": 345857,
+          "sqlStatements": 40,
+          "sqlMs": 13.508
+        },
+        {
+          "ttfb": 58.5,
+          "dcl": 145.59999999962747,
+          "load": 214.79999999981374,
+          "requests": 18,
+          "bytes": 345803,
+          "sqlStatements": 40,
+          "sqlMs": 13.971
+        },
+        {
+          "ttfb": 56.3000000002794,
+          "dcl": 93.40000000037253,
+          "load": 220.70000000018626,
+          "requests": 18,
+          "bytes": 345851,
+          "sqlStatements": 40,
+          "sqlMs": 12.689
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 12,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/sites/5f89d00a-da97-4b27-ad76-5617acd43cc1/comportamento",
+      "h1": "alfa.teste",
+      "ttfbMs": 43.2,
+      "dclMs": 97.5,
+      "loadMs": 151.5,
+      "requests": 18,
+      "prefetchesBloqueados": 11,
+      "kbFio": 309.7,
+      "kbDecodificado": 640.9,
+      "kbJsFio": 116.7,
+      "kbJsDecodificado": 382,
+      "jsRequests": 12,
+      "kbHtmlFio": 13.8,
+      "kbHtmlDecodificado": 59.3,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 38,
+      "sqlMs": 10.331,
+      "sqlDistintas": 17,
+      "sqlTransacoes": 8,
+      "sqlOverheadTransacao": 23,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 8,
+          "ms": 0.12,
+          "sql": "begin"
+        },
+        {
+          "vezes": 8,
+          "ms": 0.318,
+          "sql": "commit"
+        },
+        {
+          "vezes": 7,
+          "ms": 0.053,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.466,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.508,
+          "sql": "with eligible as ( select s.id, s.visitor_id, s.started_at, s.source, s.medium, s.campaign, s.device, s.entry_page_id from sessions s where s.site_id = $1 and s"
+        },
+        {
+          "ms": 0.439,
+          "sql": "with eligible as ( select s.id, s.visitor_id, s.started_at, s.source, s.medium, s.campaign, s.device, s.entry_page_id from sessions s where s.site_id = $1 and s"
+        },
+        {
+          "ms": 0.268,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.255,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "ms": 0.254,
+          "sql": "select count(*)::int as total from leads"
+        }
+      ],
+      "comPrefetch": {
+        "requests": 29,
+        "bytesTransferidos": 318919,
+        "rscRequests": 11,
+        "sqlStatements": 38,
+        "sqlMs": 10.038,
+        "wallMs": 759
+      },
+      "corridas": [
+        {
+          "ttfb": 38.799999999813735,
+          "dcl": 75.60000000009313,
+          "load": 151.5,
+          "requests": 18,
+          "bytes": 317171,
+          "sqlStatements": 38,
+          "sqlMs": 10.675
+        },
+        {
+          "ttfb": 43.1999999997206,
+          "dcl": 97.79999999981374,
+          "load": 149.10000000009313,
+          "requests": 18,
+          "bytes": 317184,
+          "sqlStatements": 38,
+          "sqlMs": 10.331
+        },
+        {
+          "ttfb": 55.799999999813735,
+          "dcl": 97.5,
+          "load": 182.59999999962747,
+          "requests": 18,
+          "bytes": 317172,
+          "sqlStatements": 38,
+          "sqlMs": 10.283
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 12,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/sites/5f89d00a-da97-4b27-ad76-5617acd43cc1/qualidade",
+      "h1": "alfa.teste",
+      "ttfbMs": 43.2,
+      "dclMs": 87.5,
+      "loadMs": 172.5,
+      "requests": 19,
+      "prefetchesBloqueados": 11,
+      "kbFio": 323.7,
+      "kbDecodificado": 683.2,
+      "kbJsFio": 120.6,
+      "kbJsDecodificado": 392.3,
+      "jsRequests": 13,
+      "kbHtmlFio": 23.9,
+      "kbHtmlDecodificado": 91.4,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 42,
+      "sqlMs": 10.718,
+      "sqlDistintas": 21,
+      "sqlTransacoes": 8,
+      "sqlOverheadTransacao": 23,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 8,
+          "ms": 0.16,
+          "sql": "begin"
+        },
+        {
+          "vezes": 8,
+          "ms": 0.376,
+          "sql": "commit"
+        },
+        {
+          "vezes": 7,
+          "ms": 0.059,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.425,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.416,
+          "sql": "with eventos as ( -- Medições, com a anterior do mesmo par. select r.medido_em as quando, 'analise'::text as tipo, r.site_id, r.url_solicitada as url, r.strateg"
+        },
+        {
+          "ms": 0.288,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.253,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.219,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "ms": 0.206,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "comPrefetch": {
+        "requests": 30,
+        "bytesTransferidos": 333291,
+        "rscRequests": 11,
+        "sqlStatements": 42,
+        "sqlMs": 11.098,
+        "wallMs": 786
+      },
+      "corridas": [
+        {
+          "ttfb": 43.1999999997206,
+          "dcl": 119.1999999997206,
+          "load": 168.5,
+          "requests": 19,
+          "bytes": 331519,
+          "sqlStatements": 42,
+          "sqlMs": 10.718
+        },
+        {
+          "ttfb": 49.60000000009313,
+          "dcl": 87.5,
+          "load": 186.10000000009313,
+          "requests": 19,
+          "bytes": 331540,
+          "sqlStatements": 42,
+          "sqlMs": 11.458
+        },
+        {
+          "ttfb": 37.700000000186265,
+          "dcl": 76.60000000009313,
+          "load": 172.5,
+          "requests": 19,
+          "bytes": 331508,
+          "sqlStatements": 42,
+          "sqlMs": 10.275
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 13,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/sites/5f89d00a-da97-4b27-ad76-5617acd43cc1/rastreamento",
+      "h1": "alfa.teste",
+      "ttfbMs": 48.5,
+      "dclMs": 85,
+      "loadMs": 175.1,
+      "requests": 18,
+      "prefetchesBloqueados": 12,
+      "kbFio": 326.3,
+      "kbDecodificado": 698.1,
+      "kbJsFio": 118.2,
+      "kbJsDecodificado": 386.2,
+      "jsRequests": 12,
+      "kbHtmlFio": 28.9,
+      "kbHtmlDecodificado": 112.4,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 42,
+      "sqlMs": 11.029,
+      "sqlDistintas": 15,
+      "sqlTransacoes": 10,
+      "sqlOverheadTransacao": 29,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 10,
+          "ms": 0.253,
+          "sql": "begin"
+        },
+        {
+          "vezes": 10,
+          "ms": 1.153,
+          "sql": "commit"
+        },
+        {
+          "vezes": 9,
+          "ms": 0.08,
+          "sql": "select set_config('?', $?, true)"
+        },
+        {
+          "vezes": 2,
+          "ms": 0.564,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.734,
+          "sql": "commit"
+        },
+        {
+          "ms": 0.352,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.325,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.313,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "ms": 0.251,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        }
+      ],
+      "comPrefetch": {
+        "requests": 30,
+        "bytesTransferidos": 336156,
+        "rscRequests": 12,
+        "sqlStatements": 42,
+        "sqlMs": 9.236,
+        "wallMs": 821
+      },
+      "corridas": [
+        {
+          "ttfb": 48.5,
+          "dcl": 83.60000000009313,
+          "load": 170.5,
+          "requests": 18,
+          "bytes": 334081,
+          "sqlStatements": 42,
+          "sqlMs": 11.847
+        },
+        {
+          "ttfb": 44.10000000009313,
+          "dcl": 85,
+          "load": 175.10000000009313,
+          "requests": 18,
+          "bytes": 334158,
+          "sqlStatements": 42,
+          "sqlMs": 10.019
+        },
+        {
+          "ttfb": 54.40000000037253,
+          "dcl": 157,
+          "load": 210.8000000002794,
+          "requests": 18,
+          "bytes": 334208,
+          "sqlStatements": 42,
+          "sqlMs": 11.029
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 12,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    },
+    {
+      "rota": "/sites/5f89d00a-da97-4b27-ad76-5617acd43cc1/configurar",
+      "h1": "alfa.teste",
+      "ttfbMs": 31.4,
+      "dclMs": 65.9,
+      "loadMs": 176.6,
+      "requests": 20,
+      "prefetchesBloqueados": 11,
+      "kbFio": 323.7,
+      "kbDecodificado": 678.7,
+      "kbJsFio": 132.5,
+      "kbJsDecodificado": 432.1,
+      "jsRequests": 14,
+      "kbHtmlFio": 12,
+      "kbHtmlDecodificado": 47,
+      "kbFontes": 172.5,
+      "kbCss": 6.7,
+      "sqlStatements": 43,
+      "sqlMs": 6.87,
+      "sqlDistintas": 17,
+      "sqlTransacoes": 10,
+      "sqlOverheadTransacao": 29,
+      "consultasSessao": 1,
+      "repetidas": [
+        {
+          "vezes": 10,
+          "ms": 0.15,
+          "sql": "begin"
+        },
+        {
+          "vezes": 10,
+          "ms": 0.266,
+          "sql": "commit"
+        },
+        {
+          "vezes": 9,
+          "ms": 0.058,
+          "sql": "select set_config('?', $?, true)"
+        }
+      ],
+      "maisLentas": [
+        {
+          "ms": 0.316,
+          "sql": "select user_id as \"userId\", account_id as \"accountId\", email, name, account_name as \"accountName\", is_demo as \"isDemo\" from app.find_user_for_session($1)"
+        },
+        {
+          "ms": 0.257,
+          "sql": "with sinais (site_id, site, cliente, url, dispositivo, tipo, titulo, evidencia, prioridade, proxima_acao, detectado_em) as ( -- 1. Desempenho ruim numa URL moni"
+        },
+        {
+          "ms": 0.24,
+          "sql": "select s.id, s.client_id as \"clientId\", c.name as \"clienteNome\", s.name, s.domain, s.timezone, s.public_id as \"publicId\", s.snippet_seen_at as \"snippetSeenAt\", "
+        },
+        {
+          "ms": 0.225,
+          "sql": "select c.id, c.name, c.notes, c.created_at as \"createdAt\", (select count(*)::int from sites s where s.client_id = c.id and s.archived_at is null) as sites from "
+        },
+        {
+          "ms": 0.191,
+          "sql": "select id from clients where archived_at is null"
+        }
+      ],
+      "comPrefetch": {
+        "requests": 31,
+        "bytesTransferidos": 333218,
+        "rscRequests": 11,
+        "sqlStatements": 43,
+        "sqlMs": 7.595,
+        "wallMs": 794
+      },
+      "corridas": [
+        {
+          "ttfb": 31.399999999906868,
+          "dcl": 65.39999999990687,
+          "load": 176.59999999962747,
+          "requests": 20,
+          "bytes": 331440,
+          "sqlStatements": 43,
+          "sqlMs": 6.87
+        },
+        {
+          "ttfb": 35.39999999990687,
+          "dcl": 69.39999999990687,
+          "load": 189.6999999997206,
+          "requests": 20,
+          "bytes": 331456,
+          "sqlStatements": 43,
+          "sqlMs": 7.616
+        },
+        {
+          "ttfb": 31.299999999813735,
+          "dcl": 65.89999999990687,
+          "load": 163.6999999997206,
+          "requests": 20,
+          "bytes": 331466,
+          "sqlStatements": 43,
+          "sqlMs": 6.387
+        }
+      ],
+      "porTipo": {
+        "document": 1,
+        "script": 14,
+        "stylesheet": 1,
+        "font": 4,
+        "image": 0,
+        "fetch": 0,
+        "other": 0
+      }
+    }
+  ],
+  "estaticos": {
+    "/t.js": {
+      "status": 200,
+      "bytesSemCompressao": 12865,
+      "bytesGzip": 4689,
+      "cacheControl": "public, max-age=300, must-revalidate",
+      "etag": "W/\"3241-1a0a60cd7b2\"",
+      "contentEncodingComAcceptGzip": "gzip",
+      "origemDoCacheControl": "next.config.ts:41 (headers() para source /t.js)"
+    },
+    "/f.js": {
+      "status": 200,
+      "bytesSemCompressao": 13710,
+      "bytesGzip": 4967,
+      "cacheControl": "public, max-age=0",
+      "etag": "W/\"358e-1a0a7706c9c\"",
+      "contentEncodingComAcceptGzip": "gzip",
+      "origemDoCacheControl": "padrão do Next para /public (sem regra em next.config.ts)"
+    },
+    "/sw.js": {
+      "status": 200,
+      "bytesSemCompressao": 1657,
+      "bytesGzip": 811,
+      "cacheControl": "public, max-age=0",
+      "etag": "W/\"679-1a0b6d358a4\"",
+      "contentEncodingComAcceptGzip": "gzip",
+      "origemDoCacheControl": "padrão do Next para /public"
+    },
+    "/entrar": {
+      "status": 200,
+      "bytesHtmlSemCompressao": 19099,
+      "bytesHtmlGzip": 7055,
+      "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "ttfbCurlSegundos": 0.016
+    }
+  },
+  "diagnostico": {
+    "rota": "GET /api/diagnostico (sem cookie, sem token)",
+    "status": 200,
+    "ttfbCurlSegundos": 0.073,
+    "bytes": 340,
+    "camposExpostos": [
+      "tudoOk",
+      "esquema.{verificado,completo,faltando[]}",
+      "commit (sha do build)",
+      "deployment",
+      "ambiente",
+      "painelFunciona",
+      "coletaFunciona",
+      "problemas[] (variavel, essencial, causa, oQueFazer)",
+      "faltaSessionSecret",
+      "observacao"
+    ],
+    "naoExpoe": [
+      "host/usuário/senha do banco",
+      "nomes das variáveis de ambiente (só com sessão ou ?token=)",
+      "conexoes detalhadas"
+    ],
+    "observacao": "Cada chamada anônima abre conexão nos 3 pools (verificarConexao para DATABASE_URL, _INGEST, _FORMS) e roda verificarEsquema — custo de banco pago por qualquer visitante sem limite de taxa visível na rota (src/app/api/diagnostico/route.ts:86-100)."
+  },
+  "coleta": {
+    "rota": "POST /api/collect (page_view válido, site sit_teste_alfa01, Origin https://alfa.teste)",
+    "status": 204,
+    "latenciaHttpSegundos": [
+      0.0189,
+      0.0162,
+      0.0167
+    ],
+    "latenciaMedianaMs": 16.7,
+    "statementsSql": 9,
+    "linhasDeLogSql": 23,
+    "somaMsSqlPorEvento": [
+      2.752,
+      2.946,
+      3.247
+    ],
+    "somaMsSqlMediana": 2.946,
+    "statements": [
+      "begin",
+      "select … from sites where public_id = $1 (resolverSite)",
+      "select set_config('app.site_id', $1, true)",
+      "select app.consumir_limite($1, $2) (escrita: limite por site)",
+      "insert into pages … on conflict do nothing + select (página)",
+      "select id from sessions … (sessão aberta?)",
+      "insert into sessions …",
+      "insert into events …",
+      "commit"
+    ],
+    "observacao": "talvezLimpar (src/server/limites.ts:132) roda com probabilidade 1% e não apareceu nas 3 amostras. Transação única: 9 idas ao banco por evento."
+  }
+}
