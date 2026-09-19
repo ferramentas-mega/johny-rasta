@@ -9,7 +9,6 @@ import { TextoMatrix } from '@/components/TextoMatrix';
 import { BotaoRecolher } from '@/components/BotaoRecolher';
 import { Avatar } from '@/components/Avatar';
 import { MenuInferior } from '@/components/MenuInferior';
-import { ControlesAparencia } from '@/components/ControlesAparencia';
 
 /**
  * Menu lateral.
@@ -146,12 +145,11 @@ export function MenuLateral({
         })}
       </nav>
 
-      {/* Tema e efeitos vivem no rodapé do menu (desktop). No celular o menu
-          não existe, e eles continuam no cabeçalho — `.controles-cabecalho`. */}
-      <div className="controles-lateral">
-        <ControlesAparencia />
-      </div>
-
+      {/* Tema e efeitos NÃO moram aqui: ficam no cabeçalho, em toda largura.
+          Chegaram a ficar no rodapé do menu na v2 e saíram a pedido — no menu
+          recolhido viravam dois botões empilhados sem rótulo, e no celular o
+          menu não existe, então o cabeçalho já era o único lugar que valia
+          para todo mundo. Um controle, um lugar. */}
       <div className="lateral-rodape">
         {/* Iniciais do USUÁRIO, ao lado do nome da CONTA. São duas informações
             diferentes: o texto diz em que conta você está, o avatar diz quem

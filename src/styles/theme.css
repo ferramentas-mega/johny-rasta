@@ -1784,8 +1784,8 @@ svg:has(.funil-etapa:hover) .funil-etapa:not(:hover) text {
    Layout v2: menu fixo, cabeçalho de uma linha, cartões KPI
    ========================================================================== */
 
-/* Menu lateral FIXO: a navegação rola dentro dele; marca e rodapé (tema, FX,
-   conta) ficam sempre à vista. */
+/* Menu lateral FIXO: a navegação rola dentro dele; marca e rodapé (conta)
+   ficam sempre à vista. Tema e FX ficam no cabeçalho, em toda largura. */
 @media (min-width: 861px) {
   .lateral {
     position: sticky;
@@ -1799,24 +1799,6 @@ svg:has(.funil-etapa:hover) .funil-etapa:not(:hover) text {
     overflow-y: auto;
     scrollbar-width: thin;
   }
-  .controles-cabecalho {
-    display: none;
-  }
-}
-@media (max-width: 860px) {
-  .controles-lateral {
-    display: none;
-  }
-}
-.controles-lateral {
-  display: flex;
-  gap: var(--esp-2);
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: var(--esp-3);
-}
-[data-menu='recolhido'] .controles-lateral {
-  flex-direction: column;
 }
 
 /* Cabeçalho de UMA linha, fixo no topo do conteúdo, translúcido. O que não

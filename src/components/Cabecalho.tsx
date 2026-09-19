@@ -79,9 +79,7 @@ export function Cabecalho({
             {filtros}
             <BotaoAtualizar geradoEm={geradoEm} aCadaSegundos={atualizarACada} />
             <SinoAvisos />
-            <span className="controles-cabecalho" style={{ display: 'contents' }}>
-              <ControlesAparencia />
-            </span>
+            <ControlesAparencia />
           </div>
         </div>
       </header>
